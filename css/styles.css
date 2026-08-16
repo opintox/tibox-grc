@@ -374,6 +374,32 @@
   .intro-col-form{display:flex; flex-direction:column; gap:14px;}
   .intro-col-desc{border-left:1px solid var(--border); padding-left:32px;}
   @media (max-width:760px){.intro-col-desc{border-left:none; border-top:1px solid var(--border); padding-left:0; padding-top:20px;}}
+  /* ---------- pantalla de bienvenida (reglas del ejercicio) ---------- */
+  body.intro-mode .topbar{display:none;}
+  body.intro-mode .wrap{max-width:720px; padding-top:0; padding-bottom:0;}
+  .intro-shell{display:flex; flex-direction:column; gap:18px; padding:48px 0 40px;}
+  .intro-hero{display:flex; flex-direction:column; align-items:flex-start; gap:10px; margin-bottom:4px;}
+  .intro-hero-brand{display:flex; align-items:center; gap:10px;}
+  .intro-hero-brand .wordmark{font-family:var(--display); font-weight:800; font-size:var(--fs-lg); letter-spacing:0.05em; color:#fff;}
+  .intro-hero-title{font-family:var(--display); font-weight:800; font-size:var(--fs-3xl); line-height:1.12; letter-spacing:-0.02em; color:#fff; margin:4px 0 0;}
+  .intro-hero-title .accent{background:linear-gradient(90deg,#0FC7F6,#7C8CF0); -webkit-background-clip:text; background-clip:text; color:transparent;}
+  .intro-hero-sub{font-size:var(--fs-sm); line-height:1.6; color:var(--muted); margin:0; max-width:52ch;}
+  .intro-panel .section-title{margin-bottom:12px;}
+  .rule-steps{display:flex; flex-direction:column; gap:18px;}
+  .rule-step{display:flex; gap:14px; align-items:flex-start;}
+  .rule-step-num{
+    flex-shrink:0; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-family:var(--mono); font-weight:700; font-size:var(--fs-sm); color:#0A1020;
+    background:linear-gradient(135deg,#0FC7F6,#0B8FD6); box-shadow:0 6px 16px -8px rgba(14,165,233,0.6);
+  }
+  .rule-step-title{font-family:var(--display); font-weight:700; font-size:var(--fs-md); color:var(--text); margin-bottom:3px;}
+  .rule-step-desc{font-size:var(--fs-sm); line-height:1.55; color:var(--muted); margin:0;}
+  .intro-foot{display:flex; justify-content:flex-end; padding-top:2px;}
+  @media (max-width:640px){
+    .intro-shell{padding:30px 0 30px;}
+    .intro-hero-title{font-size:var(--fs-2xl);}
+  }
+
   .intro-desc-text{font-size:var(--fs-sm); line-height:1.6; color:var(--muted); margin:0 0 10px;}
   .intro-desc-text:last-child{margin-bottom:0;}
   .intro-desc-text b{color:var(--text);}
