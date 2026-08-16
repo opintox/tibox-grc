@@ -257,6 +257,11 @@
   .stage-chart-block:first-child{padding-top:2px;}
   .stage-chart-label{font-size:var(--fs-xs); font-weight:600; margin-bottom:8px; display:flex; align-items:baseline; gap:6px;}
   .stage-chart-label span{font-family:var(--mono); font-size:var(--fs-3xs); color:var(--muted-2); font-weight:400;}
+  .mini-bar-row{display:flex; align-items:center; gap:8px; font-size:var(--fs-3xs);}
+  .mini-bar-label{width:76px; flex-shrink:0; font-family:var(--mono); color:var(--muted); text-transform:uppercase; font-size:var(--fs-4xs);}
+  .mini-bar-track{flex:1; height:6px; background:var(--panel-3); border-radius:3px; overflow:hidden;}
+  .mini-bar-fill{height:100%; border-radius:3px; transition:width .25s ease;}
+  .mini-bar-val{font-family:var(--mono); font-size:var(--fs-3xs); width:16px; text-align:right; flex-shrink:0;}
 
   /* Selección de funciones: el grid se adapta a la cantidad real de opciones.
      Con 2 opciones cada tarjeta ocupa exactamente el 50% del ancho disponible. */
