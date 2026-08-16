@@ -47,7 +47,7 @@
   }
   @media (max-width:480px){.topbar{padding:10px 14px;} .brand h1, .brand .divider{display:none;}}
   .brand{display:flex; align-items:center; gap:12px;}
-  .brand .wordmark{font-family:var(--display); font-weight:800; font-size:var(--fs-lg); letter-spacing:0.04em; color:#fff; margin:0;}
+  .tibox-logo{display:block; width:auto; flex-shrink:0;}
   .brand .divider{width:1px; height:16px; background:rgba(255,255,255,0.18); flex-shrink:0;}
   .brand .mark{font-family:var(--mono); font-weight:700; letter-spacing:0.14em; font-size:var(--fs-xs); color:var(--muted); border:1px solid var(--border); border-radius:3px; padding:3px 7px;}
   .brand h1{font-family:var(--display); font-size:var(--fs-sm); font-weight:600; letter-spacing:0.01em; margin:0; text-transform:uppercase; color:var(--muted);}
@@ -375,15 +375,22 @@
   .intro-col-desc{border-left:1px solid var(--border); padding-left:32px;}
   @media (max-width:760px){.intro-col-desc{border-left:none; border-top:1px solid var(--border); padding-left:0; padding-top:20px;}}
   /* ---------- pantalla de bienvenida (reglas del ejercicio) ---------- */
+  /* #screen-intro vive fuera de .wrap (igual que .topbar) para que el banner de marca
+     pueda ocupar el ancho completo de la pantalla; el cuerpo de texto sí se centra en
+     una columna legible, como el resto de las pantallas de contenido. */
   body.intro-mode .topbar{display:none;}
-  body.intro-mode .wrap{max-width:720px; padding-top:0; padding-bottom:0;}
-  .intro-shell{display:flex; flex-direction:column; gap:18px; padding:48px 0 40px;}
-  .intro-hero{display:flex; flex-direction:column; align-items:flex-start; gap:10px; margin-bottom:4px;}
-  .intro-hero-brand{display:flex; align-items:center; gap:10px;}
-  .intro-hero-brand .wordmark{font-family:var(--display); font-weight:800; font-size:var(--fs-lg); letter-spacing:0.05em; color:#fff;}
+  .intro-hero-band{
+    padding:56px clamp(20px, 4vw, 64px) 44px; border-bottom:1px solid var(--border);
+    background:
+      radial-gradient(120% 60% at 20% 0%, rgba(14,165,233,0.20), transparent 62%),
+      radial-gradient(100% 50% at 90% 100%, rgba(124,140,240,0.16), transparent 64%),
+      linear-gradient(180deg,#0A1226 0%,#070E1E 100%);
+  }
+  .intro-hero{display:flex; flex-direction:column; align-items:flex-start; gap:12px; max-width:900px; margin:0 auto;}
   .intro-hero-title{font-family:var(--display); font-weight:800; font-size:var(--fs-3xl); line-height:1.12; letter-spacing:-0.02em; color:#fff; margin:4px 0 0;}
   .intro-hero-title .accent{background:linear-gradient(90deg,#0FC7F6,#7C8CF0); -webkit-background-clip:text; background-clip:text; color:transparent;}
   .intro-hero-sub{font-size:var(--fs-sm); line-height:1.6; color:var(--muted); margin:0; max-width:52ch;}
+  .intro-shell{display:flex; flex-direction:column; gap:18px; max-width:760px; margin:0 auto; padding:36px clamp(20px, 3vw, 48px) 60px;}
   .intro-panel .section-title{margin-bottom:12px;}
   .rule-steps{display:flex; flex-direction:column; gap:18px;}
   .rule-step{display:flex; gap:14px; align-items:flex-start;}
@@ -396,7 +403,8 @@
   .rule-step-desc{font-size:var(--fs-sm); line-height:1.55; color:var(--muted); margin:0;}
   .intro-foot{display:flex; justify-content:flex-end; padding-top:2px;}
   @media (max-width:640px){
-    .intro-shell{padding:30px 0 30px;}
+    .intro-hero-band{padding:36px 20px 30px;}
+    .intro-shell{padding:26px 20px 50px;}
     .intro-hero-title{font-size:var(--fs-2xl);}
   }
 
@@ -878,7 +886,6 @@
   .rail-group + .rail-group{margin-top:var(--sp-6);}
   .rail-spacer{flex:1 1 var(--sp-6); min-height:var(--sp-6);}
   .rail-brand{display:flex; align-items:center; gap:var(--sp-2); margin-bottom:var(--sp-3);}
-  .rail-brand .wordmark{font-family:var(--display); font-weight:800; font-size:var(--fs-lg); letter-spacing:0.05em; color:#fff;}
   .rail-status{
     display:inline-flex; align-items:center; gap:8px; align-self:flex-start;
     font-family:var(--mono); font-size:var(--fs-3xs); letter-spacing:0.14em; text-transform:uppercase;
