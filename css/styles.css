@@ -386,11 +386,16 @@
       radial-gradient(100% 50% at 90% 100%, rgba(124,140,240,0.16), transparent 64%),
       linear-gradient(180deg,#0A1226 0%,#070E1E 100%);
   }
-  .intro-hero{display:flex; flex-direction:column; align-items:flex-start; gap:12px; max-width:900px; margin:0 auto;}
+  .intro-hero{display:flex; flex-direction:column; align-items:flex-start; gap:12px; max-width:1400px; margin:0 auto;}
   .intro-hero-title{font-family:var(--display); font-weight:800; font-size:var(--fs-3xl); line-height:1.12; letter-spacing:-0.02em; color:#fff; margin:4px 0 0;}
   .intro-hero-title .accent{background:linear-gradient(90deg,#0FC7F6,#7C8CF0); -webkit-background-clip:text; background-clip:text; color:transparent;}
   .intro-hero-sub{font-size:var(--fs-sm); line-height:1.6; color:var(--muted); margin:0; max-width:52ch;}
-  .intro-shell{display:flex; flex-direction:column; gap:18px; max-width:760px; margin:0 auto; padding:36px clamp(20px, 3vw, 48px) 60px;}
+  /* Dos columnas en pantallas anchas para aprovechar el ancho disponible sin que el
+     texto se estire en líneas demasiado largas; una sola columna en pantallas angostas. */
+  .intro-shell{
+    display:grid; grid-template-columns:1fr 1fr; align-items:start; gap:20px;
+    max-width:1400px; margin:0 auto; padding:36px clamp(20px, 3vw, 48px) 60px;
+  }
   .intro-panel .section-title{margin-bottom:12px;}
   .rule-steps{display:flex; flex-direction:column; gap:18px;}
   .rule-step{display:flex; gap:14px; align-items:flex-start;}
@@ -401,7 +406,10 @@
   }
   .rule-step-title{font-family:var(--display); font-weight:700; font-size:var(--fs-md); color:var(--text); margin-bottom:3px;}
   .rule-step-desc{font-size:var(--fs-sm); line-height:1.55; color:var(--muted); margin:0;}
-  .intro-foot{display:flex; justify-content:flex-end; padding-top:2px;}
+  .intro-foot{grid-column:1 / -1; display:flex; justify-content:flex-end; padding-top:2px;}
+  @media (max-width:860px){
+    .intro-shell{grid-template-columns:1fr;}
+  }
   @media (max-width:640px){
     .intro-hero-band{padding:36px 20px 30px;}
     .intro-shell{padding:26px 20px 50px;}
