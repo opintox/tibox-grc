@@ -1,0 +1,5 @@
+{
+  "files.associations": { "*.js": "javascript" },
+  "editor.tabSize": 2,
+  "liveServer.settings.port": 5510
+}
