@@ -388,7 +388,7 @@
   }
   /* Fila del banner: el bloque de texto a la izquierda y el CTA «Siguiente» arriba a la
      derecha, ambos alineados al tope de la fila. */
-  .intro-hero-row{display:flex; align-items:flex-start; justify-content:space-between; gap:24px; max-width:1400px; margin:0 auto;}
+  .intro-hero-row{display:flex; align-items:flex-start; justify-content:space-between; gap:24px; max-width:1800px; margin:0 auto;}
   .intro-hero{display:flex; flex-direction:column; align-items:flex-start; gap:12px; min-width:0;}
   .intro-hero-row .btn-cta{flex-shrink:0;}
   .intro-hero-title{font-family:var(--display); font-weight:800; font-size:var(--fs-3xl); line-height:1.12; letter-spacing:-0.02em; color:#fff; margin:4px 0 0;}
@@ -400,9 +400,12 @@
      ya que el CTA se movió al banner y ya no ocupa ese espacio. */
   .intro-shell{
     display:grid; grid-template-columns:1fr 1fr; align-items:start; gap:20px;
-    max-width:1400px; margin:0 auto; padding:36px clamp(20px, 3vw, 48px) 5vh;
+    max-width:1800px; margin:0 auto; padding:36px clamp(20px, 3vw, 48px) 5vh;
   }
   .intro-panel .section-title{margin-bottom:12px;}
+  /* Las tarjetas ocupan toda su columna (más ancha ahora), pero el texto se limita a una
+     medida legible en vez de estirarse de borde a borde de la tarjeta. */
+  .intro-panel .section-sub{max-width:62ch;}
   .rule-steps{display:flex; flex-direction:column; gap:18px;}
   .rule-step{display:flex; gap:14px; align-items:flex-start;}
   .rule-step-num{
@@ -411,7 +414,7 @@
     background:linear-gradient(135deg,#0FC7F6,#0B8FD6); box-shadow:0 6px 16px -8px rgba(14,165,233,0.6);
   }
   .rule-step-title{font-family:var(--display); font-weight:700; font-size:var(--fs-md); color:var(--text); margin-bottom:3px;}
-  .rule-step-desc{font-size:var(--fs-sm); line-height:1.55; color:var(--muted); margin:0;}
+  .rule-step-desc{font-size:var(--fs-sm); line-height:1.55; color:var(--muted); margin:0; max-width:58ch;}
   @media (max-width:860px){
     .intro-shell{grid-template-columns:1fr;}
   }
