@@ -460,7 +460,9 @@ function updateBottomState(){
   const pBadge = document.getElementById('participantsBadge');
   if(pBadge) pBadge.textContent = `${activeCount} activa${activeCount === 1 ? '' : 's'}`;
 }
-document.body.classList.add('setup-mode');
+// La app abre siempre en la pantalla de bienvenida (reglas del ejercicio); recién al presionar
+// «Siguiente» ahí se entra al modo configuración que antes era la pantalla inicial.
+document.body.classList.add('intro-mode');
 updateBottomState();
 
 // Intenta restaurar configuración guardada de una sesión anterior (si existe). El modal de
@@ -468,6 +470,13 @@ updateBottomState();
 loadSetupState();
 
 document.getElementById('continueBtn').addEventListener('click', startGame);
+
+document.getElementById('introNextBtn').addEventListener('click', () => {
+  document.getElementById('screen-intro').classList.add('hidden');
+  document.getElementById('screen-setup').classList.remove('hidden');
+  document.body.classList.remove('intro-mode');
+  document.body.classList.add('setup-mode');
+});
 
 // ---------------- export / import client config ----------------
 // Usa el mismo snapshot que los perfiles guardados (currentConfigSnapshot) para que el archivo
