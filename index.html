@@ -88,6 +88,10 @@
             <input type="text" id="facilitatorNameInput" placeholder="Quién conduce la sesión">
           </div>
           <div class="rail-actions">
+            <button class="btn btn-sm btn-primary" id="saveProfileBtn">Guardar perfil</button>
+            <button class="btn btn-sm" id="profilesToggleBtn">Perfiles guardados</button>
+          </div>
+          <div class="rail-actions">
             <button class="btn btn-sm" id="exportConfigBtn">Exportar</button>
             <button class="btn btn-sm" id="importConfigBtn">Importar</button>
             <input type="file" id="importConfigFile" accept="application/json" class="hidden">
@@ -260,8 +264,9 @@
         <textarea id="actaNotes" placeholder="Observaciones adicionales, contexto de la sesión, acuerdos verbales..." style="min-height:80px;"></textarea>
       </div>
       <div class="results-actions" style="margin-top:14px;">
-        <button class="btn btn-primary" id="downloadResultsBtnBottom">Descargar acta completa (JSON)</button>
-        <button class="btn" id="backFromResultsBtn">Volver a la configuración</button>
+        <button class="btn btn-primary" id="saveExerciseBtn">Guardar ejercicio →</button>
+        <button class="btn" id="downloadResultsBtnBottom">Descargar acta completa (JSON)</button>
+        <button class="btn" id="backFromResultsBtn">Volver sin guardar</button>
       </div>
     </div>
   </div>

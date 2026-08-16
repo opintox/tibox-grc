@@ -36,6 +36,11 @@ let clientName = '';
 let facilitatorName = '';
 // matriz de participación editable en tiempo real, una copia por escenario partiendo de PARTICIPATION_MATRIX
 let sessionMatrices = {};
+// Se pone en true solo al guardar (o cargar) un perfil de cliente explícito; cualquier edición
+// posterior de cliente/facilitador/participantes/escenario lo vuelve a poner en false. El botón
+// «Comenzar ejercicio» exige que esté en true (ver updateBottomState) para forzar a guardar el
+// perfil del cliente antes de empezar la sesión.
+let profileSaved = false;
 function getMatrix(scenarioId){
   if(!sessionMatrices[scenarioId]) sessionMatrices[scenarioId] = {...(PARTICIPATION_MATRIX[scenarioId] || {})};
   const m = sessionMatrices[scenarioId];
@@ -71,6 +76,165 @@ function saveSetupState(){
     }catch(e){ /* localStorage no disponible o lleno; no es crítico para seguir usando la app */ }
   }, 300);
 }
+// ---------------- perfiles de cliente guardados ----------------
+// A diferencia del autoguardado de arriba (un solo borrador, se sobreescribe solo), esto es una
+// lista de perfiles con nombre que el facilitador guarda a propósito con el botón «Guardar perfil»,
+// para poder reutilizarlos entre sesiones sin depender de un archivo exportado.
+const PROFILES_STORAGE_KEY = 'tabletop_profiles_v1';
+function loadProfiles(){
+  try{
+    const list = JSON.parse(localStorage.getItem(PROFILES_STORAGE_KEY) || '[]');
+    return Array.isArray(list) ? list : [];
+  }catch(e){ return []; }
+}
+function saveProfilesList(list){
+  try{ localStorage.setItem(PROFILES_STORAGE_KEY, JSON.stringify(list)); }
+  catch(e){ /* localStorage no disponible o lleno; no es crítico para seguir usando la app */ }
+}
+function currentConfigSnapshot(){
+  const allMatrices = {};
+  SCENARIOS.forEach(s => { allMatrices[s.id] = getMatrix(s.id); });
+  return {
+    clientName, facilitatorName,
+    participants: participants.map(p => ({...p})),
+    selectedScenarioId, sessionMatrices: allMatrices
+  };
+}
+// Guarda (o actualiza, si ya existe uno con el mismo nombre de cliente) un perfil. Devuelve
+// null si no hay nombre de cliente, ya que el nombre es la clave con la que se identifica el perfil.
+function saveProfile(){
+  const name = clientName.trim();
+  if(!name) return null;
+  const list = loadProfiles();
+  const snapshot = currentConfigSnapshot();
+  const idx = list.findIndex(p => (p.clientName || '').trim().toLowerCase() === name.toLowerCase());
+  const now = new Date().toISOString();
+  let profile;
+  if(idx >= 0){
+    profile = {...list[idx], ...snapshot, savedAt: now};
+    list[idx] = profile;
+  } else {
+    profile = {id: `profile_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, ...snapshot, savedAt: now};
+    list.push(profile);
+  }
+  saveProfilesList(list);
+  profileSaved = true;
+  updateBottomState();
+  return profile;
+}
+function deleteProfile(id){
+  saveProfilesList(loadProfiles().filter(p => p.id !== id));
+}
+function loadProfileIntoForm(profile){
+  clientName = profile.clientName || '';
+  facilitatorName = profile.facilitatorName || '';
+  participants = Array.isArray(profile.participants) && profile.participants.length === ROLE_KEYS.length
+    ? profile.participants.map(p => ({...p})) : DEFAULT_PARTICIPANTS.map(p => ({...p}));
+  enforceMandatoryRoles();
+  selectedScenarioId = profile.selectedScenarioId || null;
+  sessionMatrices = profile.sessionMatrices ? JSON.parse(JSON.stringify(profile.sessionMatrices)) : {};
+  document.getElementById('clientNameInput').value = clientName;
+  document.getElementById('facilitatorNameInput').value = facilitatorName;
+  renderParticipants();
+  renderScenarioCards();
+  profileSaved = true; // coincide exactamente con lo guardado: no hace falta volver a guardar
+  updateBottomState();
+  saveSetupState();
+}
+
+// ---------------- panel desplegable de perfiles guardados ----------------
+let profilesPanelEl = null;
+function closeProfilesPanel(){
+  if(!profilesPanelEl) return;
+  profilesPanelEl.remove();
+  profilesPanelEl = null;
+  document.removeEventListener('mousedown', profilesOutsideClick, true);
+}
+function profilesOutsideClick(e){
+  if(profilesPanelEl && !profilesPanelEl.contains(e.target) && e.target.id !== 'profilesToggleBtn'){
+    closeProfilesPanel();
+  }
+}
+function renderProfilesPanel(){
+  if(!profilesPanelEl) return;
+  const list = loadProfiles().sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt));
+  if(list.length === 0){
+    profilesPanelEl.innerHTML = '<div class="profiles-dropdown-empty">Aún no hay perfiles guardados.</div>';
+    return;
+  }
+  profilesPanelEl.innerHTML = `<div class="profiles-dropdown-list">${list.map(p => `
+    <div class="profile-row" data-id="${p.id}" role="button" tabindex="0">
+      <div class="profile-row-main">
+        <div class="profile-row-name">${escapeHtml(p.clientName || 'Sin nombre')}</div>
+        <div class="profile-row-meta">${escapeHtml(p.facilitatorName || 'Sin facilitador')} · ${escapeHtml(new Date(p.savedAt).toLocaleDateString('es-CL'))}</div>
+      </div>
+      <button class="profile-row-del" data-id="${p.id}" title="Borrar perfil" aria-label="Borrar perfil de ${escapeHtml(p.clientName || '')}">✕</button>
+    </div>`).join('')}</div>`;
+  const openProfile = id => {
+    const profile = loadProfiles().find(p => p.id === id);
+    if(profile){ loadProfileIntoForm(profile); closeProfilesPanel(); }
+  };
+  profilesPanelEl.querySelectorAll('.profile-row').forEach(row => {
+    row.addEventListener('click', e => { if(!e.target.closest('.profile-row-del')) openProfile(row.dataset.id); });
+    row.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); openProfile(row.dataset.id); } });
+  });
+  profilesPanelEl.querySelectorAll('.profile-row-del').forEach(btn => {
+    btn.addEventListener('click', async e => {
+      e.stopPropagation();
+      const id = btn.dataset.id;
+      const profile = loadProfiles().find(p => p.id === id);
+      const ok = await showConfirmModal({
+        title: 'Borrar perfil',
+        message: `¿Borrar el perfil de <b>${escapeHtml(profile ? profile.clientName : '')}</b>? Esta acción no se puede deshacer.`,
+        confirmText: 'Borrar', cancelText: 'Cancelar'
+      });
+      if(ok){ deleteProfile(id); renderProfilesPanel(); }
+    });
+  });
+}
+document.getElementById('profilesToggleBtn').addEventListener('click', () => {
+  if(profilesPanelEl){ closeProfilesPanel(); return; }
+  const btn = document.getElementById('profilesToggleBtn');
+  const rect = btn.getBoundingClientRect();
+  profilesPanelEl = document.createElement('div');
+  profilesPanelEl.className = 'profiles-dropdown';
+  profilesPanelEl.style.left = Math.min(rect.left, window.innerWidth - 300) + 'px';
+  profilesPanelEl.style.top = (rect.bottom + 8) + 'px';
+  document.body.appendChild(profilesPanelEl);
+  renderProfilesPanel();
+  setTimeout(() => document.addEventListener('mousedown', profilesOutsideClick, true), 0);
+});
+document.getElementById('saveProfileBtn').addEventListener('click', () => {
+  const btn = document.getElementById('saveProfileBtn');
+  if(!clientName.trim()){
+    showConfirmModal({
+      title: 'Falta el nombre del cliente',
+      message: 'Escribe el nombre del cliente antes de guardar el perfil.',
+      confirmText: 'Entendido', cancelText: null
+    });
+    document.getElementById('clientNameInput').focus();
+    return;
+  }
+  saveProfile();
+  saveSetupState();
+  const orig = btn.textContent;
+  btn.textContent = 'Guardado ✓';
+  setTimeout(() => { btn.textContent = orig; }, 1500);
+});
+
+// ---------------- ejercicios guardados (resultados finales) ----------------
+const EXERCISES_STORAGE_KEY = 'tabletop_exercises_v1';
+function loadSavedExercises(){
+  try{
+    const list = JSON.parse(localStorage.getItem(EXERCISES_STORAGE_KEY) || '[]');
+    return Array.isArray(list) ? list : [];
+  }catch(e){ return []; }
+}
+function saveExercisesList(list){
+  try{ localStorage.setItem(EXERCISES_STORAGE_KEY, JSON.stringify(list)); }
+  catch(e){ /* localStorage no disponible o lleno; no es crítico para seguir usando la app */ }
+}
+
 // Modal propio (reemplaza confirm()/alert() nativos del navegador, que no respetan el estilo oscuro de la app)
 function showConfirmModal({title, message, confirmText = 'Aceptar', cancelText = 'Cancelar'}){
   return new Promise(resolve => {
@@ -81,7 +245,7 @@ function showConfirmModal({title, message, confirmText = 'Aceptar', cancelText =
         <div class="modal-title" id="modalTitle">${escapeHtml(title)}</div>
         <div class="modal-message">${message}</div>
         <div class="modal-actions">
-          <button class="btn" id="modalCancelBtn">${escapeHtml(cancelText)}</button>
+          ${cancelText ? `<button class="btn" id="modalCancelBtn">${escapeHtml(cancelText)}</button>` : ''}
           <button class="btn btn-primary" id="modalConfirmBtn">${escapeHtml(confirmText)}</button>
         </div>
       </div>`;
@@ -89,7 +253,8 @@ function showConfirmModal({title, message, confirmText = 'Aceptar', cancelText =
     const cleanup = (result) => { overlay.remove(); document.removeEventListener('keydown', onKey); resolve(result); };
     function onKey(e){ if(e.key === 'Escape') cleanup(false); }
     overlay.querySelector('#modalConfirmBtn').addEventListener('click', () => cleanup(true));
-    overlay.querySelector('#modalCancelBtn').addEventListener('click', () => cleanup(false));
+    const cancelBtn = overlay.querySelector('#modalCancelBtn');
+    if(cancelBtn) cancelBtn.addEventListener('click', () => cleanup(false));
     overlay.addEventListener('mousedown', e => { if(e.target === overlay) cleanup(false); });
     document.addEventListener('keydown', onKey);
     overlay.querySelector('#modalConfirmBtn').focus();
@@ -121,12 +286,15 @@ function loadSetupState(){
     document.getElementById('facilitatorNameInput').value = facilitatorName;
     renderParticipants();
     renderScenarioCards();
+    // El borrador autoguardado no es un perfil guardado a propósito: hay que confirmar con
+    // «Guardar perfil» antes de poder comenzar el ejercicio.
+    profileSaved = false;
     updateBottomState();
   });
 }
 
-document.getElementById('clientNameInput').addEventListener('input', e => { clientName = e.target.value; saveSetupState(); });
-document.getElementById('facilitatorNameInput').addEventListener('input', e => { facilitatorName = e.target.value; saveSetupState(); });
+document.getElementById('clientNameInput').addEventListener('input', e => { clientName = e.target.value; profileSaved = false; updateBottomState(); saveSetupState(); });
+document.getElementById('facilitatorNameInput').addEventListener('input', e => { facilitatorName = e.target.value; profileSaved = false; updateBottomState(); saveSetupState(); });
 
 // ---------------- scenario cards ----------------
 const coreGridEl = document.getElementById('scenarioGridCore');
@@ -156,6 +324,7 @@ function renderScenarioCard(s, container){
   const choose = () => {
     selectedScenarioId = s.id;
     renderScenarioCards();
+    profileSaved = false;
     updateBottomState();
     saveSetupState();
   };
@@ -195,6 +364,7 @@ function renderParticipants(){
     card.querySelector('input').addEventListener('change', e => {
       participants[i].checked = e.target.checked;
       renderParticipants();
+      profileSaved = false;
       updateBottomState();
       saveSetupState();
     });
@@ -244,6 +414,8 @@ function openEditPopout(e){
     const val = input.value.trim();
     participants[i][field] = val; // permite guardar vacío para poder borrar un valor ya escrito
     renderParticipants();
+    profileSaved = false;
+    updateBottomState();
     saveSetupState();
     closePopout();
   }
@@ -269,12 +441,13 @@ function updateBottomState(){
   const scenarioName = hasScenario ? SCENARIOS.find(s => s.id === selectedScenarioId).name : null;
 
   const btn = document.getElementById('continueBtn');
-  btn.disabled = !(hasScenario && hasParticipant);
+  btn.disabled = !(hasScenario && hasParticipant && profileSaved);
   btn.textContent = 'Comenzar ejercicio →';
 
   document.getElementById('railCheck').innerHTML = [
     {done: hasScenario, label: 'Escenario', value: scenarioName || 'sin elegir'},
-    {done: hasParticipant, label: 'Participantes', value: hasParticipant ? `${activeCount} ${activeCount === 1 ? 'función' : 'funciones'}` : 'ninguna marcada'}
+    {done: hasParticipant, label: 'Participantes', value: hasParticipant ? `${activeCount} ${activeCount === 1 ? 'función' : 'funciones'}` : 'ninguna marcada'},
+    {done: profileSaved, label: 'Perfil de cliente', value: profileSaved ? 'guardado' : 'sin guardar'}
   ].map(it => `
     <div class="rc-item${it.done ? ' done' : ''}">
       <span class="rc-dot">${CHECK_ICON}</span>
@@ -297,12 +470,15 @@ loadSetupState();
 document.getElementById('continueBtn').addEventListener('click', startGame);
 
 // ---------------- export / import client config ----------------
+// Usa el mismo snapshot que los perfiles guardados (currentConfigSnapshot) para que el archivo
+// exportado y un perfil guardado en localStorage contengan siempre exactamente los mismos campos
+// — incluido el escenario elegido, que antes se quedaba fuera del archivo exportado.
 document.getElementById('exportConfigBtn').addEventListener('click', () => {
-  const allMatrices = {};
-  SCENARIOS.forEach(s => { allMatrices[s.id] = getMatrix(s.id); });
+  const snapshot = currentConfigSnapshot();
   const config = {
-    tipo: 'tabletop-config', version: 1, cliente: clientName || null, facilitador: facilitatorName || null,
-    participantes: participants, matrices: allMatrices
+    tipo: 'tabletop-config', version: 2,
+    cliente: snapshot.clientName || null, facilitador: snapshot.facilitatorName || null,
+    escenario: snapshot.selectedScenarioId, participantes: snapshot.participants, matrices: snapshot.sessionMatrices
   };
   const jsonStr = JSON.stringify(config, null, 2);
   const blob = new Blob([jsonStr], {type:'application/json'});
@@ -337,10 +513,24 @@ document.getElementById('importConfigFile').addEventListener('change', e => {
       if(config.matrices){
         Object.keys(config.matrices).forEach(sid => { sessionMatrices[sid] = {...config.matrices[sid]}; });
       }
+      // antes el archivo exportado no incluía el escenario elegido, así que importarlo
+      // dejaba la selección de escenario intacta en vez de restaurar la del archivo
+      selectedScenarioId = config.escenario || null;
+      renderScenarioCards();
+      profileSaved = false; // hay que revisar y guardar el perfil explícitamente antes de continuar
       updateBottomState();
-      alert('Configuración importada correctamente' + (clientName ? ` para ${clientName}` : '') + '.');
+      saveSetupState();
+      showConfirmModal({
+        title: 'Configuración importada',
+        message: `Se importó la configuración${clientName ? ` de <b>${escapeHtml(clientName)}</b>` : ''}. Revisa los datos y presiona «Guardar perfil» antes de comenzar el ejercicio.`,
+        confirmText: 'Entendido', cancelText: null
+      });
     } catch(err){
-      alert('El archivo no es una configuración válida de esta herramienta.');
+      showConfirmModal({
+        title: 'Archivo inválido',
+        message: 'El archivo no es una configuración válida de esta herramienta.',
+        confirmText: 'Entendido', cancelText: null
+      });
     }
   };
   reader.readAsText(file);
@@ -1140,6 +1330,22 @@ function showResults(){
       btn.textContent = 'No se pudo copiar'; setTimeout(() => btn.textContent = orig, 2000);
     });
   };
+
+  // «Guardar ejercicio»: persiste el resultado en localStorage (no depende de que el facilitador
+  // recuerde descargar el JSON) y con eso da por cerrado el ejercicio, volviendo a la configuración.
+  document.getElementById('saveExerciseBtn').onclick = () => {
+    const record = buildResultsExport();
+    record.id = `exercise_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    record.guardado_en = new Date().toISOString();
+    const list = loadSavedExercises();
+    list.push(record);
+    saveExercisesList(list);
+    showConfirmModal({
+      title: 'Ejercicio guardado',
+      message: `El resultado de <b>${escapeHtml(scenarioMeta.name)}</b>${clientName ? ` para <b>${escapeHtml(clientName)}</b>` : ''} quedó guardado en este navegador (${list.length} ejercicio${list.length === 1 ? '' : 's'} guardado${list.length === 1 ? '' : 's'} en total).`,
+      confirmText: 'Cerrar y volver a la configuración', cancelText: null
+    }).then(closeExerciseToSetup);
+  };
 }
 
 document.getElementById('goToReportBtn').addEventListener('click', () => {
@@ -1154,14 +1360,15 @@ document.getElementById('backToResultsBtn').addEventListener('click', () => {
   window.scrollTo({top: 0, behavior: 'smooth'});
 });
 
-document.getElementById('backFromResultsBtn').addEventListener('click', () => {
+function closeExerciseToSetup(){
   document.getElementById('screen-report').classList.add('hidden');
   document.getElementById('screen-setup').classList.remove('hidden');
   document.getElementById('continueBtn').classList.remove('hidden');
   document.getElementById('statusLabel').textContent = 'CONFIGURACIÓN';
   document.body.classList.add('setup-mode');
   updateBottomState();
-});
+}
+document.getElementById('backFromResultsBtn').addEventListener('click', closeExerciseToSetup);
 
 function backToSetup(){
   hideExplain();
