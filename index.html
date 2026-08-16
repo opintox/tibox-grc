@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TIBOX · Configuración</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+      <defs>
+        <linearGradient id="tiboxTop" x1="15" y1="15" x2="85" y2="15" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#FBBB03"/>
+          <stop offset="1" stop-color="#F3E006"/>
+        </linearGradient>
+        <linearGradient id="tiboxLeft" x1="15" y1="27" x2="15" y2="90" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#0FC7F6"/>
+          <stop offset="1" stop-color="#0B8FD6"/>
+        </linearGradient>
+        <linearGradient id="tiboxRight" x1="50" y1="49" x2="88" y2="70" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#FF8A3D"/>
+          <stop offset="1" stop-color="#F0401D"/>
+        </linearGradient>
+      </defs>
+</svg>
+
+
+<div class="topbar">
+  <div class="brand">
+    <svg width="26" height="26" viewBox="0 0 100 100" aria-label="TIBOX" role="img" style="flex-shrink:0;">
+      <path d="M48.5 6 82 26.3a2.3 2.3 0 0 1 0 3.9L48.5 50.6a2.3 2.3 0 0 1-2.4 0L12.6 30.2a2.3 2.3 0 0 1 0-3.9L46.1 6a2.3 2.3 0 0 1 2.4 0Z" fill="url(#tiboxTop)"/>
+      <path d="M10 31.6 42.5 51v34.7a2.3 2.3 0 0 1-3.5 2L8.3 69.9a2.3 2.3 0 0 1-1.1-2V33.4a2.3 2.3 0 0 1 2.8-1.8Z" fill="url(#tiboxLeft)"/>
+      <path d="M91.7 31.6 59.2 51v34.7a2.3 2.3 0 0 0 3.5 2l30.7-17.8a2.3 2.3 0 0 0 1.1-2V33.4a2.3 2.3 0 0 0-2.8-1.8Z" fill="url(#tiboxRight)"/>
+    </svg>
+    <span class="wordmark">TIBOX</span>
+    <span class="divider"></span>
+    <h1>Configuración del ejercicio</h1>
+  </div>
+  <div class="topbar-right">
+    <div class="status"><span class="dot"></span><span id="statusLabel">CONFIGURACIÓN</span></div>
+  </div>
+</div>
+
+<div class="explain-pop hidden" id="explainPop" role="status" aria-live="polite">
+  <div class="explain-pop-head">
+    <span class="eyebrow" style="margin-bottom:0;">Explicación</span>
+    <button class="explain-pop-close" id="explainPopClose" aria-label="Cerrar explicación">✕</button>
+  </div>
+  <div id="explanationContent"></div>
+  <div class="explain-foot" id="explainFoot"></div>
+</div>
+
+<div class="wrap">
+
+  <div id="screen-setup">
+    <div class="setup-shell">
+
+      <aside class="rail">
+        <div class="rail-brand">
+          <svg width="30" height="30" viewBox="0 0 100 100" aria-label="TIBOX" role="img" style="flex-shrink:0;">
+            <path d="M48.5 6 82 26.3a2.3 2.3 0 0 1 0 3.9L48.5 50.6a2.3 2.3 0 0 1-2.4 0L12.6 30.2a2.3 2.3 0 0 1 0-3.9L46.1 6a2.3 2.3 0 0 1 2.4 0Z" fill="url(#tiboxTop)"/>
+            <path d="M10 31.6 42.5 51v34.7a2.3 2.3 0 0 1-3.5 2L8.3 69.9a2.3 2.3 0 0 1-1.1-2V33.4a2.3 2.3 0 0 1 2.8-1.8Z" fill="url(#tiboxLeft)"/>
+            <path d="M91.7 31.6 59.2 51v34.7a2.3 2.3 0 0 0 3.5 2l30.7-17.8a2.3 2.3 0 0 0 1.1-2V33.4a2.3 2.3 0 0 0-2.8-1.8Z" fill="url(#tiboxRight)"/>
+          </svg>
+          <span class="wordmark">TIBOX</span>
+        </div>
+        <div class="rail-group">
+          <span class="rail-status"><span class="dot"></span>Configuración del ejercicio</span>
+          <h1 class="rail-title">Ensaya el incidente <span class="accent">antes de que ocurra</span></h1>
+          <p class="rail-sub">El equipo decide quién actúa y qué hace en cada etapa de la respuesta, sin tocar ningún sistema. Al cerrar obtienes un informe ejecutivo con los puntos a reforzar.</p>
+          <div class="rail-stats">
+            <div class="rail-stat"><b>10</b><span>escenarios</span></div>
+            <div class="rail-stat"><b>5</b><span>etapas</span></div>
+            <div class="rail-stat"><b>6</b><span>funciones</span></div>
+          </div>
+        </div>
+
+        <div class="rail-group rail-fields">
+          <div class="field-row" style="margin-bottom:0;">
+            <label>Nombre del cliente</label>
+            <input type="text" id="clientNameInput" placeholder="Ej: Quintero Energía">
+          </div>
+          <div class="field-row" style="margin-bottom:0;">
+            <label>Facilitador</label>
+            <input type="text" id="facilitatorNameInput" placeholder="Quién conduce la sesión">
+          </div>
+          <div class="rail-actions">
+            <button class="btn btn-sm" id="exportConfigBtn">Exportar</button>
+            <button class="btn btn-sm" id="importConfigBtn">Importar</button>
+            <input type="file" id="importConfigFile" accept="application/json" class="hidden">
+          </div>
+        </div>
+
+        <div class="rail-group">
+          <details class="rail-note">
+            <summary>Antes de comenzar</summary>
+            <div class="rail-note-body">
+              <p><b>Un tabletop es un ejercicio de simulación</b>: el equipo discute, en base a un escenario simulado de ciberseguridad, cómo respondería en la vida real.</p>
+              <p>Elige un escenario, define las funciones participantes y, durante la sesión, identifica quién debe actuar y qué acción corresponde.</p>
+              <p>El contador parte con la primera respuesta. Los errores y el tiempo empleado influyen en el puntaje final.</p>
+            </div>
+          </details>
+        </div>
+
+        <div class="rail-spacer"></div>
+
+        <div class="rail-foot">
+          <div class="rail-summary">
+            <div class="rail-check" id="railCheck"></div>
+            <button class="btn-cta" id="continueBtn" disabled>Comenzar ejercicio →</button>
+          </div>
+        </div>
+      </aside>
+
+      <main class="work">
+
+        <div class="panel section-block" id="scenarioBlock">
+          <div class="setup-section-head">
+            <h2 class="section-title">Tipo de ataque</h2>
+            <p class="section-sub">Elige el escenario que se va a discutir en la sesión.</p>
+            <span class="setup-badge" id="scenarioBadge">Sin escenario</span>
+          </div>
+          <div class="scn-grid" id="scenarioGridCore"></div>
+
+        </div>
+
+        <div class="panel section-block" id="participantsBlock">
+          <div class="setup-section-head">
+            <h2 class="section-title">Participantes</h2>
+            <p class="section-sub">Indica la empresa de cada función y marca quién participará en esta sesión.</p>
+            <span class="setup-badge" id="participantsBadge">0 activas</span>
+          </div>
+          <div class="participants-grid" id="participantsBody"></div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <div id="screen-game" class="hidden">
+
+    <!-- Cabecera única del ejercicio: reemplaza la barra superior, la línea de sesión,
+         el stepper alto, la barra de progreso y la barra de acciones. Una sola fila. -->
+    <header class="game-head">
+      <div class="gh-left">
+        <svg width="22" height="22" viewBox="0 0 100 100" aria-hidden="true" style="flex-shrink:0;">
+          <path d="M48.5 6 82 26.3a2.3 2.3 0 0 1 0 3.9L48.5 50.6a2.3 2.3 0 0 1-2.4 0L12.6 30.2a2.3 2.3 0 0 1 0-3.9L46.1 6a2.3 2.3 0 0 1 2.4 0Z" fill="url(#tiboxTop)"/>
+          <path d="M10 31.6 42.5 51v34.7a2.3 2.3 0 0 1-3.5 2L8.3 69.9a2.3 2.3 0 0 1-1.1-2V33.4a2.3 2.3 0 0 1 2.8-1.8Z" fill="url(#tiboxLeft)"/>
+          <path d="M91.7 31.6 59.2 51v34.7a2.3 2.3 0 0 0 3.5 2l30.7-17.8a2.3 2.3 0 0 0 1.1-2V33.4a2.3 2.3 0 0 0-2.8-1.8Z" fill="url(#tiboxRight)"/>
+        </svg>
+        <span class="gh-scenario" id="gameSessionBadge">Ejercicio</span>
+      </div>
+
+      <div class="gh-steps" id="gameStepper"></div>
+
+      <div class="gh-right">
+        <span class="gh-count"><b id="globalProgressText">1 / 1</b><span id="globalProgressRemaining"></span></span>
+        <span class="game-timer" id="gameTimer">00:00</span>
+        <button class="btn btn-sm" id="prevQuestionBtn" disabled title="Pregunta anterior" aria-label="Pregunta anterior">←</button>
+        <button class="btn btn-primary btn-sm" id="restartGameBtn" disabled>Siguiente →</button>
+        <button class="gh-exit" id="backToSetupBtn" title="Volver a la configuración" aria-label="Volver a la configuración">✕</button>
+      </div>
+
+      <div class="gh-bar"><div class="gh-bar-fill" id="globalProgressFill" style="width:0%"></div></div>
+    </header>
+
+    <div class="game-layout grid4">
+      <div class="panel story-panel grid4-cell" id="storyPanel">
+        <div class="eyebrow" id="storyScenarioLabel">ESCENARIO</div>
+        <p class="ops-context" id="opsContext"></p>
+        <p class="story-text" id="storyText">—</p>
+      </div>
+
+      <div class="panel grid4-cell" id="askPanel"></div>
+
+      <div class="panel grid4-cell" id="actionPanel">
+        <div id="charPanel">
+          <div class="eyebrow">¿Quién debe actuar? — selecciona la función que ejecuta esta acción</div>
+          <div class="char-grid" id="charGrid"></div>
+        </div>
+
+        <div class="hidden" id="answerBlock">
+          <div class="eyebrow">Actúa como <span id="answeringAs"></span></div>
+          <div class="answer-options" id="answerOptions"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div id="screen-results" class="hidden">
+    <div class="panel section-block results-panel results-enter" style="animation-delay:0s;">
+      <div class="res-cols">
+
+        <div class="results-main">
+          <div class="eyebrow">Errores por etapa</div>
+          <div id="resStageChart"></div>
+
+          <div class="results-sep"></div>
+          <p id="resultsMessage" style="font-size:var(--fs-sm); color:var(--muted); line-height:1.6; margin:0 0 16px;"></p>
+          <div class="results-actions">
+            <button class="btn" id="downloadResultsBtn">Descargar resultados (JSON)</button>
+            <button class="btn" id="copyResultsBtn">Copiar al portapapeles</button>
+            <button class="btn btn-primary" id="goToReportBtn">Ver informe ejecutivo →</button>
+          </div>
+        </div>
+
+        <aside class="results-side">
+          <div class="grade-badge" id="gradeBadge">
+            <span class="grade-pct" id="gradePct">—</span>
+            <span class="grade-label" id="gradeLabel">—</span><span class="grade-meta" id="gradeMeta">—</span>
+          </div>
+
+          <div class="donut-result-wrap">
+            <div class="donut-result">
+              <svg width="132" height="132" viewBox="0 0 132 132">
+                <circle cx="66" cy="66" r="54" fill="none" stroke="var(--panel-3)" stroke-width="16"/>
+                <circle id="resDonutCorrect" cx="66" cy="66" r="54" fill="none" stroke="var(--green)" stroke-width="16" stroke-dasharray="0 340" transform="rotate(-90 66 66)"/>
+                <circle id="resDonutAlt" cx="66" cy="66" r="54" fill="none" stroke="var(--amber)" stroke-width="16" stroke-dasharray="0 340" transform="rotate(-90 66 66)"/>
+                <circle id="resDonutChar" cx="66" cy="66" r="54" fill="none" stroke="var(--red)" stroke-width="16" stroke-dasharray="0 340" transform="rotate(-90 66 66)"/>
+              </svg>
+              <div class="donut-result-center"><b id="resDonutPct">0%</b><span>precisión</span></div>
+            </div>
+            <div class="donut-result-legend">
+              <div class="ring-legend-item"><span class="ring-dot" style="background:var(--green);"></span>Respondidas<b id="resTotal">0</b></div>
+              <div class="ring-legend-item"><span class="ring-dot" style="background:var(--red);"></span>Errores de función<b id="resWrongChars">0</b></div>
+              <div class="ring-legend-item"><span class="ring-dot" style="background:var(--amber);"></span>Errores de respuesta<b id="resWrongAnswers">0</b></div>
+              <div class="donut-result-meta">Duración total <b id="resDuration">00:00</b></div>
+            </div>
+          </div>
+        </aside>
+
+      </div>
+    </div>
+  </div>
+
+  <div id="screen-report" class="hidden">
+    <div class="panel section-block report-panel results-enter" style="animation-delay:0s;">
+      <div class="setup-section-head">
+        <h2 class="section-title" id="reportScenarioName" style="margin-bottom:0;">Informe ejecutivo</h2>
+        <p class="section-sub">Aspectos a mejorar detectados durante el ejercicio.</p>
+        <button class="btn btn-sm" id="backToResultsBtn">← Volver a resultados</button>
+      </div>
+      <div id="executiveReport"></div>
+    </div>
+
+    <div class="panel section-block results-enter" style="animation-delay:.16s;">
+      <div class="eyebrow">Acta del ejercicio</div>
+      <div class="acta-grid">
+        <div class="acta-field"><span class="acta-label">Fecha</span><span class="acta-value" id="actaFecha">—</span></div>
+        <div class="acta-field"><span class="acta-label">Facilitador</span><span class="acta-value" id="actaFacilitador">—</span></div>
+        <div class="acta-field"><span class="acta-label">Cliente</span><span class="acta-value" id="actaCliente">—</span></div>
+        <div class="acta-field"><span class="acta-label">Participantes confirmados</span><span class="acta-value" id="actaParticipantes">—</span></div>
+      </div>
+      <div class="field-row" style="margin-top:16px; margin-bottom:0;">
+        <label>Notas del facilitador (opcional)</label>
+        <textarea id="actaNotes" placeholder="Observaciones adicionales, contexto de la sesión, acuerdos verbales..." style="min-height:80px;"></textarea>
+      </div>
+      <div class="results-actions" style="margin-top:14px;">
+        <button class="btn btn-primary" id="downloadResultsBtnBottom">Descargar acta completa (JSON)</button>
+        <button class="btn" id="backFromResultsBtn">Volver a la configuración</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="js/data/catalogo.js"></script>
+<script src="js/data/escenarios.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>
