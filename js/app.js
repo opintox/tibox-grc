@@ -478,26 +478,7 @@ document.getElementById('introNextBtn').addEventListener('click', () => {
   document.body.classList.add('setup-mode');
 });
 
-// ---------------- export / import client config ----------------
-// Usa el mismo snapshot que los perfiles guardados (currentConfigSnapshot) para que el archivo
-// exportado y un perfil guardado en localStorage contengan siempre exactamente los mismos campos
-// — incluido el escenario elegido, que antes se quedaba fuera del archivo exportado.
-document.getElementById('exportConfigBtn').addEventListener('click', () => {
-  const snapshot = currentConfigSnapshot();
-  const config = {
-    tipo: 'tabletop-config', version: 2,
-    cliente: snapshot.clientName || null, facilitador: snapshot.facilitatorName || null,
-    escenario: snapshot.selectedScenarioId, participantes: snapshot.participants, matrices: snapshot.sessionMatrices
-  };
-  const jsonStr = JSON.stringify(config, null, 2);
-  const blob = new Blob([jsonStr], {type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = `tabletop-config_${(clientName || 'cliente').toLowerCase().replace(/[^a-z0-9]+/g,'_')}.json`;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-});
-
+// ---------------- import client config ----------------
 document.getElementById('importConfigBtn').addEventListener('click', () => {
   document.getElementById('importConfigFile').click();
 });
