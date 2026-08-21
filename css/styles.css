@@ -448,6 +448,28 @@
     .intro-shell{padding:26px 20px 5vh;}
     .intro-hero-title{font-size:var(--fs-2xl);}
   }
+  @media (min-width:861px){
+    html:has(body.intro-mode), body.intro-mode{overflow:hidden;}
+    .intro-hero-band{padding:24px clamp(20px, 4vw, 64px) 20px;}
+    .intro-shell{gap:16px; padding:16px clamp(20px, 3vw, 48px) 18px;}
+    .intro-panel{padding:18px;}
+    .intro-panel .section-title{font-size:var(--fs-lg); margin-bottom:8px;}
+    .intro-panel .section-sub{font-size:var(--fs-xs); line-height:1.4;}
+    .rule-steps{gap:10px;}
+    .rule-step{gap:10px;}
+    .rule-step-num{width:26px; height:26px; font-size:var(--fs-xs);}
+    .rule-step-title{font-size:var(--fs-sm); margin-bottom:2px;}
+    .rule-step-desc{font-size:var(--fs-xs); line-height:1.35;}
+    .intro-rail-mount > .rail{padding:18px 18px 0;}
+    .intro-rail-mount .rail-brand{margin-bottom:8px;}
+    .intro-rail-mount .rail-group + .rail-group{margin-top:14px;}
+    .intro-rail-mount .rail-title{font-size:var(--fs-xl);}
+    .intro-rail-mount .rail-sub{font-size:var(--fs-3xs); line-height:1.4;}
+    .intro-rail-mount .rail-fields{gap:8px;}
+    .intro-rail-mount .rail-summary{padding:10px; min-height:0;}
+    .intro-rail-mount .rail-check{gap:4px; margin-bottom:8px;}
+    .intro-rail-mount #continueBtn{padding:10px 14px;}
+  }
 
   .intro-desc-text{font-size:var(--fs-sm); line-height:1.6; color:var(--muted); margin:0 0 10px;}
   .intro-desc-text:last-child{margin-bottom:0;}
