@@ -450,7 +450,12 @@
   }
   @media (min-width:861px){
     html:has(body.intro-mode), body.intro-mode{overflow:hidden;}
-    .intro-hero-band{padding:24px clamp(20px, 4vw, 64px) 20px;}
+    .intro-hero-band{padding:18px clamp(20px, 4vw, 64px);}
+    .intro-hero-row{align-items:center;}
+    .intro-hero{display:grid; grid-template-columns:auto minmax(0,1fr); column-gap:24px; row-gap:4px; width:100%;}
+    .intro-hero .logo-home{grid-row:1 / span 2; align-self:center;}
+    .intro-hero-title{grid-column:2; font-size:var(--fs-2xl); margin:0;}
+    .intro-hero-sub{grid-column:2; font-size:var(--fs-xs); line-height:1.4;}
     .intro-shell{gap:16px; padding:16px clamp(20px, 3vw, 48px) 18px;}
     .intro-panel{padding:18px;}
     .intro-panel .section-title{font-size:var(--fs-lg); margin-bottom:8px;}
