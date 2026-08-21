@@ -48,6 +48,9 @@
   @media (max-width:480px){.topbar{padding:10px 14px;} .brand h1, .brand .divider{display:none;}}
   .brand{display:flex; align-items:center; gap:12px;}
   .tibox-logo{display:block; width:auto; flex-shrink:0;}
+  .logo-home{display:inline-flex; align-items:center; padding:0; border:0; background:none; cursor:pointer; border-radius:5px;}
+  .logo-home:focus-visible{outline:2px solid var(--blue); outline-offset:4px;}
+  .logo-home:hover{filter:brightness(1.12);}
   .brand .divider{width:1px; height:16px; background:rgba(255,255,255,0.18); flex-shrink:0;}
   .brand .mark{font-family:var(--mono); font-weight:700; letter-spacing:0.14em; font-size:var(--fs-xs); color:var(--muted); border:1px solid var(--border); border-radius:3px; padding:3px 7px;}
   .brand h1{font-family:var(--display); font-size:var(--fs-sm); font-weight:600; letter-spacing:0.01em; margin:0; text-transform:uppercase; color:var(--muted);}
@@ -386,11 +389,8 @@
       radial-gradient(100% 50% at 90% 100%, rgba(124,140,240,0.16), transparent 64%),
       linear-gradient(180deg,#0A1226 0%,#070E1E 100%);
   }
-  /* Fila del banner: el bloque de texto a la izquierda y el CTA «Siguiente» arriba a la
-     derecha, ambos alineados al tope de la fila. */
-  .intro-hero-row{display:flex; align-items:flex-start; justify-content:space-between; gap:24px; max-width:1800px; margin:0 auto;}
+    .intro-hero-row{display:flex; align-items:stretch; max-width:1800px; margin:0 auto;}
   .intro-hero{display:flex; flex-direction:column; align-items:flex-start; gap:12px; min-width:0;}
-  .intro-hero-row .btn-cta{flex-shrink:0;}
   .intro-hero-title{font-family:var(--display); font-weight:800; font-size:var(--fs-3xl); line-height:1.12; letter-spacing:-0.02em; color:#fff; margin:4px 0 0;}
   .intro-hero-title .accent{background:linear-gradient(90deg,#0FC7F6,#7C8CF0); -webkit-background-clip:text; background-clip:text; color:transparent;}
   .intro-hero-sub{font-size:var(--fs-sm); line-height:1.6; color:var(--muted); margin:0; max-width:52ch;}
@@ -399,9 +399,20 @@
      El padding inferior deja un respiro del 5% del alto de pantalla tras la última tarjeta,
      ya que el CTA se movió al banner y ya no ocupa ese espacio. */
   .intro-shell{
-    display:grid; grid-template-columns:1fr 1fr; align-items:start; gap:20px;
+    display:grid; grid-template-columns:var(--rail-w) repeat(2,minmax(0,1fr)); align-items:stretch; gap:20px;
     max-width:1800px; margin:0 auto; padding:36px clamp(20px, 3vw, 48px) 5vh;
   }
+  .intro-rail-mount{grid-column:1; grid-row:1; min-width:0;}
+  .intro-rail-mount > .rail{
+    position:relative; height:100%; min-height:0; border:1px solid var(--border); border-radius:18px;
+    padding:var(--sp-6) var(--sp-6) 0; overflow-y:auto;
+  }
+  .intro-rail-mount .rail-foot{position:static;}
+  .intro-rail-mount .rail-spacer{display:none;}
+  .intro-content{display:contents;}
+  .intro-content > .panel{grid-column:2; grid-row:1; height:100%; margin-bottom:0;}
+  .intro-content > .intro-left-column{grid-column:3; grid-row:1;}
+  .intro-left-column{display:flex; flex-direction:column; gap:16px; min-width:0;}
   .intro-panel .section-title{margin-bottom:12px;}
   /* Las tarjetas ocupan toda su columna (más ancha ahora), pero el texto se limita a una
      medida legible en vez de estirarse de borde a borde de la tarjeta. */
@@ -415,8 +426,21 @@
   }
   .rule-step-title{font-family:var(--display); font-weight:700; font-size:var(--fs-md); color:var(--text); margin-bottom:3px;}
   .rule-step-desc{font-size:var(--fs-sm); line-height:1.55; color:var(--muted); margin:0; max-width:58ch;}
+  .playbook-panel{margin-bottom:0;}
+  .playbook-actions{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+  .playbook-file{
+    display:flex; align-items:center; min-width:0; flex:1 1 220px; min-height:40px; padding:9px 12px;
+    border:1px dashed var(--border); border-radius:8px; background:var(--panel-2); color:var(--muted);
+    font-size:var(--fs-xs); cursor:pointer; transition:border-color .15s, color .15s, background .15s;
+  }
+  .playbook-file:hover{border-color:var(--blue); color:var(--text); background:var(--blue-dim);}
+  .playbook-file span{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .playbook-file input{position:absolute; width:1px; height:1px; opacity:0; pointer-events:none;}
+  .playbook-status{min-height:1.4em; color:var(--green); font-size:var(--fs-xs); line-height:1.4; margin:10px 0 0;}
   @media (max-width:860px){
     .intro-shell{grid-template-columns:1fr;}
+    .intro-rail-mount,.intro-content > .panel,.intro-content > .intro-left-column{grid-column:1; grid-row:auto;}
+    .intro-content > .panel,.intro-content > .intro-left-column{height:auto;}
   }
   @media (max-width:640px){
     .intro-hero-band{padding:36px 20px 30px;}
@@ -873,7 +897,7 @@
      disponible y el scroll vive dentro del área de trabajo. */
   body.setup-mode{overflow:hidden;}
 
-  .setup-shell{display:grid; grid-template-columns:var(--rail-w) minmax(0,1fr); height:100dvh; overflow:hidden;}
+  .setup-shell{display:grid; grid-template-columns:minmax(0,1fr); height:100dvh; overflow:hidden;}
 
   .rail{
     position:sticky; top:0; height:100dvh; overflow-y:auto; z-index:30;
@@ -945,7 +969,7 @@
   /* El resumen y el CTA viven dentro de una tarjeta con padding propio: así ni el
      texto de la checklist ni el botón quedan al filo del riel. */
   .rail-summary{
-    border:1px solid var(--border); border-radius:var(--radius-md); padding:var(--sp-3);
+    border:1px solid var(--border); border-radius:var(--radius-md); padding:var(--sp-3); min-height:168px;
     background:linear-gradient(180deg,#0C1428,#0A1122);
   }
   .rail-check{display:flex; flex-direction:column; gap:6px; margin-bottom:var(--sp-3);}
@@ -978,6 +1002,12 @@
   .work::-webkit-scrollbar{width:8px;}
   .work::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16); border-radius:4px;}
   .work .section-block{margin-bottom:0;}
+  .setup-actions{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    margin-top:0; padding:4px 0 0;
+  }
+  .setup-actions .btn-cta{min-width:150px; justify-content:center;}
+  #setupNextBtn:disabled{opacity:.35; cursor:not-allowed; transform:none; filter:none;}
 
   @media (max-width:1080px){
     body.setup-mode{overflow:auto;}

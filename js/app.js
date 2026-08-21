@@ -439,10 +439,14 @@ function updateBottomState(){
   const activeCount = participants.filter(p => p.checked).length;
   const hasParticipant = activeCount > 0;
   const scenarioName = hasScenario ? SCENARIOS.find(s => s.id === selectedScenarioId).name : null;
+  const isIntro = document.body.classList.contains('intro-mode');
 
   const btn = document.getElementById('continueBtn');
-  btn.disabled = !(hasScenario && hasParticipant && profileSaved);
+  const canStart = hasScenario && hasParticipant;
+  btn.disabled = isIntro ? !profileSaved : !canStart;
   btn.textContent = 'Comenzar ejercicio →';
+  const setupNextBtn = document.getElementById('setupNextBtn');
+  if(setupNextBtn) setupNextBtn.disabled = !canStart;
 
   document.getElementById('railCheck').innerHTML = [
     {done: hasScenario, label: 'Escenario', value: scenarioName || 'sin elegir'},
@@ -465,66 +469,62 @@ function updateBottomState(){
 document.body.classList.add('intro-mode');
 updateBottomState();
 
+function goHome(){
+  hideExplain();
+  if(gameState.timerInterval) clearInterval(gameState.timerInterval);
+  ['screen-setup', 'screen-game', 'screen-results', 'screen-report'].forEach(id => {
+    const screen = document.getElementById(id);
+    if(screen) screen.classList.add('hidden');
+  });
+  document.getElementById('screen-intro').classList.remove('hidden');
+  document.getElementById('introRailMount').appendChild(document.getElementById('setupRail'));
+  document.body.classList.remove('setup-mode', 'game-mode');
+  document.body.classList.add('intro-mode');
+  document.getElementById('statusLabel').textContent = 'CONFIGURACIÓN';
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+document.querySelectorAll('.logo-home').forEach(logo => logo.addEventListener('click', goHome));
+
+document.getElementById('introRailMount').appendChild(document.getElementById('setupRail'));
+
 // Intenta restaurar configuración guardada de una sesión anterior (si existe). El modal de
 // confirmación se encarga de re-pintar la UI si el usuario decide restaurarla.
 loadSetupState();
 
-document.getElementById('continueBtn').addEventListener('click', startGame);
-
-document.getElementById('introNextBtn').addEventListener('click', () => {
+function enterSetup(){
   document.getElementById('screen-intro').classList.add('hidden');
   document.getElementById('screen-setup').classList.remove('hidden');
+  document.getElementById('continueBtn').classList.add('hidden');
   document.body.classList.remove('intro-mode');
   document.body.classList.add('setup-mode');
+  updateBottomState();
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+document.getElementById('continueBtn').addEventListener('click', enterSetup);
+document.getElementById('setupBackBtn').addEventListener('click', goHome);
+document.getElementById('setupNextBtn').addEventListener('click', startGame);
+
+const playbookFileInput = document.getElementById('playbookFile');
+const playbookFileName = document.getElementById('playbookFileName');
+const playbookStatus = document.getElementById('playbookStatus');
+
+playbookFileInput.addEventListener('change', () => {
+  const file = playbookFileInput.files[0];
+  playbookFileName.textContent = file ? file.name : 'Ningún archivo seleccionado';
+  playbookStatus.textContent = '';
 });
 
-// ---------------- import client config ----------------
-document.getElementById('importConfigBtn').addEventListener('click', () => {
-  document.getElementById('importConfigFile').click();
-});
-document.getElementById('importConfigFile').addEventListener('change', e => {
-  const file = e.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    try {
-      const config = JSON.parse(ev.target.result);
-      clientName = config.cliente || '';
-      document.getElementById('clientNameInput').value = clientName;
-      facilitatorName = config.facilitador || '';
-      document.getElementById('facilitatorNameInput').value = facilitatorName;
-      if(Array.isArray(config.participantes)){
-        participants = config.participantes.map(p => ({
-          roleKey: p.roleKey, empresa: p.empresa || '', checked: p.checked !== false
-        }));
-        enforceMandatoryRoles();
-        renderParticipants();
-      }
-      if(config.matrices){
-        Object.keys(config.matrices).forEach(sid => { sessionMatrices[sid] = {...config.matrices[sid]}; });
-      }
-      // antes el archivo exportado no incluía el escenario elegido, así que importarlo
-      // dejaba la selección de escenario intacta en vez de restaurar la del archivo
-      selectedScenarioId = config.escenario || null;
-      renderScenarioCards();
-      profileSaved = false; // hay que revisar y guardar el perfil explícitamente antes de continuar
-      updateBottomState();
-      saveSetupState();
-      showConfirmModal({
-        title: 'Configuración importada',
-        message: `Se importó la configuración${clientName ? ` de <b>${escapeHtml(clientName)}</b>` : ''}. Revisa los datos y presiona «Guardar perfil» antes de comenzar el ejercicio.`,
-        confirmText: 'Entendido', cancelText: null
-      });
-    } catch(err){
-      showConfirmModal({
-        title: 'Archivo inválido',
-        message: 'El archivo no es una configuración válida de esta herramienta.',
-        confirmText: 'Entendido', cancelText: null
-      });
-    }
-  };
-  reader.readAsText(file);
-  e.target.value = '';
+document.getElementById('loadPlaybookBtn').addEventListener('click', () => {
+  const file = playbookFileInput.files[0];
+  if(!file){
+    playbookStatus.textContent = 'Selecciona un archivo para cargarlo.';
+    playbookStatus.style.color = 'var(--amber)';
+    return;
+  }
+  playbookStatus.style.color = 'var(--green)';
+  playbookStatus.textContent = `Playbook cargado: ${file.name}`;
 });
 
 // ---------------- game screen ----------------
