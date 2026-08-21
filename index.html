@@ -12,7 +12,7 @@
 
 <div class="topbar">
   <div class="brand">
-    <img class="tibox-logo" src="assets/logo-tibox-ok.png" alt="TIBOX" style="height:22px;">
+    <button class="logo-home" type="button" aria-label="Ir al inicio"><img class="tibox-logo" src="assets/logo-tibox-ok.png" alt="TIBOX" style="height:22px;"></button>
     <span class="divider"></span>
     <h1>Configuración del ejercicio</h1>
   </div>
@@ -34,21 +34,38 @@
   <div class="intro-hero-band">
     <div class="intro-hero-row">
       <div class="intro-hero">
-        <img class="tibox-logo" src="assets/logo-tibox-ok.png" alt="TIBOX" style="height:44px;">
+        <button class="logo-home" type="button" aria-label="Ir al inicio"><img class="tibox-logo" src="assets/logo-tibox-ok.png" alt="TIBOX" style="height:44px;"></button>
         <span class="rail-status"><span class="dot"></span>Simulación de respuesta a incidentes</span>
         <h1 class="intro-hero-title">Bienvenido al <span class="accent">tabletop</span></h1>
         <p class="intro-hero-sub">Antes de empezar, esto es lo que necesitas saber — léelo como las reglas de un juego. Toma un par de minutos.</p>
       </div>
-      <button class="btn-cta" id="introNextBtn">Siguiente →</button>
     </div>
   </div>
 
   <div class="intro-shell">
+    <div class="intro-rail-mount" id="introRailMount"></div>
+    <div class="intro-content">
 
-    <div class="panel section-block intro-panel">
-      <div class="eyebrow">Qué es</div>
-      <h2 class="section-title">Un ensayo, no un examen</h2>
-      <p class="section-sub" style="margin-bottom:0;">Un <b>tabletop</b> es un ejercicio de simulación: el equipo se sienta a discutir, sobre un caso de ciberseguridad inventado pero realista, cómo respondería si pasara de verdad. Nada de lo que ocurre acá toca sistemas reales — es puro criterio y coordinación entre las personas que tendrían que actuar en un incidente de verdad. No hay que saberse el procedimiento de memoria: para eso está el ejercicio.</p>
+    <div class="intro-left-column">
+      <div class="panel section-block intro-panel">
+        <div class="eyebrow">Qué es</div>
+        <h2 class="section-title">Un ensayo, no un examen</h2>
+        <p class="section-sub" style="margin-bottom:0;">Un <b>tabletop</b> es un ejercicio de simulación: el equipo se sienta a discutir, sobre un caso de ciberseguridad inventado pero realista, cómo respondería si pasara de verdad. Nada de lo que ocurre acá toca sistemas reales — es puro criterio y coordinación entre las personas que tendrían que actuar en un incidente de verdad. No hay que saberse el procedimiento de memoria: para eso está el ejercicio.</p>
+      </div>
+
+      <div class="panel section-block intro-panel playbook-panel">
+        <div class="eyebrow">Material opcional</div>
+        <h2 class="section-title">Si dispone de un playbook, cargar aquí</h2>
+        <p class="section-sub">Puedes adjuntar el material de referencia que usarán durante la simulación.</p>
+        <div class="playbook-actions">
+          <label class="playbook-file">
+            <span id="playbookFileName">Ningún archivo seleccionado</span>
+            <input type="file" id="playbookFile" accept=".json,.pdf,.doc,.docx,.txt,application/json,application/pdf,text/plain">
+          </label>
+          <button class="btn btn-primary" id="loadPlaybookBtn" type="button">Cargar playbook</button>
+        </div>
+        <p class="playbook-status" id="playbookStatus" role="status" aria-live="polite"></p>
+      </div>
     </div>
 
     <div class="panel section-block intro-panel">
@@ -93,6 +110,8 @@
       </div>
     </div>
 
+    </div>
+
   </div>
 </div>
 
@@ -101,9 +120,9 @@
   <div id="screen-setup" class="hidden">
     <div class="setup-shell">
 
-      <aside class="rail">
+      <aside class="rail" id="setupRail">
         <div class="rail-brand">
-          <img class="tibox-logo" src="assets/logo-tibox-ok.png" alt="TIBOX" style="height:26px;">
+          <button class="logo-home" type="button" aria-label="Ir al inicio"><img class="tibox-logo" src="assets/logo-tibox-ok.png" alt="TIBOX" style="height:26px;"></button>
         </div>
         <div class="rail-group">
           <span class="rail-status"><span class="dot"></span>Configuración del ejercicio</span>
@@ -128,10 +147,6 @@
           <div class="rail-actions">
             <button class="btn btn-sm btn-primary" id="saveProfileBtn">Guardar perfil</button>
             <button class="btn btn-sm" id="profilesToggleBtn">Perfiles guardados</button>
-          </div>
-          <div class="rail-actions">
-            <button class="btn btn-sm" id="importConfigBtn">Importar</button>
-            <input type="file" id="importConfigFile" accept="application/json" class="hidden">
           </div>
         </div>
 
@@ -166,6 +181,11 @@
           <div class="participants-grid" id="participantsBody"></div>
         </div>
 
+        <div class="setup-actions" aria-label="Navegación de configuración">
+          <button class="btn-cta" id="setupBackBtn" type="button">← Retroceder</button>
+          <button class="btn-cta" id="setupNextBtn" type="button" disabled>Siguiente →</button>
+        </div>
+
       </main>
     </div>
   </div>
@@ -176,7 +196,7 @@
          el stepper alto, la barra de progreso y la barra de acciones. Una sola fila. -->
     <header class="game-head">
       <div class="gh-left">
-        <img class="tibox-logo" src="assets/logo-tibox-ok.png" alt="TIBOX" style="height:18px;">
+        <button class="logo-home" type="button" aria-label="Ir al inicio"><img class="tibox-logo" src="assets/logo-tibox-ok.png" alt="TIBOX" style="height:18px;"></button>
         <span class="gh-scenario" id="gameSessionBadge">Ejercicio</span>
       </div>
 
