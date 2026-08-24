@@ -12,17 +12,11 @@ h1,h2,h3,.brand-name,.ph h2{font-family:'Space Grotesk',sans-serif}
 /* TOPBAR */
 .topbar{position:sticky;top:0;z-index:50;background:var(--sur);border-bottom:1px solid var(--br);padding:0 24px;height:52px;display:flex;align-items:center;gap:14px;box-shadow:var(--sh)}
 .topbar::after{content:"";position:absolute;left:0;right:0;bottom:-2px;height:2px;background:linear-gradient(90deg,var(--accent3),var(--accent2) 50%,var(--accent))}
-.hamburger-btn{background:none;border:1.5px solid var(--br);border-radius:7px;width:36px;height:36px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-size:1.05rem;line-height:1;color:var(--t2);cursor:pointer}
-.hamburger-btn:hover{border-color:var(--accent);color:var(--accent)}
 .brand{display:flex;align-items:center;gap:10px;flex-shrink:0}
-/* SIDEBAR (tipo "push": contrae el contenido a la derecha, sin oscurecer) */
-.app-sidebar{position:fixed;top:52px;left:0;bottom:0;width:320px;max-width:88vw;background:var(--sur);border-right:1px solid var(--br);z-index:151;transform:translateX(-100%);transition:transform .22s ease;display:flex;flex-direction:column;box-shadow:0 0 40px rgba(0,0,0,.45)}
-.app-sidebar.open{transform:translateX(0)}
-.page{margin-left:0;transition:margin-left .22s ease}
-body.sidebar-open .page{margin-left:320px}
-.sidebar-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--br);flex:0 0 auto}
-.sidebar-title{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:0.9rem;color:var(--tx)}
-.sidebar-body{flex:1;overflow-y:auto;padding:16px 18px 30px}
+/* SIDEBAR: panel de filtros fijo, siempre visible (sin toggle de hamburguesa) */
+.app-sidebar{position:fixed;top:52px;left:0;bottom:0;width:320px;background:var(--sur);border-right:1px solid var(--br);z-index:60;display:flex;flex-direction:column;box-shadow:var(--sh)}
+.page{margin-left:320px}
+.sidebar-body{flex:1;overflow-y:auto;padding:20px 18px 30px}
 .sidebar-section{display:none}
 .sidebar-section.on{display:block}
 .sb-block{margin-bottom:20px}
@@ -259,9 +253,9 @@ tr.group-row:first-child .group-head{border-top:none}
   .tabs{order:3;width:100%;overflow-x:auto}
   .page{padding:12px 14px}
   .filterbar{gap:6px;padding:10px 12px}
-  .app-sidebar{top:0;width:86vw}
-  /* En pantallas chicas no hay espacio para "empujar" el contenido: el sidebar queda flotando (sin oscurecer) */
-  body.sidebar-open .page{margin-left:0}
+  /* En pantallas chicas el panel de filtros pasa a flujo normal, apilado arriba del contenido */
+  .app-sidebar{position:static;width:100%;max-width:none;border-right:none;border-bottom:1px solid var(--br)}
+  .page{margin-left:0}
   .edit-form{padding:12px 14px}
   .modal-overlay{padding:0}
   .modal-overlay .edit-form{max-height:100vh;height:100%;width:100%;max-width:100%;border-radius:0;padding:20px 18px 24px}
