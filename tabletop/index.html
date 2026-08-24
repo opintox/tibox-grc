@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TIBOX · Configuración</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <button class="logo-home" type="button" aria-label="Ir al inicio"><img class="tibox-logo" src="assets/logo-tibox-ok.png" alt="TIBOX" style="height:22px;"></button>
+    <span class="divider"></span>
+    <h1>Configuración del ejercicio</h1>
+  </div>
+  <div class="topbar-right">
+    <div class="status"><span class="dot"></span><span id="statusLabel">CONFIGURACIÓN</span></div>
+  </div>
+</div>
+
+<div class="explain-pop hidden" id="explainPop" role="status" aria-live="polite">
+  <div class="explain-pop-head">
+    <span class="eyebrow" style="margin-bottom:0;">Explicación</span>
+    <button class="explain-pop-close" id="explainPopClose" aria-label="Cerrar explicación">✕</button>
+  </div>
+  <div id="explanationContent"></div>
+  <div class="explain-foot" id="explainFoot"></div>
+</div>
+
+<div id="screen-intro">
+  <div class="intro-hero-band">
+    <div class="intro-hero-row">
+      <div class="intro-hero">
+        <button class="logo-home" type="button" aria-label="Ir al inicio"><img class="tibox-logo" src="assets/logo-tibox-ok.png" alt="TIBOX" style="height:44px;"></button>
+        <h1 class="intro-hero-title">Bienvenido al <span class="accent">tabletop</span></h1>
+        <p class="intro-hero-sub">Antes de empezar, esto es lo que necesitas saber — léelo como las reglas de un juego. Toma un par de minutos.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="intro-shell">
+    <div class="intro-rail-mount" id="introRailMount"></div>
+    <div class="intro-content">
+
+    <div class="intro-left-column">
+      <div class="panel section-block intro-panel">
+        <div class="eyebrow">Qué es</div>
+        <h2 class="section-title">Un ensayo, no un examen</h2>
+        <p class="section-sub" style="margin-bottom:0;">Un <b>tabletop</b> es un ejercicio de simulación: el equipo se sienta a discutir, sobre un caso de ciberseguridad inventado pero realista, cómo respondería si pasara de verdad. Nada de lo que ocurre acá toca sistemas reales — es puro criterio y coordinación entre las personas que tendrían que actuar en un incidente de verdad. No hay que saberse el procedimiento de memoria: para eso está el ejercicio.</p>
+      </div>
+
+      <div class="panel section-block intro-panel playbook-panel">
+        <div class="eyebrow">Material opcional</div>
+        <h2 class="section-title">Si dispone de un playbook, cargar aquí</h2>
+        <p class="section-sub">Puedes adjuntar el material de referencia que usarán durante la simulación.</p>
+        <div class="playbook-actions">
+          <label class="playbook-file">
+            <span id="playbookFileName">Ningún archivo seleccionado</span>
+            <input type="file" id="playbookFile" accept=".json,.pdf,.doc,.docx,.txt,application/json,application/pdf,text/plain">
+          </label>
+          <button class="btn btn-primary" id="loadPlaybookBtn" type="button">Cargar playbook</button>
+        </div>
+        <p class="playbook-status" id="playbookStatus" role="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="panel section-block intro-panel">
+      <div class="eyebrow">Cómo funciona</div>
+      <h2 class="section-title">Las reglas del ejercicio</h2>
+      <div class="rule-steps">
+        <div class="rule-step">
+          <span class="rule-step-num">1</span>
+          <div>
+            <div class="rule-step-title">Configuren la sesión</div>
+            <p class="rule-step-desc">Elijan el tipo de ataque a simular y marquen qué funciones participan hoy (TI, Legal, Comunicaciones, RRHH, Dirección — Seguridad y TI siempre están). Guarden el perfil del cliente: es lo último que falta para poder empezar.</p>
+          </div>
+        </div>
+        <div class="rule-step">
+          <span class="rule-step-num">2</span>
+          <div>
+            <div class="rule-step-title">El incidente avanza en 5 etapas</div>
+            <p class="rule-step-desc">Detección → Clasificación → Contención → Recuperación → Cierre. Cada una plantea una situación nueva dentro del mismo caso, en orden.</p>
+          </div>
+        </div>
+        <div class="rule-step">
+          <span class="rule-step-num">3</span>
+          <div>
+            <div class="rule-step-title">Decidan quién actúa</div>
+            <p class="rule-step-desc">Frente a cada situación, el equipo elige qué función debe hacerse cargo de esa acción específica. Elegir a alguien a quien no le corresponde cuenta como error.</p>
+          </div>
+        </div>
+        <div class="rule-step">
+          <span class="rule-step-num">4</span>
+          <div>
+            <div class="rule-step-title">Decidan qué hacer</div>
+            <p class="rule-step-desc">Con la función correcta ya elegida, discutan entre varias alternativas y elijan la respuesta. Si se equivocan, se explica por qué antes de dejarlos reintentar.</p>
+          </div>
+        </div>
+        <div class="rule-step">
+          <span class="rule-step-num">5</span>
+          <div>
+            <div class="rule-step-title">Cierren con el informe</div>
+            <p class="rule-step-desc">Al terminar la última etapa se genera un puntaje, un informe ejecutivo con lo que conviene reforzar, y un acta que pueden guardar o descargar.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    </div>
+
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div id="screen-setup" class="hidden">
+    <div class="setup-shell">
+
+      <aside class="rail" id="setupRail">
+        <div class="rail-brand">
+          <button class="logo-home" type="button" aria-label="Ir al inicio"><img class="tibox-logo" src="assets/logo-tibox-ok.png" alt="TIBOX" style="height:26px;"></button>
+        </div>
+        <div class="rail-group">
+          <span class="rail-status"><span class="dot"></span>Configuración del ejercicio</span>
+          <h1 class="rail-title">Ensaya el incidente <span class="accent">antes de que ocurra</span></h1>
+          <p class="rail-sub">El equipo decide quién actúa y qué hace en cada etapa de la respuesta, sin tocar ningún sistema. Al cerrar obtienes un informe ejecutivo con los puntos a reforzar.</p>
+          <div class="rail-stats">
+            <div class="rail-stat"><b>10</b><span>escenarios</span></div>
+            <div class="rail-stat"><b>5</b><span>etapas</span></div>
+            <div class="rail-stat"><b>6</b><span>funciones</span></div>
+          </div>
+        </div>
+
+        <div class="rail-group rail-fields">
+          <div class="field-row" style="margin-bottom:0;">
+            <label>Nombre del cliente</label>
+            <input type="text" id="clientNameInput" placeholder="Ej: Quintero Energía">
+          </div>
+          <div class="field-row" style="margin-bottom:0;">
+            <label>Facilitador</label>
+            <input type="text" id="facilitatorNameInput" placeholder="Quién conduce la sesión">
+          </div>
+          <div class="rail-actions">
+            <button class="btn btn-sm btn-primary" id="saveProfileBtn">Guardar perfil</button>
+            <button class="btn btn-sm" id="profilesToggleBtn">Perfiles guardados</button>
+          </div>
+        </div>
+
+        <div class="rail-spacer"></div>
+
+        <div class="rail-foot">
+          <div class="rail-summary">
+            <div class="rail-check" id="railCheck"></div>
+            <button class="btn-cta" id="continueBtn" disabled>Comenzar ejercicio →</button>
+          </div>
+        </div>
+      </aside>
+
+      <main class="work">
+
+        <div class="panel section-block" id="scenarioBlock">
+          <div class="setup-section-head">
+            <h2 class="section-title">Tipo de ataque</h2>
+            <p class="section-sub">Elige el escenario que se va a discutir en la sesión.</p>
+            <span class="setup-badge" id="scenarioBadge">Sin escenario</span>
+          </div>
+          <div class="scn-grid" id="scenarioGridCore"></div>
+
+        </div>
+
+        <div class="panel section-block" id="participantsBlock">
+          <div class="setup-section-head">
+            <h2 class="section-title">Participantes</h2>
+            <p class="section-sub">Indica la empresa de cada función y marca quién participará en esta sesión.</p>
+            <span class="setup-badge" id="participantsBadge">0 activas</span>
+          </div>
+          <div class="participants-grid" id="participantsBody"></div>
+        </div>
+
+        <div class="setup-actions" aria-label="Navegación de configuración">
+          <button class="btn-cta" id="setupBackBtn" type="button">← Retroceder</button>
+          <button class="btn-cta" id="setupNextBtn" type="button" disabled>Siguiente →</button>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <div id="screen-game" class="hidden">
+
+    <!-- Cabecera única del ejercicio: reemplaza la barra superior, la línea de sesión,
+         el stepper alto, la barra de progreso y la barra de acciones. Una sola fila. -->
+    <header class="game-head">
+      <div class="gh-left">
+        <button class="logo-home" type="button" aria-label="Ir al inicio"><img class="tibox-logo" src="assets/logo-tibox-ok.png" alt="TIBOX" style="height:18px;"></button>
+        <span class="gh-scenario" id="gameSessionBadge">Ejercicio</span>
+      </div>
+
+      <div class="gh-steps" id="gameStepper"></div>
+
+      <div class="gh-right">
+        <span class="gh-count"><b id="globalProgressText">1 / 1</b><span id="globalProgressRemaining"></span></span>
+        <span class="game-timer" id="gameTimer">00:00</span>
+        <button class="btn btn-sm" id="prevQuestionBtn" disabled title="Pregunta anterior" aria-label="Pregunta anterior">←</button>
+        <button class="btn btn-primary btn-sm" id="restartGameBtn" disabled>Siguiente →</button>
+        <button class="gh-exit" id="backToSetupBtn" title="Volver a la configuración" aria-label="Volver a la configuración">✕</button>
+      </div>
+
+      <div class="gh-bar"><div class="gh-bar-fill" id="globalProgressFill" style="width:0%"></div></div>
+    </header>
+
+    <div class="game-layout grid4">
+      <div class="panel story-panel grid4-cell" id="storyPanel">
+        <div class="eyebrow" id="storyScenarioLabel">ESCENARIO</div>
+        <p class="ops-context" id="opsContext"></p>
+        <p class="story-text" id="storyText">—</p>
+      </div>
+
+      <div class="panel grid4-cell" id="askPanel"></div>
+
+      <div class="panel grid4-cell" id="actionPanel">
+        <div id="charPanel">
+          <div class="eyebrow">¿Quién debe actuar? — selecciona la función que ejecuta esta acción</div>
+          <div class="char-grid" id="charGrid"></div>
+        </div>
+
+        <div class="hidden" id="answerBlock">
+          <div class="eyebrow">Actúa como <span id="answeringAs"></span></div>
+          <div class="answer-options" id="answerOptions"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div id="screen-results" class="hidden">
+    <div class="panel section-block results-panel results-enter" style="animation-delay:0s;">
+      <div class="res-cols">
+
+        <div class="results-main">
+          <div class="eyebrow">Errores por etapa</div>
+          <div id="resStageChart"></div>
+
+          <div class="results-sep"></div>
+          <p id="resultsMessage" style="font-size:var(--fs-sm); color:var(--muted); line-height:1.6; margin:0 0 16px;"></p>
+          <div class="results-actions">
+            <button class="btn" id="downloadResultsBtn">Descargar resultados (JSON)</button>
+            <button class="btn" id="copyResultsBtn">Copiar al portapapeles</button>
+            <button class="btn btn-primary" id="goToReportBtn">Ver informe ejecutivo →</button>
+          </div>
+        </div>
+
+        <aside class="results-side">
+          <div class="grade-badge" id="gradeBadge">
+            <span class="grade-pct" id="gradePct">—</span>
+            <span class="grade-label" id="gradeLabel">—</span><span class="grade-meta" id="gradeMeta">—</span>
+          </div>
+
+          <div class="donut-result-wrap">
+            <div class="donut-result">
+              <svg width="132" height="132" viewBox="0 0 132 132">
+                <circle cx="66" cy="66" r="54" fill="none" stroke="var(--panel-3)" stroke-width="16"/>
+                <circle id="resDonutCorrect" cx="66" cy="66" r="54" fill="none" stroke="var(--green)" stroke-width="16" stroke-dasharray="0 340" transform="rotate(-90 66 66)"/>
+                <circle id="resDonutAlt" cx="66" cy="66" r="54" fill="none" stroke="var(--amber)" stroke-width="16" stroke-dasharray="0 340" transform="rotate(-90 66 66)"/>
+                <circle id="resDonutChar" cx="66" cy="66" r="54" fill="none" stroke="var(--red)" stroke-width="16" stroke-dasharray="0 340" transform="rotate(-90 66 66)"/>
+              </svg>
+              <div class="donut-result-center"><b id="resDonutPct">0%</b><span>precisión</span></div>
+            </div>
+            <div class="donut-result-legend">
+              <div class="ring-legend-item"><span class="ring-dot" style="background:var(--green);"></span>Respondidas<b id="resTotal">0</b></div>
+              <div class="ring-legend-item"><span class="ring-dot" style="background:var(--red);"></span>Errores de función<b id="resWrongChars">0</b></div>
+              <div class="ring-legend-item"><span class="ring-dot" style="background:var(--amber);"></span>Errores de respuesta<b id="resWrongAnswers">0</b></div>
+              <div class="donut-result-meta">Duración total <b id="resDuration">00:00</b></div>
+            </div>
+          </div>
+        </aside>
+
+      </div>
+    </div>
+  </div>
+
+  <div id="screen-report" class="hidden">
+    <div class="panel section-block report-panel results-enter" style="animation-delay:0s;">
+      <div class="setup-section-head">
+        <h2 class="section-title" id="reportScenarioName" style="margin-bottom:0;">Informe ejecutivo</h2>
+        <p class="section-sub">Aspectos a mejorar detectados durante el ejercicio.</p>
+        <button class="btn btn-sm" id="backToResultsBtn">← Volver a resultados</button>
+      </div>
+      <div id="executiveReport"></div>
+    </div>
+
+    <div class="panel section-block results-enter" style="animation-delay:.16s;">
+      <div class="eyebrow">Acta del ejercicio</div>
+      <div class="acta-grid">
+        <div class="acta-field"><span class="acta-label">Fecha</span><span class="acta-value" id="actaFecha">—</span></div>
+        <div class="acta-field"><span class="acta-label">Facilitador</span><span class="acta-value" id="actaFacilitador">—</span></div>
+        <div class="acta-field"><span class="acta-label">Cliente</span><span class="acta-value" id="actaCliente">—</span></div>
+        <div class="acta-field"><span class="acta-label">Participantes confirmados</span><span class="acta-value" id="actaParticipantes">—</span></div>
+      </div>
+      <div class="field-row" style="margin-top:16px; margin-bottom:0;">
+        <label>Notas del facilitador (opcional)</label>
+        <textarea id="actaNotes" placeholder="Observaciones adicionales, contexto de la sesión, acuerdos verbales..." style="min-height:80px;"></textarea>
+      </div>
+      <div class="results-actions" style="margin-top:14px;">
+        <button class="btn btn-primary" id="saveExerciseBtn">Guardar ejercicio →</button>
+        <button class="btn" id="downloadResultsBtnBottom">Descargar acta completa (JSON)</button>
+        <button class="btn" id="backFromResultsBtn">Volver sin guardar</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="js/data/catalogo.js"></script>
+<script src="js/data/escenarios.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>

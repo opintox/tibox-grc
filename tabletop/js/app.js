@@ -309,14 +309,13 @@ function renderScenarioCard(s, container){
   el.setAttribute('role', 'button');
   el.setAttribute('tabindex', '0');
   el.setAttribute('aria-pressed', selectedScenarioId === s.id ? 'true' : 'false');
-  const unvalidatedHint = s.matrixValidated ? '' : '<span class="scn-warn" title="La matriz de participación de este escenario es una extrapolación aún no validada" aria-hidden="true">⚠︎</span>';
-  if(!s.matrixValidated) el.setAttribute('aria-label', `${s.name} — matriz de participación sin validar`);
+  el.setAttribute('aria-label', s.name);
   const icon = SCENARIO_ICONS[s.id] || '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="5.5"/></svg>';
   const blurb = SCENARIO_BLURBS[s.id] || '';
   el.innerHTML = `
     <div class="scn-top">
       <span class="scn-icon">${icon}</span>
-      <span class="scn-flags">${unvalidatedHint}<span class="scn-check" aria-hidden="true"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.4 6.4 12 13 4.6"/></svg></span></span>
+      <span class="scn-flags"><span class="scn-check" aria-hidden="true"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.4 6.4 12 13 4.6"/></svg></span></span>
     </div>
     <div class="scn-name">${escapeHtml(s.name)}</div>
     <div class="scn-desc">${escapeHtml(blurb)}</div>
@@ -443,7 +442,7 @@ function updateBottomState(){
 
   const btn = document.getElementById('continueBtn');
   const canStart = hasScenario && hasParticipant;
-  btn.disabled = isIntro ? !profileSaved : !canStart;
+  btn.disabled = isIntro ? false : !canStart;
   btn.textContent = 'Comenzar ejercicio →';
   const setupNextBtn = document.getElementById('setupNextBtn');
   if(setupNextBtn) setupNextBtn.disabled = !canStart;
@@ -481,6 +480,7 @@ function goHome(){
   document.body.classList.remove('setup-mode', 'game-mode');
   document.body.classList.add('intro-mode');
   document.getElementById('statusLabel').textContent = 'CONFIGURACIÓN';
+  updateBottomState();
   window.scrollTo({top: 0, behavior: 'smooth'});
 }
 
