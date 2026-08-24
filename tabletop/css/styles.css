@@ -30,7 +30,16 @@
     background:var(--bg); color:var(--text); font-family:var(--sans); min-height:100vh;
     -webkit-font-smoothing:antialiased; overflow-x:hidden; position:relative;
   }
+  /* Mismo fondo que la portada (img/slide3.webp), para que se sienta un solo sitio al pasar
+     de una pantalla a otra. Una capa oscura semitransparente encima mantiene la legibilidad. */
   body::before{
+    content:''; position:fixed; inset:0; z-index:-2; pointer-events:none;
+    background:
+      linear-gradient(rgba(7,12,26,.72),rgba(7,12,26,.72)),
+      url('../../img/slide3.webp');
+    background-size:cover; background-position:center; background-repeat:no-repeat;
+  }
+  body::after{
     content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
     background:
       radial-gradient(40vw circle at 12% 8%, rgba(14,165,233,0.14), transparent 60%),
@@ -378,46 +387,57 @@
   .intro-col-desc{border-left:1px solid var(--border); padding-left:32px;}
   @media (max-width:760px){.intro-col-desc{border-left:none; border-top:1px solid var(--border); padding-left:0; padding-top:20px;}}
   /* ---------- pantalla de bienvenida (reglas del ejercicio) ---------- */
-  /* #screen-intro vive fuera de .wrap (igual que .topbar) para que el banner de marca
-     pueda ocupar el ancho completo de la pantalla; el cuerpo de texto sí se centra en
-     una columna legible, como el resto de las pantallas de contenido. */
-  body.intro-mode .topbar{display:none;}
-  .intro-hero-band{
-    padding:56px clamp(20px, 4vw, 64px) 44px; border-bottom:1px solid var(--border);
-    background:
-      radial-gradient(120% 60% at 20% 0%, rgba(14,165,233,0.20), transparent 62%),
-      radial-gradient(100% 50% at 90% 100%, rgba(124,140,240,0.16), transparent 64%),
-      linear-gradient(180deg,#0A1226 0%,#070E1E 100%);
-  }
-    .intro-hero-row{display:flex; align-items:stretch; max-width:1800px; margin:0 auto;}
-  .intro-hero{display:flex; flex-direction:column; align-items:flex-start; gap:12px; min-width:0;}
-  .intro-hero-title{font-family:var(--display); font-weight:800; font-size:var(--fs-3xl); line-height:1.12; letter-spacing:-0.02em; color:#fff; margin:4px 0 0;}
-  .intro-hero-title .accent{background:linear-gradient(90deg,#0FC7F6,#7C8CF0); -webkit-background-clip:text; background-clip:text; color:transparent;}
-  .intro-hero-sub{font-size:var(--fs-sm); line-height:1.6; color:var(--muted); margin:0; max-width:52ch;}
+  /* La barra superior (.topbar) ya no se oculta acá: se ve siempre del mismo tamaño y con el
+     logo en el mismo lugar en todas las pantallas, incluida la de bienvenida. El título grande
+     que antes vivía en un banner aparte ahora es solo el primer bloque del contenido. */
+  /* .wrap contiene las otras pantallas (setup/game/results/report); sus hijos se ocultan
+     individualmente con .hidden, pero .wrap mismo no, así que sin esto deja un colchón de
+     padding vacío y desplazable debajo de la pantalla de bienvenida. */
+  body.intro-mode .wrap{display:none;}
+  .intro-welcome{flex:none; text-align:center; max-width:900px; margin:0 auto; padding:28px clamp(20px, 3vw, 48px) 4px;}
+  .intro-welcome h1{font-family:var(--display); font-weight:800; font-size:var(--fs-2xl); line-height:1.15; letter-spacing:-0.01em; color:#fff; margin:0 0 6px;}
+  .intro-welcome h1 .accent{background:linear-gradient(90deg,#0FC7F6,#7C8CF0); -webkit-background-clip:text; background-clip:text; color:transparent;}
+  .intro-welcome p{font-size:var(--fs-sm); line-height:1.6; color:var(--muted); margin:0;}
+  /* La pantalla de bienvenida llena el alto visible bajo la barra superior (topbar + contenido
+     = 100vh) y, si el contenido no alcanza a llenarlo, se centra verticalmente en el espacio
+     libre en vez de dejarlo todo abajo. Si el contenido llegara a ser más alto que la pantalla
+     (ventana muy baja, zoom alto), #screen-intro simplemente crece y la página vuelve a
+     scrollear — nunca se recorta contenido. */
+  #screen-intro{display:flex; flex-direction:column; min-height:calc(100vh - var(--topbar-h));}
   /* Dos columnas en pantallas anchas para aprovechar el ancho disponible sin que el
-     texto se estire en líneas demasiado largas; una sola columna en pantallas angostas.
-     El padding inferior deja un respiro del 5% del alto de pantalla tras la última tarjeta,
-     ya que el CTA se movió al banner y ya no ocupa ese espacio. */
+     texto se estire en líneas demasiado largas; una sola columna en pantallas angostas. */
   .intro-shell{
-    display:grid; grid-template-columns:var(--rail-w) repeat(2,minmax(0,1fr)); align-items:stretch; gap:20px;
-    max-width:1800px; margin:0 auto; padding:36px clamp(20px, 3vw, 48px) 5vh;
+    flex:1; display:grid; grid-template-columns:var(--rail-w) minmax(0,1fr); align-items:start;
+    align-content:center; gap:20px;
+    max-width:1800px; width:100%; margin:0 auto; padding:32px clamp(20px, 3vw, 48px);
   }
-  .intro-rail-mount{grid-column:1; grid-row:1; min-width:0;}
+  /* La tarjeta de configuración se estira para igualar la altura de la columna derecha (la
+     más alta de las dos) en vez de quedar más corta y suelta. El spacer interno de .rail
+     (oculto en otras variantes) se deja activo para que ese espacio ganado empuje el CTA
+     "Comenzar ejercicio" hacia abajo — se ve como un sidebar con acción anclada al pie, no
+     como una tarjeta con aire de sobra. */
+  .intro-rail-mount{grid-column:1; grid-row:1; min-width:0; align-self:stretch;}
   .intro-rail-mount > .rail{
-    position:relative; height:100%; min-height:0; border:1px solid var(--border); border-radius:18px;
-    padding:var(--sp-6) var(--sp-6) 0; overflow-y:auto;
+    /* .rail trae "height / position:sticky / top" de la pantalla de configuración (donde sí
+       es un sidebar fijo bajo la barra superior). Acá es solo una tarjeta más: se anulan esas
+       reglas por unas relativas al alto ya estirado del contenedor. */
+    position:relative; top:auto; height:100%; border:1px solid var(--border); border-radius:18px;
+    padding:var(--sp-6) var(--sp-6) 0; overflow-y:visible;
   }
   .intro-rail-mount .rail-foot{position:static;}
-  .intro-rail-mount .rail-spacer{display:none;}
   .intro-content{display:contents;}
-  .intro-content > .panel{grid-column:2; grid-row:1; height:100%; margin-bottom:0;}
-  .intro-content > .intro-left-column{grid-column:3; grid-row:1;}
-  .intro-left-column{display:flex; flex-direction:column; gap:16px; min-width:0;}
+  /* Una sola columna de contenido en orden de lectura (qué es → cómo funciona → opcional),
+     en vez de repartirlo en dos sub-columnas que quedaban de alturas dispares. */
+  .intro-content > .intro-right-column{grid-column:2; grid-row:1;}
+  .intro-right-column{display:flex; flex-direction:column; gap:20px; min-width:0;}
   .intro-panel .section-title{margin-bottom:12px;}
-  /* Las tarjetas ocupan toda su columna (más ancha ahora), pero el texto se limita a una
+  /* Las tarjetas ocupan todo el ancho de la columna, pero el texto se limita a una
      medida legible en vez de estirarse de borde a borde de la tarjeta. */
   .intro-panel .section-sub{max-width:62ch;}
-  .rule-steps{display:flex; flex-direction:column; gap:18px;}
+  /* Los 5 pasos se acomodan en 2 columnas para aprovechar el ancho; el último (el cierre)
+     ocupa el ancho completo como remate de la secuencia. */
+  .rule-steps{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:22px 32px;}
+  .rule-step:last-child{grid-column:1 / -1;}
   .rule-step{display:flex; gap:14px; align-items:flex-start;}
   .rule-step-num{
     flex-shrink:0; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center;
@@ -437,25 +457,18 @@
   .playbook-file span{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .playbook-file input{position:absolute; width:1px; height:1px; opacity:0; pointer-events:none;}
   .playbook-status{min-height:1.4em; color:var(--green); font-size:var(--fs-xs); line-height:1.4; margin:10px 0 0;}
+  @media (max-width:700px){
+    .rule-steps{grid-template-columns:1fr;}
+  }
   @media (max-width:860px){
     .intro-shell{grid-template-columns:1fr;}
-    .intro-rail-mount,.intro-content > .panel,.intro-content > .intro-left-column{grid-column:1; grid-row:auto;}
-    .intro-content > .panel,.intro-content > .intro-left-column{height:auto;}
+    .intro-rail-mount,.intro-content > .intro-right-column{grid-column:1; grid-row:auto;}
   }
   @media (max-width:640px){
-    .intro-hero-band{padding:36px 20px 30px;}
-    .intro-hero-row{flex-direction:column; align-items:stretch;}
-    .intro-shell{padding:26px 20px 5vh;}
-    .intro-hero-title{font-size:var(--fs-2xl);}
+    .intro-welcome{padding:20px 20px 4px;}
+    .intro-shell{padding:26px 20px;}
   }
   @media (min-width:861px){
-    html:has(body.intro-mode), body.intro-mode{overflow:hidden;}
-    .intro-hero-band{padding:18px clamp(20px, 4vw, 64px);}
-    .intro-hero-row{align-items:center;}
-    .intro-hero{display:grid; grid-template-columns:auto minmax(0,1fr); column-gap:24px; row-gap:4px; width:100%;}
-    .intro-hero .logo-home{grid-row:1 / span 2; align-self:center;}
-    .intro-hero-title{grid-column:2; font-size:var(--fs-2xl); margin:0;}
-    .intro-hero-sub{grid-column:2; font-size:var(--fs-xs); line-height:1.4;}
     .intro-shell{gap:16px; padding:16px clamp(20px, 3vw, 48px) 18px;}
     .intro-panel{padding:18px;}
     .intro-panel .section-title{font-size:var(--fs-lg); margin-bottom:8px;}
@@ -914,19 +927,19 @@
 
   /* ============================================================
      PANTALLA DE CONFIGURACIÓN — riel fijo + área de trabajo
-     La barra superior se oculta aquí: el riel asume marca, estado
-     y acción principal. La barra vuelve en el modo ejercicio.
+     La barra superior ahora se mantiene visible (mismo tamaño y logo en el mismo
+     lugar en toda la app); el riel ya no repite su propio logo, solo asume estado
+     y acción principal.
      ============================================================ */
-  body.setup-mode .topbar{display:none;}
   body.setup-mode .wrap{max-width:none; width:100%; padding:0;}
   /* La ventana no scrollea en configuración: el shell ocupa exactamente el alto
-     disponible y el scroll vive dentro del área de trabajo. */
+     disponible bajo la barra superior, y el scroll vive dentro del área de trabajo. */
   body.setup-mode{overflow:hidden;}
 
-  .setup-shell{display:grid; grid-template-columns:minmax(0,1fr); height:100dvh; overflow:hidden;}
+  .setup-shell{display:grid; grid-template-columns:minmax(0,1fr); height:calc(100dvh - var(--topbar-h)); overflow:hidden;}
 
   .rail{
-    position:sticky; top:0; height:100dvh; overflow-y:auto; z-index:30;
+    position:sticky; top:var(--topbar-h); height:calc(100dvh - var(--topbar-h)); overflow-y:auto; z-index:30;
     display:flex; flex-direction:column;
     padding:var(--sp-6) var(--sp-6) 0; border-right:1px solid var(--border);
     background:
