@@ -14,7 +14,6 @@
 <body>
 
 <div class="topbar" style="flex-wrap:wrap">
-  <button class="hamburger-btn" id="btnSidebarToggle" aria-label="Abrir filtros" title="Filtros">☰</button>
   <div class="brand">
     <a href="../index.html" aria-label="Volver al inicio" style="display:inline-flex;line-height:0">
       <img src="img/logo-tibox-ok.png" alt="TIBOX" style="width:110px;height:32px;object-fit:contain">
@@ -41,10 +40,6 @@
 </div>
 
 <aside class="app-sidebar" id="appSidebar">
-  <div class="sidebar-head">
-    <span class="sidebar-title" id="sidebarTitle">Filtros · Requerimientos</span>
-    <button type="button" class="modal-close" id="sidebarCloseBtn" title="Cerrar">✕</button>
-  </div>
   <div class="sidebar-body">
 
     <!-- FILTROS: REQUERIMIENTOS -->
@@ -313,7 +308,6 @@ let chartInstances = {};
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
 
 // TABS
-const SIDEBAR_TITLES={req:'Filtros · Requerimientos',dash:'Filtros · Dashboard'};
 document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));
@@ -322,24 +316,8 @@ document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{
   document.getElementById('page-'+b.dataset.tab).classList.add('on');
   const sec=document.getElementById('sidebar-'+b.dataset.tab);
   if(sec)sec.classList.add('on');
-  document.getElementById('sidebarTitle').textContent=SIDEBAR_TITLES[b.dataset.tab]||'Filtros';
   if(b.dataset.tab==='dash') renderDashboard();
 }));
-
-// SIDEBAR (hamburguesa, tipo "push": contrae el contenido, sin oscurecer)
-function isSidebarOpen(){return document.getElementById('appSidebar').classList.contains('open');}
-function openSidebar(){document.getElementById('appSidebar').classList.add('open');document.body.classList.add('sidebar-open');}
-function closeSidebar(){document.getElementById('appSidebar').classList.remove('open');document.body.classList.remove('sidebar-open');}
-function toggleSidebar(){isSidebarOpen()?closeSidebar():openSidebar();}
-document.getElementById('btnSidebarToggle').addEventListener('click',toggleSidebar);
-document.getElementById('sidebarCloseBtn').addEventListener('click',closeSidebar);
-document.addEventListener('keydown',ev=>{if(ev.key==='Escape')closeSidebar();});
-document.addEventListener('click',function(ev){
-  if(!isSidebarOpen())return;
-  const sidebar=document.getElementById('appSidebar');
-  if(sidebar.contains(ev.target)||ev.target.closest('#btnSidebarToggle'))return;
-  closeSidebar();
-});
 
 // DOM CHIPS
 function buildDomChips(){
