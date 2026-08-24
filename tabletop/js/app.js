@@ -468,24 +468,6 @@ function updateBottomState(){
 document.body.classList.add('intro-mode');
 updateBottomState();
 
-function goHome(){
-  hideExplain();
-  if(gameState.timerInterval) clearInterval(gameState.timerInterval);
-  ['screen-setup', 'screen-game', 'screen-results', 'screen-report'].forEach(id => {
-    const screen = document.getElementById(id);
-    if(screen) screen.classList.add('hidden');
-  });
-  document.getElementById('screen-intro').classList.remove('hidden');
-  document.getElementById('introRailMount').appendChild(document.getElementById('setupRail'));
-  document.body.classList.remove('setup-mode', 'game-mode');
-  document.body.classList.add('intro-mode');
-  document.getElementById('statusLabel').textContent = 'CONFIGURACIÓN';
-  updateBottomState();
-  window.scrollTo({top: 0, behavior: 'smooth'});
-}
-
-document.querySelectorAll('.logo-home').forEach(logo => logo.addEventListener('click', goHome));
-
 document.getElementById('introRailMount').appendChild(document.getElementById('setupRail'));
 
 // Intenta restaurar configuración guardada de una sesión anterior (si existe). El modal de
@@ -498,6 +480,24 @@ function enterSetup(){
   document.getElementById('continueBtn').classList.add('hidden');
   document.body.classList.remove('intro-mode');
   document.body.classList.add('setup-mode');
+  updateBottomState();
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+// Vuelve de la configuración a la pantalla de bienvenida, dentro de la misma sesión
+// (el logo ya no usa esto: ahora navega directo al índice principal del sitio).
+function goHome(){
+  hideExplain();
+  if(gameState.timerInterval) clearInterval(gameState.timerInterval);
+  ['screen-setup', 'screen-game', 'screen-results', 'screen-report'].forEach(id => {
+    const screen = document.getElementById(id);
+    if(screen) screen.classList.add('hidden');
+  });
+  document.getElementById('screen-intro').classList.remove('hidden');
+  document.getElementById('introRailMount').appendChild(document.getElementById('setupRail'));
+  document.body.classList.remove('setup-mode', 'game-mode');
+  document.body.classList.add('intro-mode');
+  document.getElementById('statusLabel').textContent = 'CONFIGURACIÓN';
   updateBottomState();
   window.scrollTo({top: 0, behavior: 'smooth'});
 }

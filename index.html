@@ -27,6 +27,13 @@ body{
   display:flex;flex-direction:column;
 }
 body::before{
+  content:'';position:fixed;inset:0;z-index:-2;pointer-events:none;
+  background:
+    linear-gradient(rgba(7,12,26,.72),rgba(7,12,26,.72)),
+    url('img/slide3.webp');
+  background-size:cover;background-position:center;background-repeat:no-repeat;
+}
+body::after{
   content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
   background:
     radial-gradient(42vw circle at 14% 10%,rgba(255,138,0,0.10),transparent 60%),

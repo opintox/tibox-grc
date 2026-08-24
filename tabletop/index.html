@@ -12,7 +12,7 @@
 
 <div class="topbar">
   <div class="brand">
-    <button class="logo-home" type="button" aria-label="Ir al inicio"><img class="tibox-logo" src="assets/logo-tibox-ok.png" alt="TIBOX" style="height:22px;"></button>
+    <a class="logo-home" href="../index.html" aria-label="Ir al inicio"><img class="tibox-logo" src="assets/logo-tibox-ok.png" alt="TIBOX" style="height:22px;"></a>
     <span class="divider"></span>
     <h1>Configuración del ejercicio</h1>
   </div>
@@ -31,25 +31,62 @@
 </div>
 
 <div id="screen-intro">
-  <div class="intro-hero-band">
-    <div class="intro-hero-row">
-      <div class="intro-hero">
-        <button class="logo-home" type="button" aria-label="Ir al inicio"><img class="tibox-logo" src="assets/logo-tibox-ok.png" alt="TIBOX" style="height:44px;"></button>
-        <h1 class="intro-hero-title">Bienvenido al <span class="accent">tabletop</span></h1>
-        <p class="intro-hero-sub">Antes de empezar, esto es lo que necesitas saber — léelo como las reglas de un juego. Toma un par de minutos.</p>
-      </div>
-    </div>
+  <div class="intro-welcome">
+    <h1>Bienvenido al <span class="accent">tabletop</span></h1>
+    <p>Antes de empezar, esto es lo que necesitas saber — léelo como las reglas de un juego. Toma un par de minutos.</p>
   </div>
 
   <div class="intro-shell">
     <div class="intro-rail-mount" id="introRailMount"></div>
     <div class="intro-content">
 
-    <div class="intro-left-column">
+    <div class="intro-right-column">
       <div class="panel section-block intro-panel">
         <div class="eyebrow">Qué es</div>
         <h2 class="section-title">Un ensayo, no un examen</h2>
         <p class="section-sub" style="margin-bottom:0;">Un <b>tabletop</b> es un ejercicio de simulación: el equipo se sienta a discutir, sobre un caso de ciberseguridad inventado pero realista, cómo respondería si pasara de verdad. Nada de lo que ocurre acá toca sistemas reales — es puro criterio y coordinación entre las personas que tendrían que actuar en un incidente de verdad. No hay que saberse el procedimiento de memoria: para eso está el ejercicio.</p>
+      </div>
+
+      <div class="panel section-block intro-panel">
+        <div class="eyebrow">Cómo funciona</div>
+        <h2 class="section-title">Las reglas del ejercicio</h2>
+        <div class="rule-steps">
+          <div class="rule-step">
+            <span class="rule-step-num">1</span>
+            <div>
+              <div class="rule-step-title">Configuren la sesión</div>
+              <p class="rule-step-desc">Elijan el tipo de ataque a simular y marquen qué funciones participan hoy (TI, Legal, Comunicaciones, RRHH, Dirección — Seguridad y TI siempre están). Guarden el perfil del cliente: es lo último que falta para poder empezar.</p>
+            </div>
+          </div>
+          <div class="rule-step">
+            <span class="rule-step-num">2</span>
+            <div>
+              <div class="rule-step-title">El incidente avanza en 5 etapas</div>
+              <p class="rule-step-desc">Detección → Clasificación → Contención → Recuperación → Cierre. Cada una plantea una situación nueva dentro del mismo caso, en orden.</p>
+            </div>
+          </div>
+          <div class="rule-step">
+            <span class="rule-step-num">3</span>
+            <div>
+              <div class="rule-step-title">Decidan quién actúa</div>
+              <p class="rule-step-desc">Frente a cada situación, el equipo elige qué función debe hacerse cargo de esa acción específica. Elegir a alguien a quien no le corresponde cuenta como error.</p>
+            </div>
+          </div>
+          <div class="rule-step">
+            <span class="rule-step-num">4</span>
+            <div>
+              <div class="rule-step-title">Decidan qué hacer</div>
+              <p class="rule-step-desc">Con la función correcta ya elegida, discutan entre varias alternativas y elijan la respuesta. Si se equivocan, se explica por qué antes de dejarlos reintentar.</p>
+            </div>
+          </div>
+          <div class="rule-step">
+            <span class="rule-step-num">5</span>
+            <div>
+              <div class="rule-step-title">Cierren con el informe</div>
+              <p class="rule-step-desc">Al terminar la última etapa se genera un puntaje, un informe ejecutivo con lo que conviene reforzar, y un acta que pueden guardar o descargar.</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="panel section-block intro-panel playbook-panel">
@@ -67,48 +104,6 @@
       </div>
     </div>
 
-    <div class="panel section-block intro-panel">
-      <div class="eyebrow">Cómo funciona</div>
-      <h2 class="section-title">Las reglas del ejercicio</h2>
-      <div class="rule-steps">
-        <div class="rule-step">
-          <span class="rule-step-num">1</span>
-          <div>
-            <div class="rule-step-title">Configuren la sesión</div>
-            <p class="rule-step-desc">Elijan el tipo de ataque a simular y marquen qué funciones participan hoy (TI, Legal, Comunicaciones, RRHH, Dirección — Seguridad y TI siempre están). Guarden el perfil del cliente: es lo último que falta para poder empezar.</p>
-          </div>
-        </div>
-        <div class="rule-step">
-          <span class="rule-step-num">2</span>
-          <div>
-            <div class="rule-step-title">El incidente avanza en 5 etapas</div>
-            <p class="rule-step-desc">Detección → Clasificación → Contención → Recuperación → Cierre. Cada una plantea una situación nueva dentro del mismo caso, en orden.</p>
-          </div>
-        </div>
-        <div class="rule-step">
-          <span class="rule-step-num">3</span>
-          <div>
-            <div class="rule-step-title">Decidan quién actúa</div>
-            <p class="rule-step-desc">Frente a cada situación, el equipo elige qué función debe hacerse cargo de esa acción específica. Elegir a alguien a quien no le corresponde cuenta como error.</p>
-          </div>
-        </div>
-        <div class="rule-step">
-          <span class="rule-step-num">4</span>
-          <div>
-            <div class="rule-step-title">Decidan qué hacer</div>
-            <p class="rule-step-desc">Con la función correcta ya elegida, discutan entre varias alternativas y elijan la respuesta. Si se equivocan, se explica por qué antes de dejarlos reintentar.</p>
-          </div>
-        </div>
-        <div class="rule-step">
-          <span class="rule-step-num">5</span>
-          <div>
-            <div class="rule-step-title">Cierren con el informe</div>
-            <p class="rule-step-desc">Al terminar la última etapa se genera un puntaje, un informe ejecutivo con lo que conviene reforzar, y un acta que pueden guardar o descargar.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
     </div>
 
   </div>
@@ -120,9 +115,6 @@
     <div class="setup-shell">
 
       <aside class="rail" id="setupRail">
-        <div class="rail-brand">
-          <button class="logo-home" type="button" aria-label="Ir al inicio"><img class="tibox-logo" src="assets/logo-tibox-ok.png" alt="TIBOX" style="height:26px;"></button>
-        </div>
         <div class="rail-group">
           <span class="rail-status"><span class="dot"></span>Configuración del ejercicio</span>
           <h1 class="rail-title">Ensaya el incidente <span class="accent">antes de que ocurra</span></h1>
@@ -195,7 +187,7 @@
          el stepper alto, la barra de progreso y la barra de acciones. Una sola fila. -->
     <header class="game-head">
       <div class="gh-left">
-        <button class="logo-home" type="button" aria-label="Ir al inicio"><img class="tibox-logo" src="assets/logo-tibox-ok.png" alt="TIBOX" style="height:18px;"></button>
+        <a class="logo-home" href="../index.html" aria-label="Ir al inicio"><img class="tibox-logo" src="assets/logo-tibox-ok.png" alt="TIBOX" style="height:18px;"></a>
         <span class="gh-scenario" id="gameSessionBadge">Ejercicio</span>
       </div>
 
