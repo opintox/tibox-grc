@@ -3,8 +3,8 @@
 // 2. Corre sgc/db/schema.sql en Project → SQL Editor
 // 3. Reemplaza estos dos valores por los de Project Settings → API
 //    (Project URL y "anon public" key).
-const SUPABASE_URL = 'https://TU-PROYECTO.supabase.co';
-const SUPABASE_ANON_KEY = 'TU-ANON-KEY';
+const SUPABASE_URL = 'https://tufpwziickeigrbfeqvh.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_dq539tPOsWsn3fqT_l47Rg_oaByj9W6';
 
 // La anon key es pública por diseño (viaja en el navegador de cualquiera que
 // abra la página): la seguridad la dan las políticas RLS de schema.sql, no
