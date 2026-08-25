@@ -6,6 +6,7 @@
 <title>CIP Cumplimiento · Quintero Energía</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
@@ -25,10 +26,9 @@
     <button class="tab" data-tab="dash">📊 Dashboard</button>
   </div>
   <div class="topright">
-    <button class="btn" id="btnCargarCarpeta" title="Elige la carpeta donde guardas los JSON: se carga automáticamente el más reciente y queda conectada para la próxima vez">📁 Cargar carpeta</button>
-    <label for="fileImportFallback" class="btn" id="lblFileImportFallback" style="cursor:pointer;display:none" title="Elige la carpeta donde guardas los JSON: se carga automáticamente el más reciente">📁 Cargar carpeta</label>
-    <input type="file" id="fileImportFallback" webkitdirectory multiple style="position:absolute;width:1px;height:1px;opacity:0">
-    <button class="btn" id="btnCompare" title="Compara el avance entre dos fechas de la misma carpeta de seguimiento">📅 Comparar avances</button>
+    <button class="btn" id="btnImportarJSON" title="Sube un JSON exportado antes y lo guarda en la base de datos (útil para migrar datos existentes o restaurar un respaldo)">📥 Importar JSON</button>
+    <input type="file" id="importarJSONInput" accept="application/json" style="position:absolute;width:1px;height:1px;opacity:0">
+    <button class="btn" id="btnCompare" title="Compara el estado actual contra un JSON exportado anteriormente">📅 Comparar avances</button>
     <button class="btn" id="btnClearAll" title="Limpiar Evidencia, Responsable y Estado de todos los entregables">🧹 Limpiar Datos</button>
     <button class="btn" id="btnExcel" title="Exporta a Excel lo que estés viendo con los filtros actuales">📊 Exportar Excel</button>
     <button class="btn btn-primary" id="btnExport">⬇ Exportar JSON</button>
@@ -264,23 +264,18 @@
 <div class="compare-modal" id="compareModal">
   <div class="compare-box">
     <div class="compare-title">Comparar avances</div>
-    <div class="compare-sub">Selecciona dos fechas de la carpeta conectada. Si hay más de un archivo para la misma fecha, se usa el modificado más recientemente.</div>
-    <button class="btn" id="btnCompareElegirCarpeta" style="width:100%;justify-content:center;margin-bottom:10px;display:none">📁 Elegir carpeta</button>
-    <label for="compareFolderInputFallback" class="btn" id="lblCompareFolderFallback" style="cursor:pointer;width:100%;justify-content:center;margin-bottom:10px;display:none">📁 Elegir carpeta</label>
-    <input type="file" id="compareFolderInputFallback" webkitdirectory multiple style="position:absolute;width:1px;height:1px;opacity:0">
-    <div id="compareFolderStatus" style="font-size:0.68rem;color:var(--mu);margin-bottom:16px"></div>
-    <div class="compare-fields">
-      <div class="compare-field"><label for="comparePrevDate">Fecha anterior</label><input type="date" id="comparePrevDate" class="finput" list="compareDatesList" disabled></div>
-      <div class="compare-field"><label for="compareCurrentDate">Fecha actual</label><input type="date" id="compareCurrentDate" class="finput" list="compareDatesList" disabled></div>
-    </div>
-    <datalist id="compareDatesList"></datalist>
+    <div class="compare-sub">Elige un JSON exportado anteriormente (con "⬇ Exportar JSON") para compararlo contra el estado actual de la base de datos.</div>
+    <label for="comparePrevFile" class="btn" style="cursor:pointer;width:100%;justify-content:center;margin-bottom:10px">📁 Elegir JSON anterior</label>
+    <input type="file" id="comparePrevFile" accept="application/json" style="position:absolute;width:1px;height:1px;opacity:0">
+    <div id="compareFileStatus" style="font-size:0.68rem;color:var(--mu);margin-bottom:16px"></div>
     <div class="compare-actions">
       <button class="btn" id="btnCloseCompare">Cancelar</button>
-      <button class="btn btn-primary" id="btnRunCompare">Comparar avances</button>
+      <button class="btn btn-primary" id="btnRunCompare" disabled>Comparar avances</button>
     </div>
   </div>
 </div>
 
+<script src="js/db.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
