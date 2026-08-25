@@ -1206,13 +1206,17 @@ function formatearFechaSnapshot(s){
   return d.toLocaleDateString('es-CL',{day:'2-digit',month:'short',year:'numeric'});
 }
 
+// El campo <input type="date"> abre el calendario nativo del navegador; el
+// <datalist> le pasa las fechas con snapshot para que las sugiera/resalte.
+// Fuera de ese rango (min/max) el propio navegador no deja navegar.
 async function abrirComparador(){
   document.getElementById('compareModal').classList.add('show');
-  const prevSel=document.getElementById('comparePrevSel');
-  const currSel=document.getElementById('compareCurrentSel');
+  const prevInp=document.getElementById('comparePrevDate');
+  const currInp=document.getElementById('compareCurrentDate');
+  const enVivo=document.getElementById('compareUsarEnVivo');
   const status=document.getElementById('compareFileStatus');
   const btnRun=document.getElementById('btnRunCompare');
-  prevSel.disabled=currSel.disabled=true;btnRun.disabled=true;
+  prevInp.disabled=currInp.disabled=true;btnRun.disabled=true;
   status.textContent='Cargando fechas guardadas…';
   try{
     SNAPSHOTS_CACHE=await dbListarSnapshots();
@@ -1220,35 +1224,42 @@ async function abrirComparador(){
       status.textContent='⚠️ Todavía no hay ningún snapshot guardado. Usa "📸 Guardar snapshot" primero.';
       return;
     }
-    const opciones=SNAPSHOTS_CACHE.map(s=>'<option value="'+esc(s.fecha)+'">'+esc(formatearFechaSnapshot(s))+'</option>').join('');
-    prevSel.innerHTML=opciones;
-    currSel.innerHTML='<option value="">🔴 En vivo (ahora)</option>'+opciones;
-    prevSel.value=SNAPSHOTS_CACHE.length>1?SNAPSHOTS_CACHE[1].fecha:SNAPSHOTS_CACHE[0].fecha;
-    currSel.value='';
-    prevSel.disabled=currSel.disabled=false;btnRun.disabled=false;
-    status.textContent=SNAPSHOTS_CACHE.length+' fecha'+(SNAPSHOTS_CACHE.length===1?'':'s')+' guardada'+(SNAPSHOTS_CACHE.length===1?'':'s');
+    const fechas=SNAPSHOTS_CACHE.map(s=>s.fecha).sort(); // asc: [0]=más antigua, [ultima]=más reciente
+    document.getElementById('compareDatesList').innerHTML=
+      fechas.map(f=>'<option value="'+f+'">').join('');
+    [prevInp,currInp].forEach(inp=>{ inp.min=fechas[0]; inp.max=fechas[fechas.length-1]; });
+    prevInp.value=fechas.length>1?fechas[fechas.length-2]:fechas[fechas.length-1];
+    currInp.value=fechas[fechas.length-1];
+    currInp.disabled=enVivo.checked; // "en vivo" tapa el campo mientras esté marcado
+    prevInp.disabled=false;btnRun.disabled=false;
+    status.textContent=fechas.length+' fecha'+(fechas.length===1?'':'s')+' guardada'+(fechas.length===1?'':'s')+' ('+formatearFechaSnapshot({fecha:fechas[0]})+' a '+formatearFechaSnapshot({fecha:fechas[fechas.length-1]})+')';
   }catch(err){
     status.textContent='❌ '+err.message;
   }
 }
+document.getElementById('compareUsarEnVivo').addEventListener('change',function(){
+  document.getElementById('compareCurrentDate').disabled=this.checked;
+});
 function cerrarComparador(){document.getElementById('compareModal').classList.remove('show');}
 document.getElementById('btnCompare').addEventListener('click',abrirComparador);
 document.getElementById('btnCloseCompare').addEventListener('click',cerrarComparador);
 document.getElementById('compareModal').addEventListener('click',function(ev){if(ev.target===this)cerrarComparador();});
 
 document.getElementById('btnRunCompare').addEventListener('click',async function(){
-  const prevFecha=document.getElementById('comparePrevSel').value;
-  const currFecha=document.getElementById('compareCurrentSel').value;
-  if(!prevFecha){toast('⚠️ Elige una fecha anterior');return;}
+  const prevFecha=document.getElementById('comparePrevDate').value;
+  const usarEnVivo=document.getElementById('compareUsarEnVivo').checked;
+  const currFecha=usarEnVivo?'':document.getElementById('compareCurrentDate').value;
+  const prevInfo=SNAPSHOTS_CACHE.find(s=>s.fecha===prevFecha);
+  if(!prevFecha||!prevInfo){toast('⚠️ Elige una fecha anterior con snapshot guardado');return;}
+  if(!usarEnVivo && !SNAPSHOTS_CACHE.find(s=>s.fecha===currFecha)){toast('⚠️ Elige una fecha actual con snapshot guardado (o marca "en vivo")');return;}
   try{
-    const prevInfo=SNAPSHOTS_CACHE.find(s=>s.fecha===prevFecha);
     const prevData=await dbObtenerSnapshot(prevFecha);
-    COMPARE_PREV={data:prevData, label:prevInfo?formatearFechaSnapshot(prevInfo):prevFecha};
+    COMPARE_PREV={data:prevData, label:formatearFechaSnapshot(prevInfo)};
 
     if(currFecha){
       const currInfo=SNAPSHOTS_CACHE.find(s=>s.fecha===currFecha);
       const currData=await dbObtenerSnapshot(currFecha);
-      COMPARE_CURRENT={data:currData, label:currInfo?formatearFechaSnapshot(currInfo):currFecha};
+      COMPARE_CURRENT={data:currData, label:formatearFechaSnapshot(currInfo)};
     }else{
       COMPARE_CURRENT=null; // "actual" = estado vivo de la base de datos
     }
