@@ -1198,10 +1198,12 @@ document.getElementById('btnGuardarSnapshot').addEventListener('click',async fun
 // "📸 Guardar snapshot"). "Fecha actual" también permite elegir el estado
 // vivo de la base de datos, con la opción "🔴 En vivo (ahora)".
 let SNAPSHOTS_CACHE=[];
+// Siempre se muestra la fecha en formato calendario (ej. "25 ago 2026"), no la
+// etiqueta cruda que pueda traer el snapshot (ej. el nombre de un archivo importado).
 function formatearFechaSnapshot(s){
-  if(s.etiqueta) return s.etiqueta;
   const d=new Date(s.fecha+'T00:00:00');
-  return isNaN(d.getTime()) ? s.fecha : d.toLocaleDateString('es-CL');
+  if(isNaN(d.getTime())) return s.fecha;
+  return d.toLocaleDateString('es-CL',{day:'2-digit',month:'short',year:'numeric'});
 }
 
 async function abrirComparador(){
