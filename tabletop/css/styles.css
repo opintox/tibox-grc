@@ -790,7 +790,8 @@
   .scn-top{display:flex; align-items:flex-start; justify-content:space-between; gap:10px;}
   .scn-icon{
     width:35px; height:35px; border-radius:10px; display:flex; align-items:center; justify-content:center;
-    background:linear-gradient(135deg, var(--a), var(--a2)); color:#0A1020; flex-shrink:0;
+    background:linear-gradient(135deg, color-mix(in srgb, var(--a) 35%, transparent), color-mix(in srgb, var(--a2) 35%, transparent));
+    color:#fff; flex-shrink:0;
     border:1px solid rgba(255,255,255,0.18);
     box-shadow:0 8px 18px -10px var(--glow);
   }
@@ -814,7 +815,7 @@
   .scn-card.selected{border-color:var(--a); transform:translateY(-2px); box-shadow:0 20px 36px -20px var(--glow);}
   .scn-card.selected::after{
     content:''; position:absolute; inset:0; border-radius:16px; pointer-events:none;
-    box-shadow:0 0 0 2px var(--a) inset;
+    box-shadow:0 0 0 1px var(--a) inset;
   }
   .scn-card.selected .scn-check{opacity:1; transform:scale(1); background:var(--a); color:#0A1020; border-color:var(--a);}
 
