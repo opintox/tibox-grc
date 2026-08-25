@@ -28,7 +28,8 @@
   <div class="topright">
     <button class="btn" id="btnImportarJSON" title="Sube un JSON exportado antes y lo guarda en la base de datos (útil para migrar datos existentes o restaurar un respaldo)">📥 Importar JSON</button>
     <input type="file" id="importarJSONInput" accept="application/json" style="position:absolute;width:1px;height:1px;opacity:0">
-    <button class="btn" id="btnCompare" title="Compara el estado actual contra un JSON exportado anteriormente">📅 Comparar avances</button>
+    <button class="btn" id="btnGuardarSnapshot" title="Guarda una foto del estado de hoy en la base de datos, para poder compararla más adelante en 'Comparar avances'">📸 Guardar snapshot</button>
+    <button class="btn" id="btnCompare" title="Compara el estado entre dos fechas guardadas en la base de datos">📅 Comparar avances</button>
     <button class="btn" id="btnClearAll" title="Limpiar Evidencia, Responsable y Estado de todos los entregables">🧹 Limpiar Datos</button>
     <button class="btn" id="btnExcel" title="Exporta a Excel lo que estés viendo con los filtros actuales">📊 Exportar Excel</button>
     <button class="btn btn-primary" id="btnExport">⬇ Exportar JSON</button>
@@ -264,10 +265,16 @@
 <div class="compare-modal" id="compareModal">
   <div class="compare-box">
     <div class="compare-title">Comparar avances</div>
-    <div class="compare-sub">Elige un JSON exportado anteriormente (con "⬇ Exportar JSON") para compararlo contra el estado actual de la base de datos.</div>
-    <label for="comparePrevFile" class="btn" style="cursor:pointer;width:100%;justify-content:center;margin-bottom:10px">📁 Elegir JSON anterior</label>
-    <input type="file" id="comparePrevFile" accept="application/json" style="position:absolute;width:1px;height:1px;opacity:0">
-    <div id="compareFileStatus" style="font-size:0.68rem;color:var(--mu);margin-bottom:16px"></div>
+    <div class="compare-sub">Elige dos fechas guardadas con "📸 Guardar snapshot" para comparar su avance.</div>
+    <div class="compare-fields">
+      <div class="compare-field"><label for="comparePrevSel">Fecha anterior</label>
+        <select id="comparePrevSel" class="fsel" style="width:100%" disabled></select>
+      </div>
+      <div class="compare-field"><label for="compareCurrentSel">Fecha actual</label>
+        <select id="compareCurrentSel" class="fsel" style="width:100%" disabled></select>
+      </div>
+    </div>
+    <div id="compareFileStatus" style="font-size:0.68rem;color:var(--mu);margin-top:12px"></div>
     <div class="compare-actions">
       <button class="btn" id="btnCloseCompare">Cancelar</button>
       <button class="btn btn-primary" id="btnRunCompare" disabled>Comparar avances</button>

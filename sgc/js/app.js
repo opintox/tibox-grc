@@ -1164,12 +1164,6 @@ function leerJson(file){
     reader.readAsText(file);
   });
 }
-function etiquetaFecha(data,file){
-  const raw=data.exportado || data.fecha || '';
-  const date=raw ? new Date(raw) : null;
-  if(date && !isNaN(date.getTime())) return date.toLocaleDateString('es-CL');
-  return file && file.name ? file.name.replace(/\.json$/i,'') : 'Sin fecha';
-}
 
 document.getElementById('btnImportarJSON').addEventListener('click',function(){
   document.getElementById('importarJSONInput').click();
@@ -1188,31 +1182,76 @@ document.getElementById('importarJSONInput').addEventListener('change',async fun
   }
 });
 
+// ============ GUARDAR SNAPSHOT ============
+document.getElementById('btnGuardarSnapshot').addEventListener('click',async function(){
+  if(!DATA){toast('No hay datos');return;}
+  try{
+    await dbGuardarSnapshot();
+    toast('📸 Snapshot de hoy guardado');
+  }catch(err){
+    toast('❌ No se pudo guardar el snapshot: '+err.message);
+  }
+});
+
 // ============ COMPARAR AVANCES ============
-// "Actual" siempre es el estado vivo de la base de datos (ya cargado en DATA);
-// solo hay que elegir el JSON "anterior" contra el que se compara.
-let COMPARE_PREV_FILE=null;
-document.getElementById('comparePrevFile').addEventListener('change',function(ev){
-  COMPARE_PREV_FILE=ev.target.files[0]||null;
+// Las dos fechas a comparar salen de la tabla "snapshots" (creadas con
+// "📸 Guardar snapshot"). "Fecha actual" también permite elegir el estado
+// vivo de la base de datos, con la opción "🔴 En vivo (ahora)".
+let SNAPSHOTS_CACHE=[];
+function formatearFechaSnapshot(s){
+  if(s.etiqueta) return s.etiqueta;
+  const d=new Date(s.fecha+'T00:00:00');
+  return isNaN(d.getTime()) ? s.fecha : d.toLocaleDateString('es-CL');
+}
+
+async function abrirComparador(){
+  document.getElementById('compareModal').classList.add('show');
+  const prevSel=document.getElementById('comparePrevSel');
+  const currSel=document.getElementById('compareCurrentSel');
   const status=document.getElementById('compareFileStatus');
   const btnRun=document.getElementById('btnRunCompare');
-  if(COMPARE_PREV_FILE){ status.textContent='✅ '+COMPARE_PREV_FILE.name; btnRun.disabled=false; }
-  else{ status.textContent=''; btnRun.disabled=true; }
-});
-function abrirComparador(){ document.getElementById('compareModal').classList.add('show'); }
+  prevSel.disabled=currSel.disabled=true;btnRun.disabled=true;
+  status.textContent='Cargando fechas guardadas…';
+  try{
+    SNAPSHOTS_CACHE=await dbListarSnapshots();
+    if(!SNAPSHOTS_CACHE.length){
+      status.textContent='⚠️ Todavía no hay ningún snapshot guardado. Usa "📸 Guardar snapshot" primero.';
+      return;
+    }
+    const opciones=SNAPSHOTS_CACHE.map(s=>'<option value="'+esc(s.fecha)+'">'+esc(formatearFechaSnapshot(s))+'</option>').join('');
+    prevSel.innerHTML=opciones;
+    currSel.innerHTML='<option value="">🔴 En vivo (ahora)</option>'+opciones;
+    prevSel.value=SNAPSHOTS_CACHE.length>1?SNAPSHOTS_CACHE[1].fecha:SNAPSHOTS_CACHE[0].fecha;
+    currSel.value='';
+    prevSel.disabled=currSel.disabled=false;btnRun.disabled=false;
+    status.textContent=SNAPSHOTS_CACHE.length+' fecha'+(SNAPSHOTS_CACHE.length===1?'':'s')+' guardada'+(SNAPSHOTS_CACHE.length===1?'':'s');
+  }catch(err){
+    status.textContent='❌ '+err.message;
+  }
+}
 function cerrarComparador(){document.getElementById('compareModal').classList.remove('show');}
 document.getElementById('btnCompare').addEventListener('click',abrirComparador);
 document.getElementById('btnCloseCompare').addEventListener('click',cerrarComparador);
 document.getElementById('compareModal').addEventListener('click',function(ev){if(ev.target===this)cerrarComparador();});
 
 document.getElementById('btnRunCompare').addEventListener('click',async function(){
-  if(!COMPARE_PREV_FILE){toast('⚠️ Elige un JSON anterior');return;}
+  const prevFecha=document.getElementById('comparePrevSel').value;
+  const currFecha=document.getElementById('compareCurrentSel').value;
+  if(!prevFecha){toast('⚠️ Elige una fecha anterior');return;}
   try{
-    const data=await leerJson(COMPARE_PREV_FILE);
-    COMPARE_PREV={data:data,label:etiquetaFecha(data,COMPARE_PREV_FILE)};
-    COMPARE_CURRENT=null; // "actual" = estado vivo de la base de datos
+    const prevInfo=SNAPSHOTS_CACHE.find(s=>s.fecha===prevFecha);
+    const prevData=await dbObtenerSnapshot(prevFecha);
+    COMPARE_PREV={data:prevData, label:prevInfo?formatearFechaSnapshot(prevInfo):prevFecha};
+
+    if(currFecha){
+      const currInfo=SNAPSHOTS_CACHE.find(s=>s.fecha===currFecha);
+      const currData=await dbObtenerSnapshot(currFecha);
+      COMPARE_CURRENT={data:currData, label:currInfo?formatearFechaSnapshot(currInfo):currFecha};
+    }else{
+      COMPARE_CURRENT=null; // "actual" = estado vivo de la base de datos
+    }
     cerrarComparador();
-    toast('✅ Comparando contra '+COMPARE_PREV.label);
+    toast('✅ Comparando '+COMPARE_PREV.label+' vs '+(COMPARE_CURRENT?COMPARE_CURRENT.label:'ahora'));
     if(document.getElementById('page-dash').classList.contains('on')) renderDashboard();
   }catch(err){toast('❌ '+err.message);}
 });

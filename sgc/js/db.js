@@ -119,3 +119,29 @@ async function dbImportarJSON(data){
     dbOk(await sb.from('personas').upsert(personas.map(p=>({nombre:p.nombre, org:p.org}))));
   }
 }
+
+// ---- Snapshots: "fotos" del estado completo para "Comparar avances" ----
+// Se guarda el mismo shape {dominios, requerimientos, personas} que usa
+// loadData(), armado a partir del DATA que ya está en memoria (no hace falta
+// leer nada de nuevo de la base).
+function dbGuardarSnapshot(etiqueta){
+  const dominios={};
+  Object.values(DATA.dominios).forEach(d=>{ dominios[d.id]=d; });
+  const data={dominios, requerimientos:DATA.requerimientos, personas:DATA.personas};
+  const fecha=new Date().toISOString().slice(0,10);
+  return sb.from('snapshots').upsert({fecha, etiqueta:etiqueta||null, data}, {onConflict:'fecha'}).then(dbOk);
+}
+
+// Lista de fechas disponibles para elegir en "Comparar avances" (sin traer el
+// jsonb completo de cada una, para que el combo cargue rápido).
+async function dbListarSnapshots(){
+  const r=await sb.from('snapshots').select('fecha, etiqueta').order('fecha', {ascending:false});
+  dbOk(r);
+  return r.data;
+}
+
+async function dbObtenerSnapshot(fecha){
+  const r=await sb.from('snapshots').select('data').eq('fecha', fecha).single();
+  dbOk(r);
+  return r.data.data;
+}

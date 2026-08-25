@@ -42,6 +42,17 @@ create table if not exists personas (
   org text not null check (org in ('tibox','quintero','sin-asignar'))
 );
 
+-- "Fotos" del estado completo en una fecha, para "Comparar avances". Se crean
+-- con el botón "📸 Guardar snapshot" (una por día: si ya existe una para hoy,
+-- se sobrescribe). Guarda el mismo shape {dominios, requerimientos, personas}
+-- que ya usa el resto de la app, así que compararlas no requiere lógica nueva.
+create table if not exists snapshots (
+  fecha date primary key,
+  etiqueta text,
+  data jsonb not null,
+  created_at timestamptz not null default now()
+);
+
 create index if not exists idx_requerimientos_dominio on requerimientos(dominio_id);
 create index if not exists idx_entregables_requerimiento on entregables(requerimiento_id);
 
@@ -49,7 +60,7 @@ create index if not exists idx_entregables_requerimiento on entregables(requerim
 -- La app todavía no se suscribe a estos cambios (guarda al editar, pero otro
 -- usuario recién ve el cambio al recargar) — esto lo deja preparado para
 -- cuando se agregue esa mejora, sin otra migración de esquema.
-alter publication supabase_realtime add table dominios, requerimientos, entregables, personas;
+alter publication supabase_realtime add table dominios, requerimientos, entregables, personas, snapshots;
 
 -- RLS: esta es una herramienta interna sin login propio, así que se habilita
 -- acceso de lectura/escritura completo con la clave "anon" pública. La
@@ -61,8 +72,10 @@ alter table dominios enable row level security;
 alter table requerimientos enable row level security;
 alter table entregables enable row level security;
 alter table personas enable row level security;
+alter table snapshots enable row level security;
 
 create policy "dominios acceso publico" on dominios for all using (true) with check (true);
 create policy "requerimientos acceso publico" on requerimientos for all using (true) with check (true);
 create policy "entregables acceso publico" on entregables for all using (true) with check (true);
 create policy "personas acceso publico" on personas for all using (true) with check (true);
+create policy "snapshots acceso publico" on snapshots for all using (true) with check (true);
