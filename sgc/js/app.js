@@ -117,11 +117,13 @@ function buildTable(){
   tbody.innerHTML=h;
   tbody.querySelectorAll('.stsel').forEach(sel=>sel.addEventListener('change',()=>{
     const eid=sel.dataset.eid;
-    DATA.requerimientos.forEach(req=>req.entregables.forEach(e=>{if(e.id===eid)e.estado=sel.value;}));
+    const e=findE(eid);
+    if(e) e.estado=sel.value;
     const row=sel.closest('tr');row.dataset.st=sel.value;
     sel.style.borderColor=STCOLOR[sel.value];sel.style.background=getBg(sel.value);sel.style.color=STCOLOR[sel.value];
     refrescarResumenGrupo(row.dataset.dom);
     updateSummary();applyFilters();
+    if(e) dbGuardarEntregable(e).catch(err=>toast('❌ No se pudo guardar: '+err.message));
   }));
   tbody.querySelectorAll('tr').forEach(tr=>{
     tr.addEventListener('click',function(ev){
@@ -404,6 +406,7 @@ function initForm(){
       row.style.background='rgba(255,138,0,.10)';setTimeout(()=>row.style.background='',1200);
     }
     updateSummary();applyFilters();renderPersonas();
+    dbGuardarEntregable(e).catch(err=>toast('❌ No se pudo guardar: '+err.message));
     const sinClasificar = e.responsable && e.org==='sin-asignar' && !e.orgManual;
     if(sinClasificar){
       setPersonasOpen(true);
@@ -975,6 +978,10 @@ function aplicarCambioPersonas(){
   renderPersonas();
   refreshFormOrg();
   if(document.getElementById('page-dash').classList.contains('on')) renderDashboard();
+  // enrichOrg() puede haber recalculado el org de varios entregables (los que
+  // no tienen orgManual): se persisten para que la base de datos no quede
+  // desincronizada con lo que ahora se ve en pantalla.
+  dbSincronizarOrgs().catch(err=>toast('❌ No se pudo sincronizar organizaciones: '+err.message));
 }
 
 // ---- Conteo de entregables por persona ----
@@ -1018,12 +1025,14 @@ function renderPersonas(){
     if(!p) return;
     p.org=sel.value;
     aplicarCambioPersonas();
+    dbGuardarPersona(p).catch(err=>toast('❌ No se pudo guardar: '+err.message));
     toast('✅ '+p.nombre+' → '+ORG_LABEL[p.org]);
   }));
   tbody.querySelectorAll('.p-del').forEach(btn=>btn.addEventListener('click',()=>{
     const nombre=btn.dataset.nombre;
     if(!confirm('¿Quitar a "'+nombre+'" de la lista?\n\nSus entregables quedarán como Sin Asignar.')) return;
     DATA.personas=(DATA.personas||[]).filter(x=>normNombre(x.nombre)!==normNombre(nombre));
+    dbEliminarPersona(nombre).catch(err=>toast('❌ No se pudo eliminar: '+err.message));
     aplicarCambioPersonas();
     toast('🗑️ '+nombre+' eliminado de la lista');
   }));
@@ -1082,12 +1091,14 @@ function agregarPersona(nombre, org, silencioso){
     if(ya.org===org){ showPMsg('⚠️ "'+nombre+'" ya está en la lista como '+ORG_LABEL[org]+'.','#F59E0B'); return false; }
     ya.org=org;
     aplicarCambioPersonas();
+    dbGuardarPersona(ya).catch(err=>toast('❌ No se pudo guardar: '+err.message));
     toast('✅ '+ya.nombre+' → '+ORG_LABEL[org]);
     return true;
   }
   DATA.personas.push({nombre:nombre, org:org});
   DATA.personas.sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
   aplicarCambioPersonas();
+  dbGuardarPersona({nombre:nombre, org:org}).catch(err=>toast('❌ No se pudo guardar: '+err.message));
   if(!silencioso) showPMsg('✅ "'+nombre+'" agregado a '+ORG_LABEL[org]+'.','#10B981');
   toast('✅ '+nombre+' agregado a '+ORG_LABEL[org]);
   return true;
@@ -1137,128 +1148,7 @@ function loadData(imported){
   initPersonasForm();renderPersonas();refreshFormOrg();
 }
 
-// ============ CARPETA CONECTADA (File System Access API, con memoria entre sesiones) ============
-// En navegadores compatibles (Chrome/Edge) la carpeta elegida queda guardada en IndexedDB: la próxima
-// vez que se abre la página se reconecta sola (sin volver a navegar carpetas), siempre que el permiso
-// siga vigente. En navegadores sin soporte (Firefox/Safari) se usa el selector de carpeta clásico,
-// que sí requiere elegirla de nuevo cada vez.
-const FS_SUPPORTED='showDirectoryPicker' in window;
-let FOLDER_HANDLE=null;
-
-function idbAbrir(){
-  return new Promise(function(resolve,reject){
-    const req=indexedDB.open('cip_tibox',1);
-    req.onupgradeneeded=function(){ req.result.createObjectStore('carpetas'); };
-    req.onsuccess=function(){ resolve(req.result); };
-    req.onerror=function(){ reject(req.error); };
-  });
-}
-function idbGetHandle(){
-  return idbAbrir().then(function(db){
-    return new Promise(function(resolve,reject){
-      const tx=db.transaction('carpetas','readonly');
-      const req=tx.objectStore('carpetas').get('ultima');
-      req.onsuccess=function(){ resolve(req.result||null); };
-      req.onerror=function(){ reject(req.error); };
-    });
-  });
-}
-function idbSetHandle(handle){
-  return idbAbrir().then(function(db){
-    return new Promise(function(resolve,reject){
-      const tx=db.transaction('carpetas','readwrite');
-      tx.objectStore('carpetas').put(handle,'ultima');
-      tx.oncomplete=function(){ resolve(); };
-      tx.onerror=function(){ reject(tx.error); };
-    });
-  });
-}
-
-async function listarJsonsDeCarpeta(handle){
-  const out=[];
-  for await (const entry of handle.values()){
-    if(entry.kind==='file' && entry.name.toLowerCase().endsWith('.json')) out.push(await entry.getFile());
-  }
-  return out;
-}
-
-function cargarArchivoJson(file,prefijo){
-  return new Promise(function(resolve){
-    const reader=new FileReader();
-    reader.onload=function(e){
-      try{
-        const imp=JSON.parse(e.target.result);
-        if(!imp.requerimientos){toast('❌ Archivo no válido: '+file.name);resolve();return;}
-        loadData(imp);
-        toast((prefijo||'✅ ')+file.name+' · '+imp.requerimientos.length+' requerimientos');
-      }catch(err){toast('❌ Error en '+file.name+': '+err.message);}
-      resolve();
-    };
-    reader.readAsText(file);
-  });
-}
-
-// Usa una carpeta ya autorizada: carga el JSON más reciente y arma el mapa de fechas para "Comparar avances"
-async function usarCarpeta(handle,opts){
-  opts=opts||{};
-  FOLDER_HANDLE=handle;
-  const files=await listarJsonsDeCarpeta(handle);
-  if(!files.length){
-    toast('⚠️ La carpeta "'+handle.name+'" no contiene archivos .json');
-  }else{
-    files.sort((a,b)=>b.lastModified-a.lastModified);
-    await cargarArchivoJson(files[0],opts.auto?'✅ Carpeta reconectada · ':'✅ ');
-  }
-  actualizarMapaFechasComparar(files,true);
-  const btn=document.getElementById('btnCargarCarpeta');
-  if(btn){ btn.textContent='📁 '+handle.name; btn.title='Carpeta conectada: "'+handle.name+'" · clic para cambiarla'; }
-}
-
-// Clic manual en "Cargar carpeta": reutiliza el permiso guardado si existe, o abre el selector si es la primera vez
-async function conectarCarpetaManual(){
-  if(!FS_SUPPORTED)return;
-  try{
-    let handle=await idbGetHandle();
-    if(handle){
-      const actual=await handle.queryPermission({mode:'read'});
-      if(actual==='granted'){
-        handle=await window.showDirectoryPicker(); // ya conectados: un clic manual = elegir otra carpeta
-      }else{
-        const otorgado=await handle.requestPermission({mode:'read'});
-        if(otorgado!=='granted'){toast('❌ Permiso denegado para la carpeta');return;}
-      }
-    }else{
-      handle=await window.showDirectoryPicker();
-    }
-    await idbSetHandle(handle);
-    await usarCarpeta(handle,{auto:false});
-  }catch(err){
-    if(err && err.name==='AbortError')return; // el usuario cerró el selector
-    toast('❌ '+err.message);
-  }
-}
-
-// Al cargar la página: intenta reconectar en silencio (sin ningún clic) si el permiso ya estaba concedido
-async function reconectarCarpetaSilenciosa(){
-  if(!FS_SUPPORTED)return;
-  try{
-    const handle=await idbGetHandle();
-    if(!handle)return;
-    const perm=await handle.queryPermission({mode:'read'});
-    if(perm!=='granted')return; // sin gesto del usuario no forzamos el prompt de permiso
-    await usarCarpeta(handle,{auto:true});
-  }catch(err){ /* silencioso: si falla, el usuario puede conectar manualmente */ }
-}
-
-// Fallback para navegadores sin File System Access API (Firefox/Safari): hay que elegir la carpeta cada vez
-document.getElementById('fileImportFallback').addEventListener('change',function(ev){
-  const jsons=Array.from(ev.target.files).filter(f=>f.name.toLowerCase().endsWith('.json'));
-  if(!jsons.length){toast('❌ La carpeta no contiene archivos .json');ev.target.value='';return;}
-  jsons.sort((a,b)=>b.lastModified-a.lastModified);
-  cargarArchivoJson(jsons[0]).then(function(){ actualizarMapaFechasComparar(jsons,true); });
-  ev.target.value='';
-});
-
+// ============ IMPORTAR JSON (migración / restauración de respaldos) ============
 function leerJson(file){
   return new Promise(function(resolve,reject){
     if(!file){reject(new Error('Falta seleccionar un archivo'));return;}
@@ -1280,76 +1170,49 @@ function etiquetaFecha(data,file){
   if(date && !isNaN(date.getTime())) return date.toLocaleDateString('es-CL');
   return file && file.name ? file.name.replace(/\.json$/i,'') : 'Sin fecha';
 }
-async function abrirComparador(){
-  document.getElementById('compareModal').classList.add('show');
-  if(FS_SUPPORTED && FOLDER_HANDLE){
-    try{ actualizarMapaFechasComparar(await listarJsonsDeCarpeta(FOLDER_HANDLE),true); }catch(err){}
-  }else if(FS_SUPPORTED){
-    actualizarMapaFechasComparar([],true);
+
+document.getElementById('btnImportarJSON').addEventListener('click',function(){
+  document.getElementById('importarJSONInput').click();
+});
+document.getElementById('importarJSONInput').addEventListener('change',async function(ev){
+  const file=ev.target.files[0];
+  ev.target.value='';
+  if(!file)return;
+  try{
+    const data=await leerJson(file);
+    await dbImportarJSON(data);
+    toast('✅ '+file.name+' importado a la base de datos');
+    loadData(await dbCargarTodo());
+  }catch(err){
+    toast('❌ '+err.message);
   }
-}
+});
+
+// ============ COMPARAR AVANCES ============
+// "Actual" siempre es el estado vivo de la base de datos (ya cargado en DATA);
+// solo hay que elegir el JSON "anterior" contra el que se compara.
+let COMPARE_PREV_FILE=null;
+document.getElementById('comparePrevFile').addEventListener('change',function(ev){
+  COMPARE_PREV_FILE=ev.target.files[0]||null;
+  const status=document.getElementById('compareFileStatus');
+  const btnRun=document.getElementById('btnRunCompare');
+  if(COMPARE_PREV_FILE){ status.textContent='✅ '+COMPARE_PREV_FILE.name; btnRun.disabled=false; }
+  else{ status.textContent=''; btnRun.disabled=true; }
+});
+function abrirComparador(){ document.getElementById('compareModal').classList.add('show'); }
 function cerrarComparador(){document.getElementById('compareModal').classList.remove('show');}
 document.getElementById('btnCompare').addEventListener('click',abrirComparador);
 document.getElementById('btnCloseCompare').addEventListener('click',cerrarComparador);
 document.getElementById('compareModal').addEventListener('click',function(ev){if(ev.target===this)cerrarComparador();});
-if(FS_SUPPORTED) document.getElementById('btnCompareElegirCarpeta').addEventListener('click',conectarCarpetaManual);
-
-// Extrae una fecha YYYY-MM-DD del nombre del archivo (ej. "CIP_Quintero_2026-08-24 (1).json")
-function extraerFechaDeNombre(nombre){
-  const m=nombre.match(/(\d{4}-\d{2}-\d{2})/);
-  return m?m[1]:null;
-}
-
-// Mapa fecha -> archivo más reciente (por fecha de modificación) entre los .json disponibles
-let COMPARE_DATE_MAP={};
-
-function actualizarMapaFechasComparar(files,resetSelection){
-  COMPARE_DATE_MAP={};
-  files.forEach(f=>{
-    if(!f.name.toLowerCase().endsWith('.json'))return;
-    const d=extraerFechaDeNombre(f.name);
-    if(!d)return;
-    if(!COMPARE_DATE_MAP[d]||f.lastModified>COMPARE_DATE_MAP[d].lastModified) COMPARE_DATE_MAP[d]=f;
-  });
-  const fechas=Object.keys(COMPARE_DATE_MAP).sort();
-  document.getElementById('compareDatesList').innerHTML=fechas.map(d=>'<option value="'+d+'">').join('');
-  const prevSel=document.getElementById('comparePrevDate');
-  const currSel=document.getElementById('compareCurrentDate');
-  prevSel.disabled=currSel.disabled=!fechas.length;
-  if(fechas.length){
-    prevSel.min=currSel.min=fechas[0];
-    prevSel.max=currSel.max=fechas[fechas.length-1];
-    if(resetSelection){
-      currSel.value=fechas[fechas.length-1];
-      if(fechas.length>1) prevSel.value=fechas[fechas.length-2];
-    }
-    document.getElementById('compareFolderStatus').textContent='✅ '+fechas.length+' fecha'+(fechas.length===1?'':'s')+' disponible'+(fechas.length===1?'':'s')+' ('+fechas[0]+' a '+fechas[fechas.length-1]+')';
-  }else{
-    document.getElementById('compareFolderStatus').textContent=(FS_SUPPORTED&&!FOLDER_HANDLE)?'⚠️ Conecta una carpeta primero':'⚠️ No se encontraron JSON con fecha en el nombre (ej. "..._2026-08-24.json")';
-  }
-  const btnElegir=document.getElementById('btnCompareElegirCarpeta');
-  if(btnElegir) btnElegir.style.display=(FS_SUPPORTED&&!FOLDER_HANDLE)?'':'none';
-}
-
-// Fallback para navegadores sin File System Access API (Firefox/Safari): selector de carpeta clásico
-document.getElementById('compareFolderInputFallback').addEventListener('change',function(ev){
-  actualizarMapaFechasComparar(Array.from(ev.target.files),true);
-});
 
 document.getElementById('btnRunCompare').addEventListener('click',async function(){
-  const prevDate=document.getElementById('comparePrevDate').value;
-  const currDate=document.getElementById('compareCurrentDate').value;
-  if(!prevDate||!currDate){toast('⚠️ Elige la carpeta y selecciona ambas fechas');return;}
-  const prevFile=COMPARE_DATE_MAP[prevDate];
-  const currFile=COMPARE_DATE_MAP[currDate];
-  if(!prevFile||!currFile){toast('❌ No hay JSON para esa fecha en la carpeta elegida');return;}
+  if(!COMPARE_PREV_FILE){toast('⚠️ Elige un JSON anterior');return;}
   try{
-    const results=await Promise.all([leerJson(prevFile),leerJson(currFile)]);
-    COMPARE_PREV={data:results[0],label:etiquetaFecha(results[0],prevFile)};
-    COMPARE_CURRENT={data:results[1],label:etiquetaFecha(results[1],currFile)};
-    loadData(results[1]);
+    const data=await leerJson(COMPARE_PREV_FILE);
+    COMPARE_PREV={data:data,label:etiquetaFecha(data,COMPARE_PREV_FILE)};
+    COMPARE_CURRENT=null; // "actual" = estado vivo de la base de datos
     cerrarComparador();
-    toast('✅ Comparación cargada · '+COMPARE_PREV.label+' vs '+COMPARE_CURRENT.label);
+    toast('✅ Comparando contra '+COMPARE_PREV.label);
     if(document.getElementById('page-dash').classList.contains('on')) renderDashboard();
   }catch(err){toast('❌ '+err.message);}
 });
@@ -1586,17 +1449,14 @@ document.getElementById('btnClearAll').addEventListener('click',function(){
   enrichOrg(DATA);
   buildDomChips();buildTable();updateSummary();applyFilters();initForm();
   renderPersonas();refreshFormOrg();
+  dbLimpiarTodosLosEntregables().catch(err=>toast('❌ No se pudo limpiar en la base de datos: '+err.message));
   toast('🧹 Datos limpiados · ahora puedes exportar el JSON');
 });
 
-// INIT
-// Sin datos precargados: usa "Cargar carpeta" para conectar la carpeta de seguimiento.
-if(FS_SUPPORTED){
-  document.getElementById('btnCargarCarpeta').addEventListener('click',conectarCarpetaManual);
-  reconectarCarpetaSilenciosa();
-}else{
-  // Sin soporte de File System Access API (Firefox/Safari): usar el selector de carpeta clásico
-  document.getElementById('btnCargarCarpeta').style.display='none';
-  document.getElementById('lblFileImportFallback').style.display='';
-  document.getElementById('lblCompareFolderFallback').style.display='';
-}
+// INIT: carga los datos vivos desde la base de datos al abrir la página.
+dbCargarTodo().then(function(data){
+  loadData(data);
+}).catch(function(err){
+  toast('❌ No se pudo conectar a la base de datos: '+err.message);
+  console.error(err);
+});
