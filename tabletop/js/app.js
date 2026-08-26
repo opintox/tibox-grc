@@ -1370,4 +1370,18 @@ function backToSetup(){
   document.body.classList.add('setup-mode');
   updateBottomState();
 }
+
+// Mantiene --topbar-h sincronizado con el alto real de la barra superior. Ese alto
+// cambia según el modo (config trae los botones Retroceder/Siguiente, en curso trae el
+// stepper del ejercicio), y varios calc(100dvh - var(--topbar-h)) de más abajo dependen
+// de que este valor sea exacto — si no, sobra un resto de alto que obliga a hacer scroll
+// para ver todo el contenido.
+const topbarEl = document.querySelector('.topbar');
+if(topbarEl && window.ResizeObserver){
+  const syncTopbarHeight = () => {
+    document.documentElement.style.setProperty('--topbar-h', topbarEl.offsetHeight + 'px');
+  };
+  new ResizeObserver(syncTopbarHeight).observe(topbarEl);
+  syncTopbarHeight();
+}
 })();

@@ -90,7 +90,13 @@ function dbEliminarPersona(nombre){
 
 // ---- Migración: sube un JSON exportado por la versión anterior (basada en
 // carpeta + archivos) a la base de datos. Sirve tanto para la carga inicial
-// de datos existentes como para restaurar un respaldo más adelante. ----
+// de datos existentes como para restaurar un respaldo más adelante.
+//
+// El JSON puede ser viejo (un respaldo de hace semanas) mientras alguien ya
+// editó datos más recientes en vivo. Para no perder esas ediciones, un
+// entregable solo se sobrescribe si su "updated_at" en la base es anterior
+// (o igual) al momento en que se exportó el JSON: si ya se editó después de
+// esa fecha, la base ya tiene la versión más reciente y se deja como está. ----
 async function dbImportarJSON(data){
   const dominios=Object.values(data.dominios||{});
   if(dominios.length){
@@ -112,12 +118,33 @@ async function dbImportarJSON(data){
     responsable:e.responsable||'', estado:e.estado||'Pendiente', periodicidad:e.periodicidad||'',
     org:e.org||'sin-asignar', org_manual:!!e.orgManual, orden:i
   })));
-  if(entregables.length) dbOk(await sb.from('entregables').upsert(entregables));
+
+  let aplicados=entregables.length, omitidos=0;
+  if(entregables.length){
+    // Sin fecha de exportación no hay forma de saber qué tan viejo es el JSON:
+    // se trata como "muy antiguo" y solo se insertan entregables que todavía
+    // no existan (nunca se pisa algo que ya está en la base).
+    const exportadoMs=data.exportado ? new Date(data.exportado).getTime() : 0;
+    const {data:vivos}=dbOk(await sb.from('entregables').select('id,updated_at'));
+    const vivoPorId={};
+    vivos.forEach(v=>{ vivoPorId[v.id]=v.updated_at; });
+
+    const aAplicar=entregables.filter(e=>{
+      const updatedAt=vivoPorId[e.id];
+      if(updatedAt===undefined) return true; // no existe aún: insertarlo igual
+      return new Date(updatedAt).getTime() <= exportadoMs;
+    });
+    omitidos=entregables.length-aAplicar.length;
+    aplicados=aAplicar.length;
+    if(aAplicar.length) dbOk(await sb.from('entregables').upsert(aAplicar));
+  }
 
   const personas=data.personas||[];
   if(personas.length){
     dbOk(await sb.from('personas').upsert(personas.map(p=>({nombre:p.nombre, org:p.org}))));
   }
+
+  return {aplicados, omitidos};
 }
 
 // ---- Snapshots: "fotos" del estado completo para "Comparar avances" ----
