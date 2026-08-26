@@ -227,7 +227,7 @@ tr.group-row:first-child .group-head{border-top:none}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .compare-modal{position:fixed;inset:0;background:rgba(6,11,26,.72);z-index:900;display:none;align-items:center;justify-content:center;padding:20px}
 .compare-modal.show{display:flex}
-.compare-box{width:min(560px,100%);background:var(--sur);border:1px solid var(--br);border-radius:14px;padding:22px;box-shadow:0 20px 50px rgba(0,0,0,.5)}
+.compare-box{width:min(640px,100%);background:var(--sur);border:1px solid var(--br);border-radius:14px;padding:22px;box-shadow:0 20px 50px rgba(0,0,0,.5)}
 .compare-title{font-family:'Space Grotesk',sans-serif;font-size:1.05rem;font-weight:700;margin-bottom:4px}
 .compare-sub{font-size:.72rem;color:var(--mu);line-height:1.4;margin-bottom:18px}
 .compare-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -237,6 +237,24 @@ tr.group-row:first-child .group-head{border-top:none}
 .compare-field input:disabled{opacity:.5;cursor:not-allowed}
 .compare-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
 @media(max-width:600px){.compare-fields{grid-template-columns:1fr}.compare-modal{padding:12px}}
+
+/* ── MINI CALENDARIO (elegir fecha con snapshot en Comparar avances) ── */
+.mini-cal{transition:opacity .15s ease}
+.mini-cal.disabled{opacity:.4;pointer-events:none}
+.mini-cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.mini-cal-month{font-size:.68rem;font-weight:700;color:var(--tx);text-transform:capitalize}
+.mini-cal-nav{background:none;border:1px solid var(--br);border-radius:6px;width:20px;height:20px;color:var(--t2);cursor:pointer;font-size:.8rem;line-height:1;display:flex;align-items:center;justify-content:center;padding:0}
+.mini-cal-nav:hover:not(:disabled){border-color:var(--mc-accent,var(--accent));color:var(--mc-accent,var(--accent))}
+.mini-cal-nav:disabled{opacity:.25;cursor:not-allowed}
+.mini-cal-dow{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:2px}
+.mini-cal-dow span{font-size:.56rem;color:var(--mu);text-align:center;text-transform:uppercase}
+.mini-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.mini-cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:.64rem;border-radius:6px;border:1px solid transparent;color:var(--mu);background:none;padding:0}
+.mini-cal-day.empty{visibility:hidden}
+.mini-cal-day:disabled:not(.empty){color:var(--br);cursor:not-allowed}
+.mini-cal-day.has-snapshot{color:var(--tx);background:var(--sur);border-color:var(--br);cursor:pointer;font-weight:600}
+.mini-cal-day.has-snapshot:hover{border-color:var(--mc-accent,var(--accent));color:var(--mc-accent,var(--accent))}
+.mini-cal-day.selected{background:var(--mc-accent,var(--accent));border-color:var(--mc-accent,var(--accent));color:var(--accent-on);font-weight:800}
 
 /* ── RESPONSIVE ── */
 @media(max-width:1100px){

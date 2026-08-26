@@ -1193,10 +1193,78 @@ document.getElementById('btnGuardarSnapshot').addEventListener('click',async fun
   }
 });
 
+// ---- Mini calendario: un widget de mes navegable donde solo se pueden
+// clickear los días que tienen snapshot guardado. Guarda su propio estado
+// (mes que se está mostrando, fechas disponibles, fecha elegida) en el
+// propio elemento del DOM (el._cal), así se puede tener uno por cada campo. ----
+const MESES_ES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const DOW_ES=['L','M','M','J','V','S','D'];
+
+function crearMiniCalendario(el, onSelect){
+  el.innerHTML=
+      '<div class="mini-cal-head">'
+        +'<button type="button" class="mini-cal-nav" data-dir="-1">‹</button>'
+        +'<span class="mini-cal-month"></span>'
+        +'<button type="button" class="mini-cal-nav" data-dir="1">›</button>'
+      +'</div>'
+      +'<div class="mini-cal-dow">'+DOW_ES.map(d=>'<span>'+d+'</span>').join('')+'</div>'
+      +'<div class="mini-cal-grid"></div>';
+  const state={cursor:new Date(), disponibles:new Set(), seleccion:null, onSelect:onSelect};
+  el._cal=state;
+  el.querySelectorAll('.mini-cal-nav').forEach(btn=>btn.addEventListener('click',function(){
+    state.cursor=new Date(state.cursor.getFullYear(), state.cursor.getMonth()+Number(this.dataset.dir), 1);
+    pintarMiniCalendario(el);
+  }));
+  el.querySelector('.mini-cal-grid').addEventListener('click',function(ev){
+    const d=ev.target.closest('.mini-cal-day.has-snapshot');
+    if(!d)return;
+    state.seleccion=d.dataset.fecha;
+    pintarMiniCalendario(el);
+    if(state.onSelect) state.onSelect(state.seleccion);
+  });
+}
+
+function pintarMiniCalendario(el){
+  const state=el._cal;
+  const y=state.cursor.getFullYear(), m=state.cursor.getMonth();
+  el.querySelector('.mini-cal-month').textContent=MESES_ES[m]+' '+y;
+
+  const fechas=[...state.disponibles].sort();
+  const minYm=fechas.length?fechas[0].slice(0,7):null;
+  const maxYm=fechas.length?fechas[fechas.length-1].slice(0,7):null;
+  const cursorYm=y+'-'+String(m+1).padStart(2,'0');
+  el.querySelectorAll('.mini-cal-nav').forEach(btn=>{
+    const dir=Number(btn.dataset.dir);
+    btn.disabled = dir<0 ? (!minYm || cursorYm<=minYm) : (!maxYm || cursorYm>=maxYm);
+  });
+
+  const offset=(new Date(y,m,1).getDay()+6)%7; // lunes=0 como primer día de la semana
+  const diasEnMes=new Date(y,m+1,0).getDate();
+
+  let h='';
+  for(let i=0;i<offset;i++) h+='<span class="mini-cal-day empty"></span>';
+  for(let dia=1;dia<=diasEnMes;dia++){
+    const fecha=y+'-'+String(m+1).padStart(2,'0')+'-'+String(dia).padStart(2,'0');
+    const disponible=state.disponibles.has(fecha);
+    const sel=fecha===state.seleccion;
+    h+='<button type="button" class="mini-cal-day'+(disponible?' has-snapshot':'')+(sel?' selected':'')+'"'
+      +(disponible?' data-fecha="'+fecha+'"':' disabled')+'>'+dia+'</button>';
+  }
+  el.querySelector('.mini-cal-grid').innerHTML=h;
+}
+
+// Posiciona el calendario en el mes de "fecha" y la deja seleccionada.
+function irAFecha(el, fecha){
+  const [y,m]=fecha.split('-').map(Number);
+  el._cal.cursor=new Date(y, m-1, 1);
+  el._cal.seleccion=fecha;
+  pintarMiniCalendario(el);
+}
+
 // ============ COMPARAR AVANCES ============
 // Las dos fechas a comparar salen de la tabla "snapshots" (creadas con
 // "📸 Guardar snapshot"). "Fecha actual" también permite elegir el estado
-// vivo de la base de datos, con la opción "🔴 En vivo (ahora)".
+// vivo de la base de datos, con el check "🔴 En vivo (ahora)".
 let SNAPSHOTS_CACHE=[];
 // Siempre se muestra la fecha en formato calendario (ej. "25 ago 2026"), no la
 // etiqueta cruda que pueda traer el snapshot (ej. el nombre de un archivo importado).
@@ -1206,17 +1274,23 @@ function formatearFechaSnapshot(s){
   return d.toLocaleDateString('es-CL',{day:'2-digit',month:'short',year:'numeric'});
 }
 
-// El campo <input type="date"> abre el calendario nativo del navegador; el
-// <datalist> le pasa las fechas con snapshot para que las sugiera/resalte.
-// Fuera de ese rango (min/max) el propio navegador no deja navegar.
+const calPrev=document.getElementById('calPrev');
+const calCurrent=document.getElementById('calCurrent');
+crearMiniCalendario(calPrev,function(){ actualizarEstadoComparador(); });
+crearMiniCalendario(calCurrent,function(){ actualizarEstadoComparador(); });
+calCurrent.classList.toggle('disabled', document.getElementById('compareUsarEnVivo').checked);
+
+function actualizarEstadoComparador(){
+  const enVivo=document.getElementById('compareUsarEnVivo').checked;
+  const btnRun=document.getElementById('btnRunCompare');
+  btnRun.disabled = !calPrev._cal.seleccion || (!enVivo && !calCurrent._cal.seleccion);
+}
+
 async function abrirComparador(){
   document.getElementById('compareModal').classList.add('show');
-  const prevInp=document.getElementById('comparePrevDate');
-  const currInp=document.getElementById('compareCurrentDate');
-  const enVivo=document.getElementById('compareUsarEnVivo');
   const status=document.getElementById('compareFileStatus');
   const btnRun=document.getElementById('btnRunCompare');
-  prevInp.disabled=currInp.disabled=true;btnRun.disabled=true;
+  btnRun.disabled=true;
   status.textContent='Cargando fechas guardadas…';
   try{
     SNAPSHOTS_CACHE=await dbListarSnapshots();
@@ -1225,20 +1299,19 @@ async function abrirComparador(){
       return;
     }
     const fechas=SNAPSHOTS_CACHE.map(s=>s.fecha).sort(); // asc: [0]=más antigua, [ultima]=más reciente
-    document.getElementById('compareDatesList').innerHTML=
-      fechas.map(f=>'<option value="'+f+'">').join('');
-    [prevInp,currInp].forEach(inp=>{ inp.min=fechas[0]; inp.max=fechas[fechas.length-1]; });
-    prevInp.value=fechas.length>1?fechas[fechas.length-2]:fechas[fechas.length-1];
-    currInp.value=fechas[fechas.length-1];
-    currInp.disabled=enVivo.checked; // "en vivo" tapa el campo mientras esté marcado
-    prevInp.disabled=false;btnRun.disabled=false;
+    const disponibles=new Set(fechas);
+    [calPrev,calCurrent].forEach(el=>{ el._cal.disponibles=disponibles; });
+    irAFecha(calPrev, fechas.length>1?fechas[fechas.length-2]:fechas[fechas.length-1]);
+    irAFecha(calCurrent, fechas[fechas.length-1]);
     status.textContent=fechas.length+' fecha'+(fechas.length===1?'':'s')+' guardada'+(fechas.length===1?'':'s')+' ('+formatearFechaSnapshot({fecha:fechas[0]})+' a '+formatearFechaSnapshot({fecha:fechas[fechas.length-1]})+')';
+    actualizarEstadoComparador();
   }catch(err){
     status.textContent='❌ '+err.message;
   }
 }
 document.getElementById('compareUsarEnVivo').addEventListener('change',function(){
-  document.getElementById('compareCurrentDate').disabled=this.checked;
+  calCurrent.classList.toggle('disabled', this.checked);
+  actualizarEstadoComparador();
 });
 function cerrarComparador(){document.getElementById('compareModal').classList.remove('show');}
 document.getElementById('btnCompare').addEventListener('click',abrirComparador);
@@ -1246,12 +1319,12 @@ document.getElementById('btnCloseCompare').addEventListener('click',cerrarCompar
 document.getElementById('compareModal').addEventListener('click',function(ev){if(ev.target===this)cerrarComparador();});
 
 document.getElementById('btnRunCompare').addEventListener('click',async function(){
-  const prevFecha=document.getElementById('comparePrevDate').value;
+  const prevFecha=calPrev._cal.seleccion;
   const usarEnVivo=document.getElementById('compareUsarEnVivo').checked;
-  const currFecha=usarEnVivo?'':document.getElementById('compareCurrentDate').value;
+  const currFecha=usarEnVivo?null:calCurrent._cal.seleccion;
   const prevInfo=SNAPSHOTS_CACHE.find(s=>s.fecha===prevFecha);
-  if(!prevFecha||!prevInfo){toast('⚠️ Elige una fecha anterior con snapshot guardado');return;}
-  if(!usarEnVivo && !SNAPSHOTS_CACHE.find(s=>s.fecha===currFecha)){toast('⚠️ Elige una fecha actual con snapshot guardado (o marca "en vivo")');return;}
+  if(!prevFecha||!prevInfo){toast('⚠️ Elige una fecha anterior');return;}
+  if(!usarEnVivo && !currFecha){toast('⚠️ Elige una fecha actual (o marca "en vivo")');return;}
   try{
     const prevData=await dbObtenerSnapshot(prevFecha);
     COMPARE_PREV={data:prevData, label:formatearFechaSnapshot(prevInfo)};

@@ -265,16 +265,15 @@
 <div class="compare-modal" id="compareModal">
   <div class="compare-box">
     <div class="compare-title">Comparar avances</div>
-    <div class="compare-sub">Elige dos fechas guardadas con "📸 Guardar snapshot" para comparar su avance. Al hacer clic en el campo se abre el calendario del navegador; solo quedan disponibles los días con snapshot.</div>
+    <div class="compare-sub">Elige dos fechas guardadas con "📸 Guardar snapshot" para comparar su avance. Los días marcados tienen snapshot; el resto no se puede elegir.</div>
     <div class="compare-fields">
-      <div class="compare-field"><label for="comparePrevDate">Fecha anterior</label>
-        <input type="date" id="comparePrevDate" class="finput" list="compareDatesList" style="width:100%" disabled>
+      <div class="compare-field"><label>Fecha anterior</label>
+        <div class="mini-cal" id="calPrev" style="--mc-accent:var(--accent2)"></div>
       </div>
-      <div class="compare-field"><label for="compareCurrentDate">Fecha actual</label>
-        <input type="date" id="compareCurrentDate" class="finput" list="compareDatesList" style="width:100%" disabled>
+      <div class="compare-field"><label>Fecha actual</label>
+        <div class="mini-cal" id="calCurrent"></div>
       </div>
     </div>
-    <datalist id="compareDatesList"></datalist>
     <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:0.72rem;color:var(--mu);cursor:pointer">
       <input type="checkbox" id="compareUsarEnVivo" checked>
       🔴 Comparar "Fecha actual" contra el estado en vivo (ahora), no una fecha guardada
