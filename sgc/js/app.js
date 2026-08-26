@@ -401,8 +401,8 @@ function initForm(){
       sel.value=fEst.value;sel.style.borderColor=STCOLOR[fEst.value];sel.style.background=getBg(fEst.value);sel.style.color=STCOLOR[fEst.value];
       row.dataset.st=fEst.value;
       row.dataset.org=e.org;
-      row.cells[5].textContent=e.evidencia||'—';
-      row.cells[6].innerHTML=celdaResponsable(e);
+      row.cells[3].textContent=e.evidencia||'—';
+      row.cells[4].innerHTML=celdaResponsable(e);
       row.style.background='rgba(14,165,233,.10)';setTimeout(()=>row.style.background='',1200);
     }
     updateSummary();applyFilters();renderPersonas();
@@ -1174,8 +1174,10 @@ document.getElementById('importarJSONInput').addEventListener('change',async fun
   if(!file)return;
   try{
     const data=await leerJson(file);
-    await dbImportarJSON(data);
-    toast('✅ '+file.name+' importado a la base de datos');
+    const {aplicados, omitidos}=await dbImportarJSON(data);
+    toast(omitidos
+      ? '✅ '+file.name+' · '+aplicados+' actualizados · '+omitidos+' se mantuvieron (más recientes en la base)'
+      : '✅ '+file.name+' importado a la base de datos');
     loadData(await dbCargarTodo());
   }catch(err){
     toast('❌ '+err.message);
