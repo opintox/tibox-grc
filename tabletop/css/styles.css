@@ -1041,11 +1041,11 @@
   .work::-webkit-scrollbar{width:8px;}
   .work::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16); border-radius:4px;}
   .work .section-block{margin-bottom:0;}
-  .setup-actions{
-    display:flex; align-items:center; justify-content:space-between; gap:12px;
-    margin-top:0; padding:4px 0 0;
-  }
-  .setup-actions .btn-cta{min-width:150px; justify-content:center;}
+  /* Vive en la barra superior (topbar-right), no al pie de la pantalla de configuración;
+     solo se muestra mientras esa pantalla está activa. */
+  .setup-actions{display:none; align-items:center; gap:10px;}
+  body.setup-mode .setup-actions{display:flex;}
+  .setup-actions .btn-cta{justify-content:center;}
   #setupNextBtn:disabled{opacity:.35; cursor:not-allowed; transform:none; filter:none;}
 
   @media (max-width:1080px){

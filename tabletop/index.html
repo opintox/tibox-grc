@@ -18,6 +18,10 @@
   </div>
   <div class="topbar-right">
     <div class="status"><span class="dot"></span><span id="statusLabel">CONFIGURACIÓN</span></div>
+    <div class="setup-actions" aria-label="Navegación de configuración">
+      <button class="btn-cta" id="setupBackBtn" type="button">← Retroceder</button>
+      <button class="btn-cta" id="setupNextBtn" type="button" disabled>Siguiente →</button>
+    </div>
   </div>
 
   <!-- Controles del ejercicio en curso: viven en la misma barra superior (no una segunda
@@ -191,11 +195,6 @@
             <span class="setup-badge" id="participantsBadge">0 activas</span>
           </div>
           <div class="participants-grid" id="participantsBody"></div>
-        </div>
-
-        <div class="setup-actions" aria-label="Navegación de configuración">
-          <button class="btn-cta" id="setupBackBtn" type="button">← Retroceder</button>
-          <button class="btn-cta" id="setupNextBtn" type="button" disabled>Siguiente →</button>
         </div>
 
       </main>
