@@ -19,6 +19,27 @@
   <div class="topbar-right">
     <div class="status"><span class="dot"></span><span id="statusLabel">CONFIGURACIÓN</span></div>
   </div>
+
+  <!-- Controles del ejercicio en curso: viven en la misma barra superior (no una segunda
+       franja debajo). Solo se muestran con body.game-mode (ver css), que ya se activa/
+       desactiva junto con #screen-game en app.js. -->
+  <header class="game-head">
+    <div class="gh-left">
+      <span class="gh-scenario" id="gameSessionBadge">Ejercicio</span>
+    </div>
+
+    <div class="gh-steps" id="gameStepper"></div>
+
+    <div class="gh-right">
+      <span class="gh-count"><b id="globalProgressText">1 / 1</b><span id="globalProgressRemaining"></span></span>
+      <span class="game-timer" id="gameTimer">00:00</span>
+      <button class="btn btn-sm" id="prevQuestionBtn" disabled title="Pregunta anterior" aria-label="Pregunta anterior">←</button>
+      <button class="btn btn-primary btn-sm" id="restartGameBtn" disabled>Siguiente →</button>
+      <button class="gh-exit" id="backToSetupBtn" title="Volver a la configuración" aria-label="Volver a la configuración">✕</button>
+    </div>
+
+    <div class="gh-bar"><div class="gh-bar-fill" id="globalProgressFill" style="width:0%"></div></div>
+  </header>
 </div>
 
 <div class="explain-pop hidden" id="explainPop" role="status" aria-live="polite">
@@ -182,27 +203,6 @@
   </div>
 
   <div id="screen-game" class="hidden">
-
-    <!-- Franja de controles del ejercicio: va debajo de la barra superior (siempre visible e
-         igual en toda la app) y reemplaza la línea de sesión, el stepper alto, la barra de
-         progreso y la barra de acciones. Una sola fila. -->
-    <header class="game-head">
-      <div class="gh-left">
-        <span class="gh-scenario" id="gameSessionBadge">Ejercicio</span>
-      </div>
-
-      <div class="gh-steps" id="gameStepper"></div>
-
-      <div class="gh-right">
-        <span class="gh-count"><b id="globalProgressText">1 / 1</b><span id="globalProgressRemaining"></span></span>
-        <span class="game-timer" id="gameTimer">00:00</span>
-        <button class="btn btn-sm" id="prevQuestionBtn" disabled title="Pregunta anterior" aria-label="Pregunta anterior">←</button>
-        <button class="btn btn-primary btn-sm" id="restartGameBtn" disabled>Siguiente →</button>
-        <button class="gh-exit" id="backToSetupBtn" title="Volver a la configuración" aria-label="Volver a la configuración">✕</button>
-      </div>
-
-      <div class="gh-bar"><div class="gh-bar-fill" id="globalProgressFill" style="width:0%"></div></div>
-    </header>
 
     <div class="game-layout grid4">
       <div class="panel story-panel grid4-cell" id="storyPanel">

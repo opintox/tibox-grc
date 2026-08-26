@@ -314,7 +314,7 @@ function syncFormFromFilters(){
     if(fDom!=='all')parts.push(DATA.dominios[fDom]?.code||fDom);
     if(fSt!=='all')parts.push(fSt);
     badge.textContent=parts.length?'· Filtro activo: '+parts.join(' + '):'';
-    badge.style.color='#FF8A00';
+    badge.style.color='#0EA5E9';
   }
 }
 
@@ -403,7 +403,7 @@ function initForm(){
       row.dataset.org=e.org;
       row.cells[5].textContent=e.evidencia||'—';
       row.cells[6].innerHTML=celdaResponsable(e);
-      row.style.background='rgba(255,138,0,.10)';setTimeout(()=>row.style.background='',1200);
+      row.style.background='rgba(14,165,233,.10)';setTimeout(()=>row.style.background='',1200);
     }
     updateSummary();applyFilters();renderPersonas();
     dbGuardarEntregable(e).catch(err=>toast('❌ No se pudo guardar: '+err.message));

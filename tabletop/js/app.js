@@ -313,13 +313,12 @@ function renderScenarioCard(s, container){
   const icon = SCENARIO_ICONS[s.id] || '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="5.5"/></svg>';
   const blurb = SCENARIO_BLURBS[s.id] || '';
   el.innerHTML = `
-    <div class="scn-top">
-      <span class="scn-icon">${icon}</span>
-      <span class="scn-flags"><span class="scn-check" aria-hidden="true"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.4 6.4 12 13 4.6"/></svg></span></span>
+    <div class="scn-head">
+      <span class="scn-badge">${icon}${escapeHtml(s.name)}</span>
+      <span class="scn-check" aria-hidden="true"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.4 6.4 12 13 4.6"/></svg></span>
     </div>
-    <div class="scn-name">${escapeHtml(s.name)}</div>
     <div class="scn-desc">${escapeHtml(blurb)}</div>
-    <div class="scn-target"><span class="scn-target-label">Objetivo</span><span class="scn-target-value">${escapeHtml(SCENARIO_TARGETS[s.id] || '—')}</span></div>`;
+    <div class="scn-fields"><div class="scn-field"><span class="scn-field-label">Objetivo</span><span class="scn-field-value">${escapeHtml(SCENARIO_TARGETS[s.id] || '—')}</span></div></div>`;
   const choose = () => {
     selectedScenarioId = s.id;
     renderScenarioCards();
