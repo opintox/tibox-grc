@@ -129,13 +129,13 @@
   .participants-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px;}
   @media (max-width:1000px){.participants-grid{grid-template-columns:repeat(2,1fr);}}
   @media (max-width:560px){.participants-grid{grid-template-columns:1fr;}}
-  .p-card{padding:14px 16px; border-radius:12px; border:1px solid var(--border); border-bottom:2px solid var(--amber); background:var(--panel-2); box-shadow:0 10px 22px -14px rgba(255,138,0,0.45); transition:opacity .15s;}
+  .p-card{padding:14px 16px; border-radius:12px; border:1px solid var(--border); border-bottom:2px solid rgba(255,255,255,0.35); background:var(--panel-2); box-shadow:0 10px 22px -14px rgba(255,255,255,0.28); transition:opacity .15s;}
 
-  /* Sin color por función/escenario: todas las tarjetas brillan igual, en naranjo (el acento de Tabletop en el portal). */
+  /* Sin color por función/escenario: todas las tarjetas brillan igual, en blanco. */
   .glow-blue, .glow-red, .glow-green, .glow-amber, .glow-purple{
-    border-bottom-color:var(--amber); box-shadow:0 10px 22px -14px rgba(255,138,0,0.45);
+    border-bottom-color:rgba(255,255,255,0.35); box-shadow:0 10px 22px -14px rgba(255,255,255,0.28);
   }
-  .scenario-grid .scenario-card.selected{border-bottom-color:var(--amber); box-shadow:0 10px 22px -14px rgba(255,138,0,0.7);}
+  .scenario-grid .scenario-card.selected{border-bottom-color:#fff; box-shadow:0 10px 22px -14px rgba(255,255,255,0.55);}
 
   .p-card.row-inactive{opacity:0.45;}
   .p-card-head{display:flex; align-items:flex-start; gap:10px; margin-bottom:10px;}
@@ -177,10 +177,10 @@
 
   .empresa-badge{display:inline-flex; align-items:center; gap:5px; font-family:var(--mono); font-size:var(--fs-2xs); letter-spacing:0.04em; padding:4px 10px; border-radius:20px; border:1px solid var(--border);}
   .empresa-badge svg{flex-shrink:0; opacity:0.9;}
-  /* Sin color por función: todas las insignias brillan igual, en naranjo. */
+  /* Sin color por función: todas las insignias son neutras. */
   .empresa-badge, .empresa-badge.seguridad, .empresa-badge.ti, .empresa-badge.legal,
   .empresa-badge.comunicaciones, .empresa-badge.rrhh, .empresa-badge.direccion{
-    color:var(--amber); border-color:rgba(255,138,0,0.3); background:rgba(255,138,0,0.1);
+    color:var(--text); border-color:rgba(255,255,255,0.14); background:rgba(255,255,255,0.06);
   }
 
   .edit-popout{
@@ -231,7 +231,7 @@
   .hidden{display:none !important;}
 
   /* ---------- game screen ---------- */
-  .story-panel{background:linear-gradient(160deg, var(--panel) 55%, var(--panel-3)); border-color:rgba(255,138,0,0.25); box-shadow:inset 2px 0 0 rgba(255,138,0,0.25);}
+  .story-panel{background:linear-gradient(160deg, var(--panel) 55%, var(--panel-3)); border-color:rgba(255,255,255,0.14); box-shadow:inset 2px 0 0 rgba(255,255,255,0.14);}
   /* Preguntas: tipografía más compacta y fluida para aprovechar mejor el panel. */
   .story-text{font-family:var(--sans); font-size:var(--fs-lg); line-height:1.5; margin:0; font-weight:400; overflow-wrap:anywhere;}
   .story-text br + br{line-height:.65;}
@@ -245,7 +245,7 @@
     font-family:var(--mono); font-size:var(--fs-3xs); letter-spacing:0.06em; color:#CFE2F5;
     background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.10); white-space:nowrap;
   }
-  .sit-chip::before{content:''; width:5px; height:5px; border-radius:50%; background:var(--amber); flex-shrink:0;}
+  .sit-chip::before{content:''; width:5px; height:5px; border-radius:50%; background:rgba(255,255,255,0.55); flex-shrink:0;}
   .sit-body{font-size:var(--fs-md); line-height:1.66; color:#D9E3F2; margin:0; max-width:none;}
   .sit-body p{margin:0 0 12px;}
   .sit-body p:last-child{margin-bottom:0;}
@@ -256,7 +256,7 @@
   /* La doble pregunta vive en su propio panel, bajo la presentación del caso. */
   #askPanel{
     display:flex; flex-wrap:wrap; align-items:center; gap:var(--sp-4);
-    padding:14px 18px; border-left:3px solid var(--amber); overflow:visible;
+    padding:14px 18px; border-left:3px solid rgba(255,255,255,0.4); overflow:visible;
   }
   .sit-ask{display:flex; flex-wrap:wrap; align-items:center; gap:var(--sp-3); width:100%;}
   .sit-ask-q{font-family:var(--display); font-weight:800; font-size:var(--fs-xl); color:#fff; letter-spacing:-0.012em; margin-right:auto;}
@@ -264,7 +264,7 @@
     font-family:var(--mono); font-size:var(--fs-3xs); letter-spacing:0.1em; text-transform:uppercase;
     color:var(--muted); padding:4px 10px; border-radius:999px; border:1px dashed var(--border);
   }
-  .sit-ask-step.on{color:var(--amber); border-style:solid; border-color:var(--amber);}
+  .sit-ask-step.on{color:#fff; border-style:solid; border-color:rgba(255,255,255,0.55);}
   .ops-context{font-size:var(--fs-2xs); font-style:italic; color:var(--muted); line-height:1.5; margin:0 0 12px; padding-bottom:10px; border-bottom:1px dashed var(--border);}
   .ops-context b{color:var(--muted); font-style:normal;}
   .org-tag{font-family:var(--mono); font-size:var(--fs-4xs); letter-spacing:0.05em; opacity:0.7; font-weight:600;}
@@ -314,21 +314,21 @@
     display:flex; flex-direction:column; gap:5px; padding:11px 15px 10px; min-height:92px;
     border-radius:var(--radius-lg); border:1px solid rgba(255,255,255,0.09);
     background-image:linear-gradient(158deg, #0C1730 0%, #080F1E 100%);
-    box-shadow:0 16px 30px -22px rgba(255,138,0,0.4);
+    box-shadow:0 16px 30px -22px rgba(255,255,255,0.22);
     transition:transform .16s ease, box-shadow .2s ease, border-color .16s ease;
   }
-  /* Sin color por función: la insignia y el brillo de todas las tarjetas son naranjos. */
+  /* Sin color por función: la insignia y el brillo de todas las tarjetas son blancos. */
   .char-card::before{
     content:''; position:absolute; top:0; left:0; right:0; height:3px;
-    background:var(--amber);
+    background:rgba(255,255,255,0.35);
   }
-  .char-card:hover{transform:translateY(-3px); box-shadow:0 22px 40px -20px rgba(255,138,0,0.45);}
+  .char-card:hover{transform:translateY(-3px); box-shadow:0 22px 40px -20px rgba(255,255,255,0.3);}
   .char-card .c-head{display:flex; align-items:center; gap:9px;}
   .char-card .c-icon{
     width:35px; height:35px; border-radius:10px; flex-shrink:0;
-    display:flex; align-items:center; justify-content:center; color:var(--amber);
-    background:rgba(255,138,0,0.12);
-    border:1px solid rgba(255,138,0,0.3); box-shadow:0 8px 18px -10px rgba(255,138,0,0.3);
+    display:flex; align-items:center; justify-content:center; color:var(--text);
+    background:rgba(255,255,255,0.08);
+    border:1px solid rgba(255,255,255,0.18); box-shadow:0 8px 18px -10px rgba(255,255,255,0.18);
   }
   .char-card .c-icon svg{width:18px; height:18px;}
   .char-card .c-name{font-family:var(--display); font-weight:800; font-size:var(--fs-md); color:#fff; line-height:1.15;}
@@ -345,7 +345,7 @@
     border-top:1px solid rgba(255,255,255,0.08); font-family:var(--mono);
   }
   .char-card .c-foot-label{font-size:var(--fs-3xs); letter-spacing:0.12em; text-transform:uppercase; color:var(--muted-2);}
-  .char-card .c-foot-value{font-size:var(--fs-3xs); color:var(--amber); margin-left:auto; text-align:right;}
+  .char-card .c-foot-value{font-size:var(--fs-3xs); color:var(--text); margin-left:auto; text-align:right;}
   .char-card.char-off{
     opacity:0.34; cursor:not-allowed; filter:grayscale(0.65);
     box-shadow:none; pointer-events:none;
@@ -679,7 +679,7 @@
   .answer-btn:focus-visible,.scenario-card:focus-visible,.char-card:focus-visible{outline:2px solid var(--blue);outline-offset:2px;}
   .game-action-bar{position:sticky;top:var(--topbar-h);z-index:20;background:linear-gradient(var(--bg) 70%,transparent);padding-bottom:10px;}
   .game-timer{padding:7px 11px;border:1px solid var(--green-dim);background:var(--green-dim);border-radius:8px;}
-  .story-panel{border-top:2px solid var(--amber);}
+  .story-panel{border-top:2px solid rgba(255,255,255,0.4);}
 
   .explanation-placeholder{padding:10px 12px;border:1px dashed var(--border);border-radius:8px;}
   .results-actions .btn{min-height:42px;}
@@ -781,44 +781,43 @@
   /* Mismo lenguaje visual que las tarjetas de "Participantes" (.p-card): insignia con
      ícono+nombre en una pastilla, brillo en el borde inferior en vez de una franja arriba,
      y el pie como fila etiqueta/valor. Sin color por escenario: todas brillan igual, en
-     naranjo, el mismo acento de Tabletop en el portal (el color por escenario, --a/--a2,
-     sigue fijado por JS pero ya no se usa aquí). */
+     blanco (el color por escenario, --a/--a2, sigue fijado por JS pero ya no se usa aquí). */
   .scn-card{
     position:relative; overflow:hidden; isolation:isolate; cursor:pointer; text-align:left;
     border-radius:12px; padding:14px 16px; min-height:132px;
     display:flex; flex-direction:column; gap:0;
     background-image:linear-gradient(158deg, #0C1730 0%, #080F1E 100%);
-    border:1px solid rgba(255,255,255,0.09); border-bottom:2px solid var(--amber);
-    box-shadow:0 10px 22px -14px rgba(255,138,0,0.45);
+    border:1px solid rgba(255,255,255,0.09); border-bottom:2px solid rgba(255,255,255,0.35);
+    box-shadow:0 10px 22px -14px rgba(255,255,255,0.28);
     transition:transform .16s ease, box-shadow .2s ease, border-color .16s ease;
   }
-  .scn-card:hover{transform:translateY(-3px); box-shadow:0 16px 30px -16px rgba(255,138,0,0.5);}
+  .scn-card:hover{transform:translateY(-3px); box-shadow:0 16px 30px -16px rgba(255,255,255,0.32);}
   .scn-card:focus-visible{outline:2px solid #fff; outline-offset:2px;}
   .scn-head{display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:10px;}
   .scn-badge{
     display:inline-flex; align-items:center; gap:6px;
     font-family:var(--mono); font-size:var(--fs-2xs); letter-spacing:0.04em;
-    padding:4px 10px; border-radius:20px; border:1px solid rgba(255,138,0,0.3);
-    background:rgba(255,138,0,0.1); color:var(--amber);
+    padding:4px 10px; border-radius:20px; border:1px solid rgba(255,255,255,0.18);
+    background:rgba(255,255,255,0.06); color:var(--text);
   }
   .scn-badge svg{flex-shrink:0; width:14px; height:14px;}
   .scn-desc{font-size:var(--fs-2xs); color:var(--muted); line-height:1.4; margin:0 0 12px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
   .scn-fields{display:flex; flex-direction:column; gap:6px; margin-top:auto;}
   .scn-field{display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:var(--fs-xs);}
   .scn-field-label{font-family:var(--mono); font-size:var(--fs-4xs); letter-spacing:0.06em; color:var(--muted-2); text-transform:uppercase; flex-shrink:0;}
-  .scn-field-value{color:var(--amber); text-align:right; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .scn-field-value{color:var(--text); text-align:right; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .scn-check{
     width:24px; height:24px; border-radius:50%; flex-shrink:0;
     display:flex; align-items:center; justify-content:center;
     background:rgba(255,255,255,0.10); border:1px solid rgba(255,255,255,0.22); color:#fff;
     opacity:0; transform:scale(.6); transition:opacity .16s ease, transform .16s ease;
   }
-  .scn-card.selected{border-color:var(--amber); transform:translateY(-2px); box-shadow:0 20px 36px -20px rgba(255,138,0,0.55);}
+  .scn-card.selected{border-color:#fff; transform:translateY(-2px); box-shadow:0 20px 36px -20px rgba(255,255,255,0.4);}
   .scn-card.selected::after{
     content:''; position:absolute; inset:0; border-radius:12px; pointer-events:none;
-    box-shadow:0 0 0 1px var(--amber) inset;
+    box-shadow:0 0 0 1px #fff inset;
   }
-  .scn-card.selected .scn-check{opacity:1; transform:scale(1); background:var(--amber); color:#0A1020; border-color:var(--amber);}
+  .scn-card.selected .scn-check{opacity:1; transform:scale(1); background:#fff; color:#0A1020; border-color:#fff;}
 
   /* ---------- panel de cliente ---------- */
   /* Título, descripción y badge en una sola línea: la descripción deja de ocupar
