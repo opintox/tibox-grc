@@ -2,14 +2,14 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>CIP Cumplimiento · Quintero Energía</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -22,17 +22,13 @@
     <div style="width:1px;height:24px;background:var(--br)"></div>
   </div>
   <div class="tabs">
-    <button class="tab on" data-tab="req">📋 Requerimientos</button>
-    <button class="tab" data-tab="dash">📊 Dashboard</button>
+    <button class="tab on icon-only" data-tab="req" title="Requerimientos">📋</button>
+    <button class="tab icon-only" data-tab="dash" title="Dashboard">📊</button>
   </div>
   <div class="topright">
-    <button class="btn" id="btnImportarJSON" title="Sube un JSON exportado antes y lo guarda en la base de datos (útil para migrar datos existentes o restaurar un respaldo)">📥 Importar JSON</button>
-    <input type="file" id="importarJSONInput" accept="application/json" style="position:absolute;width:1px;height:1px;opacity:0">
-    <button class="btn" id="btnGuardarSnapshot" title="Guarda una foto del estado de hoy en la base de datos, para poder compararla más adelante en 'Comparar avances'">📸 Guardar snapshot</button>
-    <button class="btn" id="btnCompare" title="Compara el estado entre dos fechas guardadas en la base de datos">📅 Comparar avances</button>
-    <button class="btn" id="btnClearAll" title="Limpiar Evidencia, Responsable y Estado de todos los entregables">🧹 Limpiar Datos</button>
-    <button class="btn" id="btnExcel" title="Exporta a Excel lo que estés viendo con los filtros actuales">📊 Exportar Excel</button>
-    <button class="btn btn-primary" id="btnExport">⬇ Exportar JSON</button>
+    <button class="btn icon-only" id="btnGuardarSnapshot" title="Guardar snapshot — Guarda una foto del estado de hoy en la base de datos, para poder compararla más adelante en 'Comparar avances'">📸</button>
+    <button class="btn icon-only" id="btnCompare" title="Comparar avances — Compara el estado entre dos fechas guardadas en la base de datos">📅</button>
+    <button class="btn icon-only" id="btnExcel" title="Exportar Excel — Exporta a Excel lo que estés viendo con los filtros actuales">📊</button>
   </div>
 </div>
 
@@ -46,20 +42,21 @@
         <input type="text" class="search-input" id="searchInput" placeholder="🔍 Aspecto, evidencia, responsable..." style="width:100%">
       </div>
       <div class="sb-block">
-        <div class="sb-label">Organización</div>
-        <div class="sb-chips">
-          <button class="chip on" data-of="all">Todos</button>
-          <button class="chip" data-of="tibox">🔧 TIBOX</button>
-          <button class="chip" data-of="quintero">🏢 Quintero</button>
-          <button class="chip" data-of="sin-asignar">⬜ Sin Asignar</button>
-        </div>
+        <details class="sb-accordion">
+          <summary class="sb-label">Organización</summary>
+          <div class="sb-checks">
+            <label class="sb-check"><input type="checkbox" data-of="tibox">TIBOX</label>
+            <label class="sb-check"><input type="checkbox" data-of="quintero">Quintero</label>
+            <label class="sb-check"><input type="checkbox" data-of="sin-asignar">Sin Asignar</label>
+          </div>
+        </details>
       </div>
       <div class="sb-block">
-        <div class="sb-label">Dominio</div>
-        <div id="domChips" class="sb-chips">
-          <button class="chip on" data-df="all">Todos</button>
-        </div>
-        <button class="btn btn-primary" id="btnFiltrarDominio" style="width:100%;justify-content:center;margin-top:10px">🔍 Filtrar Dominio</button>
+        <details class="sb-accordion">
+          <summary class="sb-label">Dominio</summary>
+          <div id="domChips" class="sb-checks"></div>
+          <button class="btn btn-primary" id="btnFiltrarDominio" style="width:100%;justify-content:center;margin-top:10px">🔍 Filtrar Dominio</button>
+        </details>
       </div>
       <div class="sb-block">
         <div class="sb-label">Estado</div>

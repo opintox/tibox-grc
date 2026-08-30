@@ -5,14 +5,14 @@
      sidebar, tarjetas, chips, inputs) dejan ver el fondo espacial detrás, en vez de
      ser bloques opacos. Los contenedores grandes llevan además backdrop-filter:blur
      para que ese fondo se vea difuminado, no como ruido detrás del texto. */
-  --bg:#0A1226;--sur:rgba(16,27,54,.76);--sur2:rgba(22,35,74,.82);--tx:#EDF2F7;--t2:#B7C2D0;--mu:#8291A3;
-  --br:#26325C;--bg2:rgba(22,35,74,.82);--sh:0 4px 18px rgba(2,6,16,.55);
+  --bg:#070C1A;--sur:rgba(16,27,54,.76);--sur2:rgba(22,35,74,.82);--tx:#EDF2F7;--t2:#B7C2D0;--mu:#8291A3;
+  --br:rgba(255,255,255,0.08);--bg2:rgba(22,35,74,.82);--sh:0 4px 18px rgba(2,6,16,.55);
   /* Acentos = colores del cubo (superior amarillo, izquierda cian, derecha naranjo). Nunca dominantes.
      Cian como acento principal (coherente con la tarjeta de SGC en el portal); naranjo queda de acento secundario. */
   --accent:#0EA5E9;--accent-on:#FFFFFF;--accent2:#FF8A00;--accent2-on:#1A0E00;--accent3:#FFC400;
   --ok:#4ADE80;--warn:#FDBA74;--err:#F87171;
 }
-body{font-family:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:0.9rem;background:var(--bg);color:var(--tx);min-height:100vh;position:relative;overflow-x:hidden}
+body{font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:0.9rem;background:var(--bg);color:var(--tx);min-height:100vh;min-height:100dvh;position:relative;overflow-x:hidden}
 /* Fondo espacial, igual técnica que el portal (img/slide3.webp): imagen fija con velo
    oscuro + un par de brillos radiales cian/naranjo. */
 body::before{
@@ -29,7 +29,7 @@ body::after{
     radial-gradient(42vw circle at 10% 8%,rgba(255,138,0,.08),transparent 60%),
     radial-gradient(38vw circle at 50% 100%,rgba(14,165,233,.07),transparent 60%);
 }
-h1,h2,h3,.brand-name,.ph h2{font-family:'Space Grotesk',sans-serif}
+h1,h2,h3,.brand-name,.ph h2{font-family:'Plus Jakarta Sans',sans-serif}
 /* TOPBAR */
 .topbar{position:sticky;top:0;z-index:50;background:rgba(16,27,54,.74);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--br);padding:0 24px;height:52px;display:flex;align-items:center;gap:14px;box-shadow:var(--sh)}
 .brand{display:flex;align-items:center;gap:10px;flex-shrink:0}
@@ -47,6 +47,20 @@ h1,h2,h3,.brand-name,.ph h2{font-family:'Space Grotesk',sans-serif}
 .sb-block{margin-bottom:20px}
 .sb-label{font-size:0.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin-bottom:8px}
 .sb-chips{display:flex;gap:6px;flex-wrap:wrap}
+/* Organización/Dominio: multi-selección con checkboxes reales en vez de chips de
+   selección única. Ningún checkbox marcado = sin filtro (se muestran todos). */
+.sb-checks{display:flex;flex-direction:column;gap:8px}
+.sb-check{display:flex;align-items:center;gap:8px;font-size:0.76rem;color:var(--t2);cursor:pointer}
+.sb-check input{accent-color:var(--accent);width:15px;height:15px;flex:none;cursor:pointer}
+.sb-check:hover{color:var(--tx)}
+/* ORGANIZACIÓN/DOMINIO como acordeón: colapsados por defecto, flecha que indica
+   abierto/cerrado. <summary> ya trae el estilo de .sb-label, solo se le agrega
+   la flecha y se le saca el marcador nativo del navegador. */
+.sb-accordion summary{cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;margin-bottom:0}
+.sb-accordion summary::-webkit-details-marker{display:none}
+.sb-accordion summary::after{content:'▾';font-size:0.65rem;color:var(--mu);transition:transform .15s}
+.sb-accordion[open] summary::after{transform:rotate(180deg)}
+.sb-accordion .sb-checks{margin-top:10px}
 #sidebar-req .p-card{margin-top:4px;margin-bottom:0}
 .brand-title{font-size:0.85rem;font-weight:700;color:var(--tx)}
 .brand-sub{font-size:0.65rem;color:var(--mu)}
@@ -60,6 +74,10 @@ h1,h2,h3,.brand-name,.ph h2{font-family:'Space Grotesk',sans-serif}
 .btn-primary{background:var(--accent);color:var(--accent-on);border-color:var(--accent)}
 .btn-primary:hover{background:#FF9E2E;border-color:#FF9E2E}
 .btn-icon{padding:7px 10px;font-size:1rem}
+/* Botones/pestañas que quedan solo con el emoji: cuadrados en vez de alargados,
+   el nombre vive en el title (tooltip) en vez de impreso. */
+.icon-only{padding:0;width:36px;justify-content:center;font-size:1rem}
+.btn.icon-only{width:34px;height:34px}
 /* PAGES */
 .page{display:none;padding:22px 26px}
 .page.on{display:block}
@@ -177,9 +195,9 @@ tbody tr.group-row:hover td{background:none}
 @keyframes modalPop{from{opacity:0;transform:translateY(-8px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
 .modal-close{position:absolute;top:16px;right:16px;background:var(--sur2);border:1px solid var(--br);border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:1.05rem;color:var(--mu);cursor:pointer;line-height:1;padding:0}
 .modal-close:hover{color:var(--tx);border-color:var(--accent)}
-.modal-overlay .edit-form .ftitle{font-family:'Space Grotesk',sans-serif;font-size:1.15rem;font-weight:700;color:var(--tx);margin-bottom:4px}
-.modal-overlay .edit-form .feyebrow{font-family:'Space Grotesk',sans-serif;font-size:0.68rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:8px;display:block}
-.modal-overlay .edit-form label{font-family:'Space Grotesk',sans-serif;font-size:0.7rem;font-weight:600;color:var(--mu);display:block;margin-bottom:7px;text-transform:uppercase;letter-spacing:.06em}
+.modal-overlay .edit-form .ftitle{font-family:'Plus Jakarta Sans',sans-serif;font-size:1.15rem;font-weight:700;color:var(--tx);margin-bottom:4px}
+.modal-overlay .edit-form .feyebrow{font-family:'Plus Jakarta Sans',sans-serif;font-size:0.68rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:8px;display:block}
+.modal-overlay .edit-form label{font-family:'Plus Jakarta Sans',sans-serif;font-size:0.7rem;font-weight:600;color:var(--mu);display:block;margin-bottom:7px;text-transform:uppercase;letter-spacing:.06em}
 .modal-overlay .edit-form .fsel,.modal-overlay .edit-form .finput,.modal-overlay .edit-form .ftarea,.modal-overlay .edit-form .asp-btn{font-size:0.92rem;padding:11px 14px;border-radius:10px;min-height:44px}
 .modal-overlay .edit-form .fsel:focus,.modal-overlay .edit-form .finput:focus,.modal-overlay .edit-form .ftarea:focus,.modal-overlay .edit-form .asp-btn:focus{box-shadow:0 0 0 3px rgba(255,138,0,.18)}
 .modal-overlay .edit-form .ftarea{min-height:88px}
@@ -187,15 +205,15 @@ tbody tr.group-row:hover td{background:none}
 .modal-overlay .edit-form .asp-caret{top:17px;right:14px}
 .modal-overlay .edit-form .step{display:flex;align-items:center;gap:9px;margin:26px 0 12px}
 .modal-overlay .edit-form .step:first-of-type{margin-top:22px}
-.modal-overlay .edit-form .step .num{width:20px;height:20px;flex:none;border-radius:50%;background:var(--sur2);border:1.5px solid var(--accent2);color:var(--accent2);font:700 11px/17px 'Space Grotesk',sans-serif;text-align:center}
-.modal-overlay .edit-form .step .lbl{font-family:'Space Grotesk',sans-serif;font-size:0.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu)}
+.modal-overlay .edit-form .step .num{width:20px;height:20px;flex:none;border-radius:50%;background:var(--sur2);border:1.5px solid var(--accent2);color:var(--accent2);font:700 11px/17px 'Plus Jakarta Sans',sans-serif;text-align:center}
+.modal-overlay .edit-form .step .lbl{font-family:'Plus Jakarta Sans',sans-serif;font-size:0.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mu)}
 .modal-overlay .edit-form .row1{display:grid;grid-template-columns:1fr 1fr;gap:22px}
 .modal-overlay .edit-form .row-aspecto{margin-top:22px}
 .modal-overlay .edit-form .row2{display:grid;grid-template-columns:2fr 1.1fr 1fr 1fr;gap:22px;align-items:start}
 .modal-overlay .edit-form .factions{display:flex;gap:12px;justify-content:flex-end;padding-top:22px;margin-top:26px;border-top:1px solid var(--br)}
 .modal-overlay .edit-form .factions .btn{padding:11px 22px;font-size:0.85rem;border-radius:10px}
 .modal-overlay .edit-form .factions .btn-primary{box-shadow:0 0 18px rgba(255,138,0,.3)}
-.modal-overlay .edit-form .codechip{display:inline-flex;align-items:center;gap:7px;background:var(--sur2);color:#FFB768;font:700 12px/1 'Space Grotesk',sans-serif;padding:5px 11px;border-radius:20px;border:1px solid var(--br)}
+.modal-overlay .edit-form .codechip{display:inline-flex;align-items:center;gap:7px;background:var(--sur2);color:#FFB768;font:700 12px/1 'Plus Jakarta Sans',sans-serif;padding:5px 11px;border-radius:20px;border:1px solid var(--br)}
 tbody tr:last-child td{border-bottom:none}
 /* AGRUPACIÓN POR DOMINIO (tabla de Requerimientos) */
 tr.group-row td{padding:0;border-bottom:none}
@@ -203,12 +221,12 @@ tr.group-row:first-child td{border-top:none}
 .group-head{display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--bg2);border-bottom:1px solid var(--br);border-top:1px solid var(--br)}
 tr.group-row:first-child .group-head{border-top:none}
 .group-dot{width:8px;height:8px;border-radius:50%;flex:none}
-.group-code{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:0.78rem;white-space:nowrap}
+.group-code{font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:0.78rem;white-space:nowrap}
 .group-name{font-size:0.72rem;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .group-summary{margin-left:auto;display:flex;gap:10px;flex-wrap:wrap;flex:none}
 .gs-chip{display:inline-flex;align-items:center;gap:5px;font-size:0.66rem;font-weight:700;color:var(--t2);white-space:nowrap}
 .gs-chip .dot{width:6px;height:6px;border-radius:50%;flex:none}
-.req-code{font-family:'Space Grotesk',monospace;font-size:.74rem;color:var(--accent);font-weight:700;white-space:nowrap}
+.req-code{font-family:'Plus Jakarta Sans',monospace;font-size:.74rem;color:var(--accent);font-weight:700;white-space:nowrap}
 .desc-cell{font-size:0.72rem;color:var(--t2);line-height:1.4;display:none}
 .req-desc-full{font-size:0.78rem;color:var(--t2);line-height:1.5;background:var(--bg2);border:1px solid var(--br);border-radius:8px;padding:10px 12px;margin:12px 0 0;display:none}
 .req-desc-full.show{display:block}
@@ -220,10 +238,40 @@ tr.group-row:first-child .group-head{border-top:none}
 .stsel option{background:var(--sur);color:var(--tx);font-weight:400}
 .rnum{font-size:0.6rem;color:var(--mu);font-weight:700}
 .count-bar{font-size:0.72rem;color:var(--mu);padding:8px 4px;text-align:right}
+/* TABLA DE REQUERIMIENTOS EN MÓVIL: cada fila pasa de <tr> de tabla a tarjeta de bloque.
+   Código + Estado quedan arriba (lo más identificable de un vistazo), Aspecto a Mejorar
+   ocupa el ancho completo, y Evidencia/Responsable/Frecuencia quedan como bloque secundario
+   más chico debajo de una línea separadora. Se reordena con "order" sobre las mismas <td>
+   que ya existen — no se toca el JS que arma la fila ni el click-para-editar. */
+@media (max-width:768px){
+  /* Se saca también <table>/<tbody> del modelo de tabla (no solo las filas): mezclar
+     display:table en el padre con display:flex en las filas da anchos degenerados en
+     varios navegadores. Todo pasa a flujo de bloque normal, ancho 100% real. */
+  #page-req .tbl-wrap{overflow-x:visible;background:none;border:none;box-shadow:none;backdrop-filter:none}
+  #page-req table{display:block; width:100%}
+  #page-req tbody{display:block}
+  #page-req thead{display:none}
+  #page-req tr.group-row{display:block;margin:14px 0 8px}
+  #page-req tr.group-row:first-child{margin-top:0}
+  #page-req tr.group-row td{display:block}
+  #page-req tr.data-row{
+    display:flex; flex-wrap:wrap; align-items:flex-start; gap:2px 10px; width:100%; min-width:0; box-sizing:border-box;
+    background:var(--sur); border:1px solid var(--br); border-radius:10px; margin-bottom:10px; padding:12px 14px;
+  }
+  #page-req tr.data-row td{display:block; border-bottom:none; padding:0; width:auto; min-width:0; vertical-align:top}
+  #page-req tr.data-row td.rnum{display:none}
+  #page-req .req-code{order:1; align-self:center; font-size:0.8rem}
+  #page-req tr.data-row > td:last-child{order:2; margin-left:auto; flex:0 0 auto; min-width:130px}
+  #page-req tr.data-row > td:last-child .stsel{width:100%}
+  #page-req .aspecto-cell{order:3; flex:1 1 100%; min-width:0; font-size:0.82rem; margin-top:4px}
+  #page-req .evidencia-cell{order:4; flex:1 1 100%; min-width:0; margin-top:10px; padding-top:8px; border-top:1px dashed var(--br)}
+  #page-req .resp-cell{order:5; flex:1 1 100%; min-width:0; margin-top:6px}
+}
 /* DASHBOARD */
 /* DASHBOARD — fit viewport */
 #page-dash.on{
   height:calc(100vh - 52px);
+  height:calc(100dvh - 52px);
   display:flex;flex-direction:column;
   gap:7.6px;padding:6px 20px 12px;
   overflow:hidden;box-sizing:border-box;
@@ -249,12 +297,12 @@ tr.group-row:first-child .group-head{border-top:none}
 .card-sub{font-size:0.78rem;color:var(--mu);margin-bottom:7.6px;flex:0 0 auto}
 .chart-wrap{position:relative;flex:1;min-height:280px;width:100%}
 /* TOAST */
-.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--tx);color:var(--sur);padding:10px 20px;border-radius:10px;font-size:0.8rem;opacity:0;transition:.3s;z-index:90;box-shadow:0 4px 16px rgba(0,0,0,.2)}
+.toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%) translateY(20px);background:var(--tx);color:var(--sur);padding:10px 20px;border-radius:10px;font-size:0.8rem;opacity:0;transition:.3s;z-index:90;box-shadow:0 4px 16px rgba(0,0,0,.2)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .compare-modal{position:fixed;inset:0;background:rgba(6,11,26,.72);z-index:900;display:none;align-items:center;justify-content:center;padding:20px}
 .compare-modal.show{display:flex}
 .compare-box{width:min(640px,100%);background:var(--sur);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--br);border-radius:14px;padding:22px;box-shadow:0 20px 50px rgba(0,0,0,.5)}
-.compare-title{font-family:'Space Grotesk',sans-serif;font-size:1.05rem;font-weight:700;margin-bottom:4px}
+.compare-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:1.05rem;font-weight:700;margin-bottom:4px}
 .compare-sub{font-size:.72rem;color:var(--mu);line-height:1.4;margin-bottom:18px}
 .compare-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .compare-field{border:1px solid var(--br);border-radius:9px;padding:12px;background:var(--bg2)}
@@ -288,10 +336,22 @@ tr.group-row:first-child .group-head{border-top:none}
   .dash-row-est{grid-template-columns:1fr 1fr}
 }
 @media(max-width:768px){
-  .dash-row{grid-template-columns:1fr}
-  .dash-row-3{grid-template-columns:1fr}
-  .dash-row-est{grid-template-columns:1fr}
-  #page-dash{overflow-y:auto}
+  /* #page-dash.on fija height+overflow:hidden para que en escritorio el dashboard
+     quepa sin scroll; en mobile ya no comparten ese alto fijo (cada fila es su
+     propio carrusel), así que aquí se deja crecer y scrollear la página en su lugar.
+     Necesita .on (no solo #page-dash) para ganarle en especificidad a esa regla. */
+  #page-dash.on{height:auto;overflow:visible}
+  /* Carrusel horizontal en vez de apilar las tarjetas verticalmente: cada tarjeta
+     pasa a cuadrada (aspect-ratio 1:1) y se navega con swipe lateral. */
+  .dash-row,.dash-row-3,.dash-row-est{
+    display:flex; flex-wrap:nowrap; align-items:flex-start; overflow-x:auto; scroll-snap-type:x mandatory;
+    gap:10px; padding-bottom:8px; flex:none;
+    scrollbar-width:thin; scrollbar-color:rgba(255,255,255,.16) transparent;
+  }
+  .dash-row::-webkit-scrollbar, .dash-row-3::-webkit-scrollbar, .dash-row-est::-webkit-scrollbar{height:6px}
+  .dash-row::-webkit-scrollbar-thumb, .dash-row-3::-webkit-scrollbar-thumb, .dash-row-est::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16); border-radius:3px}
+  .card{scroll-snap-align:start; flex:0 0 82%; aspect-ratio:1/1; min-width:0}
+  .chart-wrap{min-height:0}
   .topbar{flex-wrap:wrap;height:auto;padding:8px 14px;gap:6px}
   .tabs{order:3;width:100%;overflow-x:auto}
   .page{padding:12px 14px}
@@ -303,12 +363,9 @@ tr.group-row:first-child .group-head{border-top:none}
   .page{margin-left:0}
   .edit-form{padding:12px 14px}
   .modal-overlay{padding:0}
-  .modal-overlay .edit-form{max-height:100vh;height:100%;width:100%;max-width:100%;border-radius:0;padding:20px 18px 24px}
+  .modal-overlay .edit-form{max-height:100vh;max-height:100dvh;height:100%;width:100%;max-width:100%;border-radius:0;padding:20px 18px calc(24px + env(safe-area-inset-bottom))}
   .modal-overlay .edit-form .row1{grid-template-columns:1fr;gap:14px;margin-bottom:16px}
   .modal-overlay .edit-form .row2{grid-template-columns:1fr;gap:14px;margin-bottom:16px}
   .modal-overlay .edit-form .factions{justify-content:stretch}
   .modal-overlay .edit-form .factions .btn{flex:1}
-}
-@media(max-width:480px){
-  #page-dash{overflow-y:auto}
 }

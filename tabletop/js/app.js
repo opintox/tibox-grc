@@ -41,6 +41,20 @@ let sessionMatrices = {};
 // «Comenzar ejercicio» exige que esté en true (ver updateBottomState) para forzar a guardar el
 // perfil del cliente antes de empezar la sesión.
 let profileSaved = false;
+// ---------------- wizard de configuración (Perfil → Escenario → Participantes) ----------------
+// Solo 3 y solo estos: cambiar el número de pasos implica ajustar también el markup
+// (#wizardStep1/2/3) y goToStep/renderWizardStepper más abajo. Declarados aquí (no junto al
+// resto de la lógica del wizard) porque updateBottomState() ya los necesita desde la primera
+// llamada, antes de que el body del wizard se defina más abajo en el archivo.
+let currentSetupStep = 1;
+const WIZARD_STEPS = [
+  {n: 1, label: 'Perfil de cliente'},
+  {n: 2, label: 'Escenario'},
+  {n: 3, label: 'Participantes'}
+];
+// El paso más lejano ya visitado: el stepper solo deja saltar por clic hacia atrás,
+// nunca hacia un paso futuro que todavía no se mostró.
+let furthestSetupStep = 1;
 function getMatrix(scenarioId){
   if(!sessionMatrices[scenarioId]) sessionMatrices[scenarioId] = {...(PARTICIPATION_MATRIX[scenarioId] || {})};
   const m = sessionMatrices[scenarioId];
@@ -318,7 +332,7 @@ function renderScenarioCard(s, container){
       <span class="scn-check" aria-hidden="true"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.4 6.4 12 13 4.6"/></svg></span>
     </div>
     <div class="scn-desc">${escapeHtml(blurb)}</div>
-    <div class="scn-fields"><div class="scn-field"><span class="scn-field-label">Objetivo</span><span class="scn-field-value">${escapeHtml(SCENARIO_TARGETS[s.id] || '—')}</span></div></div>`;
+    <div class="scn-fields"><span class="scn-target">${escapeHtml(SCENARIO_TARGETS[s.id] || '—')}</span></div>`;
   const choose = () => {
     selectedScenarioId = s.id;
     renderScenarioCards();
@@ -427,47 +441,63 @@ function openEditPopout(e){
   setTimeout(() => document.addEventListener('mousedown', outsideClickHandler, true), 0);
 }
 
-// ---------------- estado del riel (checklist + CTA único) ----------------
-// Ya no hay pasos ni pestañas: la pantalla completa se ve de una vez y el botón solo
-// se habilita cuando la configuración mínima está lista. La lista dice qué falta.
+// ---------------- wizard de configuración: stepper + CTA ----------------
 const CHECK_ICON = '<svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.4 6.4 12 13 4.6"/></svg>';
+
+function renderWizardStepper(){
+  document.getElementById('wizardStepper').innerHTML = WIZARD_STEPS.map(step => {
+    const done = step.n < currentSetupStep;
+    const active = step.n === currentSetupStep;
+    const clickable = step.n <= furthestSetupStep && !active;
+    const cls = ['wizard-step-item', done ? 'done' : '', active ? 'active' : '', clickable ? 'clickable' : ''].filter(Boolean).join(' ');
+    return `
+    <button type="button" class="${cls}" data-goto="${step.n}" ${clickable ? '' : 'disabled'}>
+      <span class="wizard-step-n">${done ? CHECK_ICON : step.n}</span>
+      <span class="wizard-step-label">${escapeHtml(step.label)}</span>
+    </button>`;
+  }).join('');
+  document.querySelectorAll('.wizard-step-item.clickable').forEach(btn => {
+    btn.addEventListener('click', () => goToStep(parseInt(btn.dataset.goto, 10)));
+  });
+}
 
 function updateBottomState(){
   const hasScenario = !!selectedScenarioId;
   const activeCount = participants.filter(p => p.checked).length;
   const hasParticipant = activeCount > 0;
   const scenarioName = hasScenario ? SCENARIOS.find(s => s.id === selectedScenarioId).name : null;
-  const isIntro = document.body.classList.contains('intro-mode');
-
-  const btn = document.getElementById('continueBtn');
   const canStart = hasScenario && hasParticipant;
-  btn.disabled = isIntro ? false : !canStart;
-  btn.textContent = 'Comenzar ejercicio →';
-  const setupNextBtn = document.getElementById('setupNextBtn');
-  if(setupNextBtn) setupNextBtn.disabled = !canStart;
 
-  document.getElementById('railCheck').innerHTML = [
-    {done: hasScenario, label: 'Escenario', value: scenarioName || 'sin elegir'},
-    {done: hasParticipant, label: 'Participantes', value: hasParticipant ? `${activeCount} ${activeCount === 1 ? 'función' : 'funciones'}` : 'ninguna marcada'},
-    {done: profileSaved, label: 'Perfil de cliente', value: profileSaved ? 'guardado' : 'sin guardar'}
-  ].map(it => `
-    <div class="rc-item${it.done ? ' done' : ''}">
-      <span class="rc-dot">${CHECK_ICON}</span>
-      <span>${it.label}</span>
-      <span class="rc-val">${escapeHtml(it.value)}</span>
-    </div>`).join('');
+  renderWizardStepper();
+
+  const setupNextBtn = document.getElementById('setupNextBtn');
+  if(setupNextBtn){
+    const label=document.getElementById('setupNextBtnLabel');
+    if(currentSetupStep === 3){
+      setupNextBtn.disabled = !canStart;
+      if(label) label.textContent = 'Comenzar ejercicio';
+    } else {
+      setupNextBtn.disabled = false;
+      if(label) label.textContent = 'Siguiente';
+    }
+  }
 
   const scnBadge = document.getElementById('scenarioBadge');
   if(scnBadge) scnBadge.textContent = scenarioName || 'Sin escenario';
   const pBadge = document.getElementById('participantsBadge');
   if(pBadge) pBadge.textContent = `${activeCount} activa${activeCount === 1 ? '' : 's'}`;
+
+  const summaryEl = document.getElementById('wizardStep3Summary');
+  if(summaryEl){
+    summaryEl.textContent = canStart
+      ? `Escenario elegido: ${scenarioName} · ${activeCount} ${activeCount === 1 ? 'función activa' : 'funciones activas'}.`
+      : `Falta: ${!hasScenario ? 'elegir escenario' : ''}${!hasScenario && !hasParticipant ? ' y ' : ''}${!hasParticipant ? 'marcar al menos un participante' : ''}.`;
+  }
 }
 // La app abre siempre en la pantalla de bienvenida (reglas del ejercicio); recién al presionar
 // «Siguiente» ahí se entra al modo configuración que antes era la pantalla inicial.
 document.body.classList.add('intro-mode');
 updateBottomState();
-
-document.getElementById('introRailMount').appendChild(document.getElementById('setupRail'));
 
 // Intenta restaurar configuración guardada de una sesión anterior (si existe). El modal de
 // confirmación se encarga de re-pintar la UI si el usuario decide restaurarla.
@@ -476,10 +506,9 @@ loadSetupState();
 function enterSetup(){
   document.getElementById('screen-intro').classList.add('hidden');
   document.getElementById('screen-setup').classList.remove('hidden');
-  document.getElementById('continueBtn').classList.add('hidden');
   document.body.classList.remove('intro-mode');
   document.body.classList.add('setup-mode');
-  updateBottomState();
+  goToStep(1);
   window.scrollTo({top: 0, behavior: 'smooth'});
 }
 
@@ -493,7 +522,6 @@ function goHome(){
     if(screen) screen.classList.add('hidden');
   });
   document.getElementById('screen-intro').classList.remove('hidden');
-  document.getElementById('introRailMount').appendChild(document.getElementById('setupRail'));
   document.body.classList.remove('setup-mode', 'game-mode');
   document.body.classList.add('intro-mode');
   document.getElementById('statusLabel').textContent = 'CONFIGURACIÓN';
@@ -501,9 +529,28 @@ function goHome(){
   window.scrollTo({top: 0, behavior: 'smooth'});
 }
 
+function goToStep(n){
+  currentSetupStep = n;
+  if(n > furthestSetupStep) furthestSetupStep = n;
+  document.querySelectorAll('.wizard-step').forEach(el => {
+    el.classList.toggle('hidden', parseInt(el.dataset.step, 10) !== n);
+  });
+  window.scrollTo({top: 0, behavior: 'smooth'});
+  updateBottomState();
+}
+
 document.getElementById('continueBtn').addEventListener('click', enterSetup);
-document.getElementById('setupBackBtn').addEventListener('click', goHome);
-document.getElementById('setupNextBtn').addEventListener('click', startGame);
+document.getElementById('setupBackBtn').addEventListener('click', () => {
+  if(currentSetupStep === 1) goHome();
+  else goToStep(currentSetupStep - 1);
+});
+document.getElementById('setupNextBtn').addEventListener('click', () => {
+  if(currentSetupStep === 3){
+    if(!document.getElementById('setupNextBtn').disabled) startGame();
+  } else {
+    goToStep(currentSetupStep + 1);
+  }
+});
 
 const playbookFileInput = document.getElementById('playbookFile');
 const playbookFileName = document.getElementById('playbookFileName');
