@@ -9,7 +9,7 @@
   *{box-sizing:border-box;}
   /* Toda la interfaz usa una sola familia. Donde antes había monoespaciada,
      ahora se usan cifras tabulares para mantener alineadas horas y contadores. */
-  .game-timer, .gh-count, .rc-val, .sit-chip, .scn-fields, .c-foot, .acta-label,
+  .game-timer, .gh-count, .sit-chip, .scn-fields, .c-foot, .acta-label,
   .stat-value, .donut-result-center b, .plazo-chip{font-variant-numeric:tabular-nums;}
   @media (prefers-reduced-motion: reduce){
     *{animation-duration:0.01ms !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important;}
@@ -27,7 +27,7 @@
   html{overflow-x:hidden;}
   html,body{margin:0;padding:0;}
   body{
-    background:var(--bg); color:var(--text); font-family:var(--sans); min-height:100vh;
+    background:var(--bg); color:var(--text); font-family:var(--sans); min-height:100vh; min-height:100dvh;
     -webkit-font-smoothing:antialiased; overflow-x:hidden; position:relative;
   }
   /* Mismo fondo que la portada (img/slide3.webp), para que se sienta un solo sitio al pasar
@@ -126,7 +126,7 @@
   /* ---------- participants table ---------- */
   table.ptable{width:100%; border-collapse:collapse;}
 
-  .participants-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px;}
+  .participants-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; align-items:flex-start;}
   @media (max-width:1000px){.participants-grid{grid-template-columns:repeat(2,1fr);}}
   @media (max-width:560px){.participants-grid{grid-template-columns:1fr;}}
   .p-card{padding:14px 16px; border-radius:12px; border:1px solid var(--border); border-bottom:2px solid rgba(255,255,255,0.35); background:var(--panel-2); box-shadow:0 10px 22px -14px rgba(255,255,255,0.28); transition:opacity .15s;}
@@ -410,35 +410,16 @@
      libre en vez de dejarlo todo abajo. Si el contenido llegara a ser más alto que la pantalla
      (ventana muy baja, zoom alto), #screen-intro simplemente crece y la página vuelve a
      scrollear — nunca se recorta contenido. */
-  #screen-intro{display:flex; flex-direction:column; min-height:calc(100vh - var(--topbar-h));}
-  /* Dos columnas en pantallas anchas para aprovechar el ancho disponible sin que el
-     texto se estire en líneas demasiado largas; una sola columna en pantallas angostas. */
+  #screen-intro{display:flex; flex-direction:column; min-height:calc(100vh - var(--topbar-h)); min-height:calc(100dvh - var(--topbar-h));}
+  /* Una sola columna: el perfil/playbook ya no vive acá (es el paso 1 del wizard de
+     Configuración), así que esta pantalla vuelve a ser solo contenido de lectura. */
   .intro-shell{
-    flex:1; display:grid; grid-template-columns:var(--rail-w) minmax(0,1fr); align-items:start;
-    align-content:center; gap:20px;
-    max-width:1800px; width:100%; margin:0 auto; padding:32px clamp(20px, 3vw, 48px);
+    flex:1; display:flex; flex-direction:column; align-items:center;
+    gap:20px; max-width:900px; width:100%; margin:0 auto; padding:32px clamp(20px, 3vw, 48px);
   }
-  /* Antes esta tarjeta se estiraba para igualar la altura de la columna derecha (la más alta
-     de las dos) y un spacer interno empujaba el CTA "Comenzar ejercicio" hasta el fondo. Con
-     el contenido real (nombre, facilitador, dos botones) eso dejaba un vacío desproporcionado
-     en el medio de la tarjeta. Ahora la tarjeta mide su propio contenido (no se estira) y el
-     spacer solo da un respiro moderado antes del pie, así el CTA queda cerca del resto del
-     formulario en vez de colgando solo al fondo de una tarjeta enorme. */
-  .intro-rail-mount{grid-column:1; grid-row:1; min-width:0; align-self:start;}
-  .intro-rail-mount > .rail{
-    /* .rail trae "height / position:sticky / top" de la pantalla de configuración (donde sí
-       es un sidebar fijo bajo la barra superior). Acá es solo una tarjeta más: se anulan esas
-       reglas por unas relativas al alto natural del contenido. */
-    position:relative; top:auto; height:auto; border:1px solid var(--border); border-radius:18px;
-    padding:var(--sp-6) var(--sp-6) 0; overflow-y:visible;
-  }
-  .intro-rail-mount .rail-foot{position:static;}
-  .intro-rail-mount .rail-spacer{flex:none; min-height:0; height:var(--sp-7);}
-  .intro-content{display:contents;}
-  /* Una sola columna de contenido en orden de lectura (qué es → cómo funciona → opcional),
-     en vez de repartirlo en dos sub-columnas que quedaban de alturas dispares. */
-  .intro-content > .intro-right-column{grid-column:2; grid-row:1;}
+  .intro-content{width:100%;}
   .intro-right-column{display:flex; flex-direction:column; gap:20px; min-width:0;}
+  .intro-continue-btn{margin-top:4px; align-self:center;}
   .intro-panel .section-title{margin-bottom:12px;}
   /* Las tarjetas ocupan todo el ancho de la columna, pero el texto se limita a una
      medida legible en vez de estirarse de borde a borde de la tarjeta. */
@@ -455,7 +436,11 @@
   }
   .rule-step-title{font-family:var(--display); font-weight:700; font-size:var(--fs-md); color:var(--text); margin-bottom:3px;}
   .rule-step-desc{font-size:var(--fs-sm); line-height:1.55; color:var(--muted); margin:0; max-width:58ch;}
-  .playbook-panel{margin-bottom:0;}
+  .playbook-panel{margin-top:var(--sp-5); margin-bottom:0;}
+  @media (max-width:480px){
+    .profile-actions{flex-direction:column; align-items:stretch;}
+    .profile-actions .btn{width:100%; justify-content:center;}
+  }
   .playbook-actions{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
   .playbook-file{
     display:flex; align-items:center; min-width:0; flex:1 1 220px; min-height:40px; padding:9px 12px;
@@ -468,10 +453,6 @@
   .playbook-status{min-height:1.4em; color:var(--green); font-size:var(--fs-xs); line-height:1.4; margin:10px 0 0;}
   @media (max-width:700px){
     .rule-steps{grid-template-columns:1fr;}
-  }
-  @media (max-width:860px){
-    .intro-shell{grid-template-columns:1fr;}
-    .intro-rail-mount,.intro-content > .intro-right-column{grid-column:1; grid-row:auto;}
   }
   @media (max-width:640px){
     .intro-welcome{padding:20px 20px 4px;}
@@ -487,15 +468,6 @@
     .rule-step-num{width:26px; height:26px; font-size:var(--fs-xs);}
     .rule-step-title{font-size:var(--fs-sm); margin-bottom:2px;}
     .rule-step-desc{font-size:var(--fs-xs); line-height:1.35;}
-    .intro-rail-mount > .rail{padding:18px 18px 0;}
-    .intro-rail-mount .rail-brand{margin-bottom:8px;}
-    .intro-rail-mount .rail-group + .rail-group{margin-top:14px;}
-    .intro-rail-mount .rail-title{font-size:var(--fs-xl);}
-    .intro-rail-mount .rail-sub{font-size:var(--fs-3xs); line-height:1.4;}
-    .intro-rail-mount .rail-fields{gap:8px;}
-    .intro-rail-mount .rail-summary{padding:10px; min-height:0;}
-    .intro-rail-mount .rail-check{gap:4px; margin-bottom:8px;}
-    .intro-rail-mount #continueBtn{padding:10px 14px;}
   }
 
   .intro-desc-text{font-size:var(--fs-sm); line-height:1.6; color:var(--muted); margin:0 0 10px;}
@@ -773,51 +745,80 @@
   @media (max-width:560px){.hero-actions .btn-cta, .hero-actions .btn-ghost{width:100%; justify-content:center;}}
 
   /* ---------- tarjetas de escenario ---------- */
-  .scn-grid{display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:var(--sp-3);}
-  @media (max-width:1600px){.scn-grid{grid-template-columns:repeat(4, minmax(0,1fr));}}
-  @media (max-width:1180px){.scn-grid{grid-template-columns:repeat(3, minmax(0,1fr));}}
-  @media (max-width:760px){.scn-grid{grid-template-columns:repeat(2, minmax(0,1fr));}}
-  @media (max-width:480px){.scn-grid{grid-template-columns:1fr;}}
+  /* Grid limpio de 2 columnas: el escenario ahora vive en su propio paso del wizard
+     (no en la página completa), así que no necesita la cascada de 5/4/3 columnas de antes. */
+  /* auto-fit en vez de 2 columnas fijas: en pantallas muy anchas se acomodan más
+     columnas (280px como ancho mínimo cómodo por tarjeta) en vez de estirar
+     siempre las mismas 2 de borde a borde. */
+  .scn-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(280px,1fr)); gap:var(--sp-3); align-items:flex-start;}
+  /* En móvil, carrusel horizontal con scroll-snap en vez de apilar las 10 tarjetas
+     verticalmente (eso era ~5000px de scroll). El grid completo se mantiene en desktop. */
+  @media (max-width:768px){
+    .scn-grid{
+      display:flex; overflow-x:auto; scroll-snap-type:x mandatory; gap:var(--sp-3); padding-bottom:10px;
+      scrollbar-width:thin; scrollbar-color:rgba(255,255,255,.16) transparent;
+    }
+    .scn-grid::-webkit-scrollbar{height:6px;}
+    .scn-grid::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16); border-radius:3px;}
+    .scn-card{scroll-snap-align:start; flex:0 0 82%; min-width:0;}
+  }
   /* Mismo lenguaje visual que las tarjetas de "Participantes" (.p-card): insignia con
      ícono+nombre en una pastilla, brillo en el borde inferior en vez de una franja arriba,
      y el pie como fila etiqueta/valor. Sin color por escenario: todas brillan igual, en
      blanco (el color por escenario, --a/--a2, sigue fijado por JS pero ya no se usa aquí). */
+  /* Acento neón (cian) parejo para las 10 tarjetas — mismo principio de "sin color
+     por escenario" de antes, solo que ahora el acento uniforme es cian en vez de blanco. */
   .scn-card{
     position:relative; overflow:hidden; isolation:isolate; cursor:pointer; text-align:left;
     border-radius:12px; padding:14px 16px; min-height:132px;
     display:flex; flex-direction:column; gap:0;
-    background-image:linear-gradient(158deg, #0C1730 0%, #080F1E 100%);
-    border:1px solid rgba(255,255,255,0.09); border-bottom:2px solid rgba(255,255,255,0.35);
-    box-shadow:0 10px 22px -14px rgba(255,255,255,0.28);
+    background-image:linear-gradient(158deg, #0F1B36 0%, #080F1E 100%);
+    border:1px solid rgba(255,255,255,0.08); border-bottom:2px solid rgba(255,255,255,0.35);
+    box-shadow:0 10px 20px rgba(0,0,0,0.4), 0 10px 22px -14px rgba(255,255,255,0.14);
     transition:transform .16s ease, box-shadow .2s ease, border-color .16s ease;
   }
-  .scn-card:hover{transform:translateY(-3px); box-shadow:0 16px 30px -16px rgba(255,255,255,0.32);}
-  .scn-card:focus-visible{outline:2px solid #fff; outline-offset:2px;}
+  .scn-card:hover{
+    transform:translateY(-3px); border-color:rgba(56,189,248,0.4);
+    box-shadow:0 14px 26px rgba(0,0,0,0.45), 0 16px 30px -16px rgba(255,255,255,0.2);
+  }
+  .scn-card:focus-visible{outline:2px solid #38bdf8; outline-offset:2px;}
   .scn-head{display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:10px;}
   .scn-badge{
     display:inline-flex; align-items:center; gap:6px;
     font-family:var(--mono); font-size:var(--fs-2xs); letter-spacing:0.04em;
     padding:4px 10px; border-radius:20px; border:1px solid rgba(255,255,255,0.18);
-    background:rgba(255,255,255,0.06); color:var(--text);
+    background:rgba(255,255,255,0.06); color:#38bdf8;
   }
   .scn-badge svg{flex-shrink:0; width:14px; height:14px;}
   .scn-desc{font-size:var(--fs-2xs); color:var(--muted); line-height:1.4; margin:0 0 12px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
-  .scn-fields{display:flex; flex-direction:column; gap:6px; margin-top:auto;}
-  .scn-field{display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:var(--fs-xs);}
-  .scn-field-label{font-family:var(--mono); font-size:var(--fs-4xs); letter-spacing:0.06em; color:var(--muted-2); text-transform:uppercase; flex-shrink:0;}
-  .scn-field-value{color:var(--text); text-align:right; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-  .scn-check{
-    width:24px; height:24px; border-radius:50%; flex-shrink:0;
-    display:flex; align-items:center; justify-content:center;
-    background:rgba(255,255,255,0.10); border:1px solid rgba(255,255,255,0.22); color:#fff;
-    opacity:0; transform:scale(.6); transition:opacity .16s ease, transform .16s ease;
+  .scn-fields{margin-top:auto;}
+  /* Reemplaza el antiguo label "Objetivo" + valor: el valor solo, como badge, sin
+     texto redundante repetido en cada una de las 10 tarjetas. */
+  .scn-target{
+    display:inline-flex; align-items:center; font-family:var(--mono); font-size:var(--fs-4xs);
+    letter-spacing:0.04em; color:var(--muted-2); padding:3px 9px; border-radius:999px;
+    border:1px solid var(--border); max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
-  .scn-card.selected{border-color:#fff; transform:translateY(-2px); box-shadow:0 20px 36px -20px rgba(255,255,255,0.4);}
+  /* LED de estado: apagado (gris, sin brillo) hasta que la tarjeta se selecciona. */
+  .scn-check{
+    width:14px; height:14px; border-radius:50%; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.22); color:transparent;
+    transition:background .16s ease, border-color .16s ease, box-shadow .16s ease, color .16s ease;
+  }
+  .scn-check svg{width:9px; height:9px;}
+  .scn-card.selected{
+    border-color:#38bdf8; transform:translateY(-2px);
+    box-shadow:0 14px 26px rgba(0,0,0,0.45), 0 0 15px rgba(56,189,248,0.25);
+  }
   .scn-card.selected::after{
     content:''; position:absolute; inset:0; border-radius:12px; pointer-events:none;
-    box-shadow:0 0 0 1px #fff inset;
+    box-shadow:0 0 0 1px #38bdf8 inset;
   }
-  .scn-card.selected .scn-check{opacity:1; transform:scale(1); background:#fff; color:#0A1020; border-color:#fff;}
+  .scn-card.selected .scn-check{
+    background:#38bdf8; border-color:#38bdf8; color:#04121F;
+    box-shadow:0 0 8px rgba(56,189,248,0.8);
+  }
 
   /* ---------- panel de cliente ---------- */
   /* Título, descripción y badge en una sola línea: la descripción deja de ocupar
@@ -926,139 +927,70 @@
   }
 
   /* ============================================================
-     PANTALLA DE CONFIGURACIÓN — riel fijo + área de trabajo
-     La barra superior ahora se mantiene visible (mismo tamaño y logo en el mismo
-     lugar en toda la app); el riel ya no repite su propio logo, solo asume estado
-     y acción principal.
+     PANTALLA DE CONFIGURACIÓN — wizard de 3 pasos
+     Perfil de cliente → Escenario → Participantes. Un solo paso visible a la vez,
+     cada uno con height:auto (nada de position:absolute ni alturas fijas) para que
+     nunca haya tarjetas solapadas ni contenido recortado.
      ============================================================ */
-  body.setup-mode .wrap{max-width:none; width:100%; padding:0;}
-  /* La ventana no scrollea en configuración: el shell ocupa exactamente el alto
-     disponible bajo la barra superior, y el scroll vive dentro del área de trabajo. */
-  body.setup-mode{overflow:hidden;}
+  body.setup-mode .wrap{max-width:1100px; width:100%; margin:0 auto; padding:var(--sp-6) clamp(20px, 3vw, 48px) 0;}
 
-  .setup-shell{display:grid; grid-template-columns:minmax(0,1fr); height:calc(100dvh - var(--topbar-h)); overflow:hidden;}
+  .wizard{display:flex; flex-direction:column; align-items:stretch; gap:var(--sp-5); width:100%;}
+  /* Deja aire abajo para que la barra fixed (sacada del flujo normal) nunca tape
+     el final del contenido del último paso. */
+  .wizard-body{width:100%; padding-bottom:calc(88px + env(safe-area-inset-bottom));}
+  .wizard-step{height:auto;}
 
-  .rail{
-    position:sticky; top:var(--topbar-h); height:calc(100dvh - var(--topbar-h)); overflow-y:auto; z-index:30;
-    display:flex; flex-direction:column;
-    padding:var(--sp-6) var(--sp-6) 0; border-right:1px solid var(--border);
-    background:
-      radial-gradient(120% 60% at 20% 4%, rgba(14,165,233,0.20), transparent 62%),
-      radial-gradient(100% 50% at 90% 96%, rgba(124,140,240,0.16), transparent 64%),
-      rgba(10,18,38,.68);
-    backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+  .wizard-stepper{display:flex; justify-content:space-between; align-items:center; gap:8px; width:100%; max-width:100%; box-sizing:border-box;}
+  .wizard-step-item{
+    flex:1; min-width:0; display:flex; align-items:center; justify-content:center; gap:8px;
+    padding:9px 10px; border-radius:999px; border:1px solid var(--border); background:var(--panel-2);
+    font-family:var(--mono); font-size:var(--fs-3xs); letter-spacing:0.04em; color:var(--muted-2);
+    cursor:default; transition:color .2s, border-color .2s, background .2s;
   }
-  .rail{scrollbar-width:thin; scrollbar-color:rgba(255,255,255,.16) transparent;}
-  .rail::-webkit-scrollbar{width:6px;}
-  .rail::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16); border-radius:3px;}
-  .rail::before{
-    content:''; position:absolute; inset:0; pointer-events:none; opacity:0.55;
-    background-image:
-      radial-gradient(1.5px 1.5px at 14% 12%, #fff, transparent),
-      radial-gradient(1.2px 1.2px at 72% 8%, rgba(255,255,255,.75), transparent),
-      radial-gradient(1.4px 1.4px at 34% 26%, #fff, transparent),
-      radial-gradient(1.1px 1.1px at 86% 30%, rgba(255,255,255,.7), transparent),
-      radial-gradient(1.5px 1.5px at 22% 44%, rgba(255,255,255,.8), transparent),
-      radial-gradient(1.2px 1.2px at 64% 54%, #fff, transparent);
+  .wizard-step-item.clickable{cursor:pointer;}
+  .wizard-step-item.clickable:hover{border-color:var(--muted-2); color:var(--text);}
+  .wizard-step-n{
+    width:20px; height:20px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    background:var(--panel-3); font-size:var(--fs-4xs); color:inherit;
   }
-  .rail > *{position:relative; z-index:1;}
-  /* Ritmo del riel: 8px dentro de un grupo, 26px entre grupos. */
-  .rail-group{display:flex; flex-direction:column; gap:var(--sp-2);}
-  .rail-group + .rail-group{margin-top:var(--sp-6);}
-  .rail-spacer{flex:1 1 var(--sp-6); min-height:var(--sp-6);}
-  .rail-brand{display:flex; align-items:center; gap:var(--sp-2); margin-bottom:var(--sp-3);}
-  .rail-status{
-    display:inline-flex; align-items:center; gap:8px; align-self:flex-start;
-    font-family:var(--mono); font-size:var(--fs-3xs); letter-spacing:0.14em; text-transform:uppercase;
-    color:#CFE2F5; padding:5px 11px; border-radius:999px;
-    background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12);
-  }
-  .rail-status .dot{width:6px; height:6px; border-radius:50%; background:var(--blue); box-shadow:0 0 8px var(--blue);}
-  .rail-title{
-    font-family:var(--display); font-weight:800; font-size:var(--fs-2xl); line-height:1.14;
-    letter-spacing:-0.02em; color:#fff; margin:var(--sp-2) 0 0;
-  }
-  .rail-title .accent{background:linear-gradient(90deg,#0FC7F6,#7C8CF0); -webkit-background-clip:text; background-clip:text; color:transparent;}
-  .rail-sub{font-size:var(--fs-xs); line-height:1.6; color:var(--muted); margin:0;}
-  .rail-stats{display:flex; gap:var(--sp-2); flex-wrap:wrap; margin-top:var(--sp-1);}
-  .rail-stat{
-    display:flex; align-items:baseline; gap:5px; padding:6px 10px; border-radius:var(--radius-sm);
-    background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
-  }
-  .rail-stat b{font-family:var(--mono); font-size:var(--fs-xs); color:#fff;}
-  .rail-stat span{font-size:var(--fs-3xs); color:var(--muted);}
-  .rail-fields{display:flex; flex-direction:column; gap:var(--sp-3);}
-  .rail-actions{display:flex; gap:var(--sp-2); flex-wrap:wrap; margin-top:var(--sp-1);}
-  .rail-note{border:1px solid var(--border); border-radius:var(--radius-md); background:rgba(255,255,255,0.03); padding:0;}
-  .rail-note summary{
-    cursor:pointer; list-style:none; padding:10px var(--sp-3);
-    font-family:var(--mono); font-size:var(--fs-3xs); letter-spacing:0.12em; text-transform:uppercase; color:var(--muted);
-  }
-  .rail-note summary::-webkit-details-marker{display:none;}
-  .rail-note summary::after{content:'+'; float:right; color:var(--muted-2);}
-  .rail-note[open] summary::after{content:'–';}
-  .rail-note .rail-note-body{padding:0 var(--sp-3) var(--sp-3); font-size:var(--fs-xs); line-height:1.6; color:var(--muted);}
-  .rail-note .rail-note-body p{margin:0 0 8px;}
-  .rail-note .rail-note-body p:last-child{margin-bottom:0;}
-  .rail-note .rail-note-body b{color:var(--text);}
+  /* Único texto sin ancho fijo del grupo: si el contenedor se angosta (mobile, 3
+     columnas de igual ancho) trunca con "…" en vez de romper en dos líneas apretadas. */
+  .wizard-step-label{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;}
+  .wizard-step-item.active{color:#CFF7FA; border-color:rgba(14,165,233,0.55); background:var(--blue-dim);}
+  .wizard-step-item.active .wizard-step-n{background:var(--blue); color:#04121F;}
+  .wizard-step-item.done{color:var(--green);}
+  .wizard-step-item.done .wizard-step-n{background:var(--green-dim); color:var(--green);}
 
-  .rail-foot{
-    position:sticky; bottom:0; margin-top:0; padding:var(--sp-4) 0 var(--sp-5);
-    background:transparent;
-  }
-  /* El resumen y el CTA viven dentro de una tarjeta con padding propio: así ni el
-     texto de la checklist ni el botón quedan al filo del riel. */
-  .rail-summary{
-    border:1px solid var(--border); border-radius:var(--radius-md); padding:var(--sp-3); min-height:168px;
-    background:linear-gradient(180deg,#0C1428,#0A1122);
-  }
-  .rail-check{display:flex; flex-direction:column; gap:6px; margin-bottom:var(--sp-3);}
-  .rc-item{display:flex; align-items:center; gap:8px; font-size:var(--fs-xs); color:var(--muted-2);}
-  .rc-dot{
-    width:16px; height:16px; border-radius:50%; flex-shrink:0;
-    border:1px solid var(--border); display:flex; align-items:center; justify-content:center; color:transparent;
-  }
-  .rc-item.done{color:var(--text);}
-  .rc-item.done .rc-dot{background:var(--green-dim); border-color:var(--green); color:var(--green);}
-  .rc-val{
-    margin-left:auto; padding-left:var(--sp-2); font-family:var(--mono); font-size:var(--fs-3xs);
-    color:var(--muted); text-align:right; max-width:58%;
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  }
-  #continueBtn{width:100%; justify-content:center; font-size:var(--fs-md); padding:13px 18px;}
-  /* Mientras falte configuración el CTA no se pinta de naranjo: queda como botón
-     fantasma. El color aparece recién cuando la acción es posible. */
-  #continueBtn:disabled{
-    background:transparent; color:var(--muted); cursor:not-allowed;
-    border:1px dashed var(--border); box-shadow:none; filter:none; opacity:1;
-  }
-  #continueBtn:disabled:hover{transform:none; filter:none;}
+  .wizard-step3-summary{font-size:var(--fs-sm); color:var(--muted); margin:0 0 var(--sp-4);}
+  .profile-actions{display:flex; gap:var(--sp-2); flex-wrap:wrap; margin-top:var(--sp-3);}
 
-  .work{
-    min-width:0; min-height:0; overflow-y:auto; overscroll-behavior:contain;
-    padding:var(--sp-6) var(--sp-6) var(--sp-7); display:flex; flex-direction:column; gap:var(--sp-4);
-    scrollbar-width:thin; scrollbar-color:rgba(255,255,255,.16) transparent;
+  /* Barra inferior flotante: position:fixed (no sticky) para que quede fija de
+     verdad sin importar el largo del paso actual ni su scroll. Fondo translúcido +
+     blur en vez de una franja sólida, y sin línea dura arriba (solo una sombra
+     suave hacia arriba para separarla del contenido). Mismo tratamiento de
+     safe-area que ya usa el resto de la app para no quedar tapada por la barra
+     de Safari / home indicator. */
+  .wizard-nav{
+    position:fixed; left:0; right:0; bottom:0; z-index:80; display:flex; justify-content:space-between; gap:var(--sp-3);
+    padding:var(--sp-3) clamp(20px, 3vw, 48px) calc(var(--sp-4) + env(safe-area-inset-bottom));
+    background:rgba(7,14,30,0.55);
+    box-shadow:0 -12px 24px -16px rgba(0,0,0,0.5);
+    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
   }
-  .work::-webkit-scrollbar{width:8px;}
-  .work::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16); border-radius:4px;}
-  .work .section-block{margin-bottom:0;}
-  /* Vive en la barra superior (topbar-right), no al pie de la pantalla de configuración;
-     solo se muestra mientras esa pantalla está activa. */
-  .setup-actions{display:none; align-items:center; gap:10px;}
-  body.setup-mode .setup-actions{display:flex;}
-  .setup-actions .btn-cta{justify-content:center;}
+  /* Mismo radio y peso tipográfico para los dos botones (antes .btn y .btn-cta
+     traían valores distintos), e ícono+texto alineados con flex. */
+  .wizard-nav .btn, .wizard-nav .btn-cta{
+    display:inline-flex; align-items:center; gap:8px; border-radius:12px; font-weight:700;
+  }
+  /* "Atrás" es un .btn genérico (borde/fondo casi invisibles por diseño); sobre
+     el fondo ahora translúcido necesita más contraste para seguir siendo legible. */
+  .wizard-nav #setupBackBtn{
+    border-color:rgba(255,255,255,0.32); color:#fff; background:rgba(255,255,255,0.08);
+  }
+  .wizard-nav #setupBackBtn:hover{border-color:rgba(255,255,255,0.5); background:rgba(255,255,255,0.14);}
   #setupNextBtn:disabled{opacity:.35; cursor:not-allowed; transform:none; filter:none;}
 
-  @media (max-width:1080px){
-    body.setup-mode{overflow:auto;}
-    .setup-shell{grid-template-columns:minmax(0,1fr); height:auto; overflow:visible;}
-    .work{overflow:visible;}
-    .rail{position:static; height:auto; border-right:none; border-bottom:1px solid var(--border); padding-bottom:var(--sp-5);}
-    .rail-spacer{display:none;}
-    .rail-foot{position:fixed; left:0; right:0; bottom:0; z-index:80; margin:0;
-      padding:var(--sp-3) var(--sp-4) var(--sp-4); border-top:1px solid var(--border);
-      background:rgba(7,14,30,0.94); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);}
-    .rail-check{flex-direction:row; gap:var(--sp-3); margin-bottom:var(--sp-2);}
-    .rc-val{display:none;}
-    .work{padding:var(--sp-5) var(--sp-4) 120px;}
+  @media (max-width:480px){
+    .wizard-step-item{font-size:var(--fs-4xs); gap:5px; padding:7px 8px;}
+    .wizard-step-n{width:16px; height:16px;}
   }

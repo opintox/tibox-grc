@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>TIBOX · Configuración</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -18,10 +18,6 @@
   </div>
   <div class="topbar-right">
     <div class="status"><span class="dot"></span><span id="statusLabel">CONFIGURACIÓN</span></div>
-    <div class="setup-actions" aria-label="Navegación de configuración">
-      <button class="btn-cta" id="setupBackBtn" type="button">← Retroceder</button>
-      <button class="btn-cta" id="setupNextBtn" type="button" disabled>Siguiente →</button>
-    </div>
   </div>
 
   <!-- Controles del ejercicio en curso: viven en la misma barra superior (no una segunda
@@ -62,7 +58,6 @@
   </div>
 
   <div class="intro-shell">
-    <div class="intro-rail-mount" id="introRailMount"></div>
     <div class="intro-content">
 
     <div class="intro-right-column">
@@ -114,19 +109,7 @@
         </div>
       </div>
 
-      <div class="panel section-block intro-panel playbook-panel">
-        <div class="eyebrow">Material opcional</div>
-        <h2 class="section-title">Si dispone de un playbook, cargar aquí</h2>
-        <p class="section-sub">Puedes adjuntar el material de referencia que usarán durante la simulación.</p>
-        <div class="playbook-actions">
-          <label class="playbook-file">
-            <span id="playbookFileName">Ningún archivo seleccionado</span>
-            <input type="file" id="playbookFile" accept=".json,.pdf,.doc,.docx,.txt,application/json,application/pdf,text/plain">
-          </label>
-          <button class="btn btn-primary" id="loadPlaybookBtn" type="button">Cargar playbook</button>
-        </div>
-        <p class="playbook-status" id="playbookStatus" role="status" aria-live="polite"></p>
-      </div>
+      <button class="btn-cta intro-continue-btn" id="continueBtn" type="button">Continuar a la configuración →</button>
     </div>
 
     </div>
@@ -137,67 +120,77 @@
 <div class="wrap">
 
   <div id="screen-setup" class="hidden">
-    <div class="setup-shell">
+    <div class="wizard">
 
-      <aside class="rail" id="setupRail">
-        <div class="rail-group">
-          <span class="rail-status"><span class="dot"></span>Configuración del ejercicio</span>
-          <h1 class="rail-title">Ensaya el incidente <span class="accent">antes de que ocurra</span></h1>
-          <p class="rail-sub">El equipo decide quién actúa y qué hace en cada etapa de la respuesta, sin tocar ningún sistema. Al cerrar obtienes un informe ejecutivo con los puntos a reforzar.</p>
-          <div class="rail-stats">
-            <div class="rail-stat"><b>10</b><span>escenarios</span></div>
-            <div class="rail-stat"><b>5</b><span>etapas</span></div>
-            <div class="rail-stat"><b>6</b><span>funciones</span></div>
+      <div class="wizard-stepper" id="wizardStepper"></div>
+
+      <div class="wizard-body">
+
+        <section class="panel section-block wizard-step" data-step="1" id="wizardStep1">
+          <div class="setup-section-head">
+            <h2 class="section-title">Perfil del cliente</h2>
+            <p class="section-sub">Nombre del cliente y facilitador de la sesión. Puedes adjuntar un playbook de referencia si lo tienes.</p>
           </div>
-        </div>
-
-        <div class="rail-group rail-fields">
           <div class="field-row" style="margin-bottom:0;">
             <label>Nombre del cliente</label>
             <input type="text" id="clientNameInput" placeholder="Ej: Quintero Energía">
           </div>
-          <div class="field-row" style="margin-bottom:0;">
+          <div class="field-row">
             <label>Facilitador</label>
             <input type="text" id="facilitatorNameInput" placeholder="Quién conduce la sesión">
           </div>
-          <div class="rail-actions">
+          <div class="profile-actions">
             <button class="btn btn-sm btn-primary" id="saveProfileBtn">Guardar perfil</button>
             <button class="btn btn-sm" id="profilesToggleBtn">Perfiles guardados</button>
           </div>
-        </div>
 
-        <div class="rail-spacer"></div>
-
-        <div class="rail-foot">
-          <div class="rail-summary">
-            <div class="rail-check" id="railCheck"></div>
-            <button class="btn-cta" id="continueBtn" disabled>Comenzar ejercicio →</button>
+          <div class="playbook-panel">
+            <div class="eyebrow">Material opcional</div>
+            <h2 class="section-title">Si dispone de un playbook, cargar aquí</h2>
+            <p class="section-sub">Puedes adjuntar el material de referencia que usarán durante la simulación.</p>
+            <div class="playbook-actions">
+              <label class="playbook-file">
+                <span id="playbookFileName">Ningún archivo seleccionado</span>
+                <input type="file" id="playbookFile" accept=".json,.pdf,.doc,.docx,.txt,application/json,application/pdf,text/plain">
+              </label>
+              <button class="btn btn-primary" id="loadPlaybookBtn" type="button">Cargar playbook</button>
+            </div>
+            <p class="playbook-status" id="playbookStatus" role="status" aria-live="polite"></p>
           </div>
-        </div>
-      </aside>
+        </section>
 
-      <main class="work">
-
-        <div class="panel section-block" id="scenarioBlock">
+        <section class="panel section-block wizard-step hidden" data-step="2" id="wizardStep2">
           <div class="setup-section-head">
             <h2 class="section-title">Tipo de ataque</h2>
             <p class="section-sub">Elige el escenario que se va a discutir en la sesión.</p>
             <span class="setup-badge" id="scenarioBadge">Sin escenario</span>
           </div>
           <div class="scn-grid" id="scenarioGridCore"></div>
+        </section>
 
-        </div>
-
-        <div class="panel section-block" id="participantsBlock">
+        <section class="panel section-block wizard-step hidden" data-step="3" id="wizardStep3">
           <div class="setup-section-head">
             <h2 class="section-title">Participantes</h2>
             <p class="section-sub">Indica la empresa de cada función y marca quién participará en esta sesión.</p>
             <span class="setup-badge" id="participantsBadge">0 activas</span>
           </div>
+          <p class="wizard-step3-summary" id="wizardStep3Summary"></p>
           <div class="participants-grid" id="participantsBody"></div>
-        </div>
+        </section>
 
-      </main>
+      </div>
+
+      <div class="wizard-nav">
+        <button class="btn" id="setupBackBtn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+          <span>Atrás</span>
+        </button>
+        <button class="btn-cta" id="setupNextBtn" type="button" disabled>
+          <span id="setupNextBtnLabel">Siguiente</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+      </div>
+
     </div>
   </div>
 

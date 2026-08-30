@@ -59,14 +59,6 @@ function dbGuardarEntregable(e){
   }).eq('id', e.id).then(dbOk);
 }
 
-// Usado por "Limpiar Datos": misma actualización para todas las filas a la vez.
-function dbLimpiarTodosLosEntregables(){
-  return sb.from('entregables').update({
-    evidencia:'', responsable:'', estado:'Pendiente', org:'sin-asignar', org_manual:false,
-    updated_at:new Date().toISOString()
-  }).not('id','is',null).then(dbOk);
-}
-
 // Tras agregar/editar/borrar una persona, enrichOrg() recalcula en memoria el
 // org de todos los entregables sin orgManual. Esto persiste esos cambios.
 function dbSincronizarOrgs(){
@@ -86,65 +78,6 @@ function dbGuardarPersona(p){
 
 function dbEliminarPersona(nombre){
   return sb.from('personas').delete().eq('nombre', nombre).then(dbOk);
-}
-
-// ---- Migración: sube un JSON exportado por la versión anterior (basada en
-// carpeta + archivos) a la base de datos. Sirve tanto para la carga inicial
-// de datos existentes como para restaurar un respaldo más adelante.
-//
-// El JSON puede ser viejo (un respaldo de hace semanas) mientras alguien ya
-// editó datos más recientes en vivo. Para no perder esas ediciones, un
-// entregable solo se sobrescribe si su "updated_at" en la base es anterior
-// (o igual) al momento en que se exportó el JSON: si ya se editó después de
-// esa fecha, la base ya tiene la versión más reciente y se deja como está. ----
-async function dbImportarJSON(data){
-  const dominios=Object.values(data.dominios||{});
-  if(dominios.length){
-    dbOk(await sb.from('dominios').upsert(dominios.map((d,i)=>({
-      id:d.id, code:d.code, name:d.name, emoji:d.emoji||'', color:d.color||'', orden:i
-    }))));
-  }
-
-  const requerimientos=data.requerimientos||[];
-  if(requerimientos.length){
-    dbOk(await sb.from('requerimientos').upsert(requerimientos.map((r,i)=>({
-      id:r.id, dominio_id:r.dominioId, codigo:r.codigo, descripcion:r.descripcion||'', orden:i
-    }))));
-  }
-
-  const entregables=[];
-  requerimientos.forEach(r=>(r.entregables||[]).forEach((e,i)=>entregables.push({
-    id:e.id, requerimiento_id:r.id, aspecto:e.aspecto||'', evidencia:e.evidencia||'',
-    responsable:e.responsable||'', estado:e.estado||'Pendiente', periodicidad:e.periodicidad||'',
-    org:e.org||'sin-asignar', org_manual:!!e.orgManual, orden:i
-  })));
-
-  let aplicados=entregables.length, omitidos=0;
-  if(entregables.length){
-    // Sin fecha de exportación no hay forma de saber qué tan viejo es el JSON:
-    // se trata como "muy antiguo" y solo se insertan entregables que todavía
-    // no existan (nunca se pisa algo que ya está en la base).
-    const exportadoMs=data.exportado ? new Date(data.exportado).getTime() : 0;
-    const {data:vivos}=dbOk(await sb.from('entregables').select('id,updated_at'));
-    const vivoPorId={};
-    vivos.forEach(v=>{ vivoPorId[v.id]=v.updated_at; });
-
-    const aAplicar=entregables.filter(e=>{
-      const updatedAt=vivoPorId[e.id];
-      if(updatedAt===undefined) return true; // no existe aún: insertarlo igual
-      return new Date(updatedAt).getTime() <= exportadoMs;
-    });
-    omitidos=entregables.length-aAplicar.length;
-    aplicados=aAplicar.length;
-    if(aAplicar.length) dbOk(await sb.from('entregables').upsert(aAplicar));
-  }
-
-  const personas=data.personas||[];
-  if(personas.length){
-    dbOk(await sb.from('personas').upsert(personas.map(p=>({nombre:p.nombre, org:p.org}))));
-  }
-
-  return {aplicados, omitidos};
 }
 
 // ---- Snapshots: "fotos" del estado completo para "Comparar avances" ----

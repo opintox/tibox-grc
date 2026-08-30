@@ -14,7 +14,8 @@ function lightenForDark(hex,amt){
 let DATA = null;
 let COMPARE_PREV = null;
 let COMPARE_CURRENT = null;
-let fDom='all', fSt='all', fSearch='', fOrg='all';
+// fDomSet/fOrgSet: multi-selección — conjunto vacío significa "todos" (sin filtro).
+let fDomSet=new Set(), fSt='all', fSearch='', fOrgSet=new Set();
 let chartInstances = {};
 
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
@@ -31,27 +32,22 @@ document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{
   if(b.dataset.tab==='dash') renderDashboard();
 }));
 
-// DOM CHIPS
+// DOM CHECKBOXES (multi-selección; ninguno marcado = todos)
 function buildDomChips(){
   const el=document.getElementById('domChips');
-  el.innerHTML='<button class="chip on" data-df="all">Todos</button>';
+  el.innerHTML='';
   Object.values(DATA.dominios).forEach(d=>{
-    const btn=document.createElement('button');
-    btn.className='chip';btn.dataset.df=d.id;
-    btn.textContent=d.emoji+' '+d.code;
-    el.appendChild(btn);
-  });
-  el.querySelectorAll('[data-df]').forEach(c=>c.addEventListener('click',()=>{
-    el.querySelectorAll('[data-df]').forEach(x=>x.classList.remove('on'));
-    c.classList.add('on');
+    const label=document.createElement('label');
+    label.className='sb-check';
+    label.innerHTML='<input type="checkbox" data-df="'+d.id+'">'+d.code;
+    el.appendChild(label);
     // Solo marca selección; el filtro se aplica al presionar "Filtrar Dominio"
-  }));
+  });
 }
 
 // BOTÓN: Filtrar por Dominio
 document.getElementById('btnFiltrarDominio').addEventListener('click',function(){
-  const activeChip=document.querySelector('#domChips .chip.on');
-  fDom=activeChip?activeChip.dataset.df:'all';
+  fDomSet=new Set(Array.from(document.querySelectorAll('#domChips [data-df]:checked')).map(c=>c.dataset.df));
   applyFilters();
   syncFormFromFilters();
 });
@@ -231,9 +227,9 @@ function applyFilters(){
   const tot=DATA.requerimientos.reduce((a,r)=>a+r.entregables.length,0);
   const visPorGrupo={};
   document.querySelectorAll('#tbody tr.data-row').forEach(tr=>{
-    const ok=(fDom==='all'||tr.dataset.dom===fDom)&&
+    const ok=(fDomSet.size===0||fDomSet.has(tr.dataset.dom))&&
              (fSt==='all'||tr.dataset.st===fSt)&&
-             (fOrg==='all'||tr.dataset.org===fOrg)&&
+             (fOrgSet.size===0||fOrgSet.has(tr.dataset.org))&&
              (!fSearch||tr.dataset.search.includes(fSearch));
     tr.style.display=ok?'':'none';
     if(ok){vis++;visPorGrupo[tr.dataset.dom]=true;}
@@ -245,10 +241,10 @@ function applyFilters(){
   document.getElementById('countBar').textContent='Mostrando '+vis+' de '+tot+' entregables';
 }
 
-// FILTRO ORGANIZACIÓN
-document.querySelectorAll('[data-of]').forEach(c=>c.addEventListener('click',()=>{
-  document.querySelectorAll('[data-of]').forEach(x=>x.classList.remove('on'));
-  c.classList.add('on');fOrg=c.dataset.of;applyFilters();
+// FILTRO ORGANIZACIÓN (multi-selección; ningún checkbox marcado = todos)
+document.querySelectorAll('[data-of]').forEach(c=>c.addEventListener('change',()=>{
+  fOrgSet=new Set(Array.from(document.querySelectorAll('[data-of]:checked')).map(x=>x.dataset.of));
+  applyFilters();
 }));
 
 document.querySelectorAll('[data-sf]').forEach(c=>c.addEventListener('click',()=>{
@@ -273,6 +269,10 @@ function syncFormFromFilters(){
   const fReqEl=document.getElementById('fReqSel');
   const fAspEl=document.getElementById('fAspSel');
   if(!fDomEl)return;
+
+  // El resto de esta función asume un solo dominio (autocompleta el formulario de
+  // edición): con 0 o 2+ dominios marcados se comporta igual que "todos".
+  const fDom=fDomSet.size===1?[...fDomSet][0]:'all';
 
   // Sync domain
   if(fDom!=='all'){
@@ -311,7 +311,8 @@ function syncFormFromFilters(){
   const badge=document.getElementById('formFilterBadge');
   if(badge){
     const parts=[];
-    if(fDom!=='all')parts.push(DATA.dominios[fDom]?.code||fDom);
+    if(fDomSet.size===1)parts.push(DATA.dominios[fDom]?.code||fDom);
+    else if(fDomSet.size>1)parts.push(fDomSet.size+' dominios');
     if(fSt!=='all')parts.push(fSt);
     badge.textContent=parts.length?'· Filtro activo: '+parts.join(' + '):'';
     badge.style.color='#0EA5E9';
@@ -532,6 +533,12 @@ function getChartColors(){
 
 function destroyChart(id){if(chartInstances[id]){chartInstances[id].destroy();delete chartInstances[id];}}
 
+// En mobile se ocultan los números/porcentajes dibujados sobre los gráficos (datalabels
+// y el total al centro de las donas) para no saturar tarjetas chicas; el detalle exacto
+// sigue disponible en el tooltip y en la leyenda. Chart.js vuelve a llamar a estos
+// formatters en cada resize (responsive:true), así que reacciona solo al cambiar de tamaño.
+function isMobileChart(){return window.innerWidth<=768;}
+
 // Estado seleccionado en el filtro del gráfico de dos tortas
 let respStFilter='all';
 let dashResp='all';
@@ -546,7 +553,7 @@ function respMatch(e){
 const centerTotalPlugin={
   id:'centerTotal',
   afterDatasetsDraw:function(chart, args, opts){
-    if(!opts || opts.value==null) return;
+    if(!opts || opts.value==null || isMobileChart()) return;
     const ctx=chart.ctx;
     const area=chart.chartArea;
     const cx=(area.left+area.right)/2;
@@ -651,7 +658,7 @@ function renderAspectosPorResp(){
           }}},
           datalabels:{
             color:'#fff', font:{size:11, weight:'800'},
-            formatter:function(v){ return (total && v/total>=0.05) ? Math.round(v/total*100)+'%' : ''; }
+            formatter:function(v){ return (!isMobileChart() && total && v/total>=0.05) ? Math.round(v/total*100)+'%' : ''; }
           },
           centerTotal:{ value:total, label:'aspectos',
             color:'#FFFFFF', subColor:cc.tickColor }
@@ -770,7 +777,7 @@ function renderDashboard(){
         }}},
         datalabels:{
           color:'#fff', font:{size:11, weight:'800'},
-          formatter:function(v){ return (tot && v/tot>=0.05) ? Math.round(v/tot*100)+'%' : ''; }
+          formatter:function(v){ return (!isMobileChart() && tot && v/tot>=0.05) ? Math.round(v/tot*100)+'%' : ''; }
         },
         centerTotal:{ value:tot, label:'entregables', color:'#FFFFFF', subColor:cc.tickColor }
       }
@@ -799,7 +806,7 @@ function renderDashboard(){
         legend:{position:'bottom',labels:{color:cc.textColor,font:{size:12},padding:9}},
         datalabels:{
           color:'#fff',font:{size:11,weight:'700'},
-          formatter:(v)=>v>0?v:'',
+          formatter:(v)=>(!isMobileChart() && v>0)?v:'',
           anchor:'center',align:'center'
         }
       }
@@ -852,7 +859,7 @@ function renderDashboard(){
           offset:3,
           clip:false,
           formatter:function(v,ctx){
-            if(v===0)return '';
+            if(v===0 || isMobileChart())return '';
             return String(v);
           }
         }
@@ -1148,42 +1155,6 @@ function loadData(imported){
   initPersonasForm();renderPersonas();refreshFormOrg();
 }
 
-// ============ IMPORTAR JSON (migración / restauración de respaldos) ============
-function leerJson(file){
-  return new Promise(function(resolve,reject){
-    if(!file){reject(new Error('Falta seleccionar un archivo'));return;}
-    const reader=new FileReader();
-    reader.onload=function(e){
-      try{
-        const data=JSON.parse(e.target.result);
-        if(!data.requerimientos || !data.dominios) throw new Error('El JSON no contiene la estructura CIP esperada');
-        resolve(data);
-      }catch(err){reject(err);}
-    };
-    reader.onerror=function(){reject(new Error('No se pudo leer el archivo'));};
-    reader.readAsText(file);
-  });
-}
-
-document.getElementById('btnImportarJSON').addEventListener('click',function(){
-  document.getElementById('importarJSONInput').click();
-});
-document.getElementById('importarJSONInput').addEventListener('change',async function(ev){
-  const file=ev.target.files[0];
-  ev.target.value='';
-  if(!file)return;
-  try{
-    const data=await leerJson(file);
-    const {aplicados, omitidos}=await dbImportarJSON(data);
-    toast(omitidos
-      ? '✅ '+file.name+' · '+aplicados+' actualizados · '+omitidos+' se mantuvieron (más recientes en la base)'
-      : '✅ '+file.name+' importado a la base de datos');
-    loadData(await dbCargarTodo());
-  }catch(err){
-    toast('❌ '+err.message);
-  }
-});
-
 // ============ GUARDAR SNAPSHOT ============
 document.getElementById('btnGuardarSnapshot').addEventListener('click',async function(){
   if(!DATA){toast('No hay datos');return;}
@@ -1344,16 +1315,6 @@ document.getElementById('btnRunCompare').addEventListener('click',async function
   }catch(err){toast('❌ '+err.message);}
 });
 
-// EXPORT
-document.getElementById('btnExport').addEventListener('click',function(){
-  if(!DATA){toast('No hay datos');return;}
-  const out=Object.assign({},DATA,{exportado:new Date().toISOString()});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([JSON.stringify(out,null,2)],{type:'application/json'}));
-  a.download='CIP_Quintero_'+new Date().toISOString().slice(0,10)+'.json';a.click();
-  toast('✅ JSON exportado');
-});
-
 // ============ EXPORTAR A EXCEL (.xlsx nativo, sin librerías externas) ============
 const CRC_TABLA=(function(){
   const t=new Uint32Array(256);
@@ -1429,8 +1390,12 @@ function filasParaExportar(){
 function nombreArchivoExcel(){
   const limpia=function(t){ return String(t).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Za-z0-9]+/g,''); };
   const p=['CIP_Quintero'];
-  if(fDom!=='all' && DATA.dominios[fDom]) p.push(limpia(DATA.dominios[fDom].code));
-  if(fOrg!=='all') p.push(limpia(ORG_LABEL[fOrg]));
+  if(fDomSet.size===1){
+    const d=DATA.dominios[[...fDomSet][0]];
+    if(d) p.push(limpia(d.code));
+  } else if(fDomSet.size>1) p.push(fDomSet.size+'dominios');
+  if(fOrgSet.size===1) p.push(limpia(ORG_LABEL[[...fOrgSet][0]]));
+  else if(fOrgSet.size>1) p.push(fOrgSet.size+'orgs');
   if(fSt!=='all') p.push(limpia(fSt));
   if(fSearch) p.push('Busqueda');
   const d=new Date();
@@ -1559,26 +1524,6 @@ function exportarExcel(){
   toast('✅ Excel exportado · '+datos.length+' entregables');
 }
 document.getElementById('btnExcel').addEventListener('click',exportarExcel);
-
-// LIMPIAR DATOS (Evidencia / Responsable / Estado)
-document.getElementById('btnClearAll').addEventListener('click',function(){
-  if(!DATA){toast('No hay datos');return;}
-  const ok=confirm('¿Limpiar Evidencia, Responsable y Estado de TODOS los entregables ('+DATA.requerimientos.reduce((a,r)=>a+r.entregables.length,0)+')?\n\nEsta acción no se puede deshacer (puedes exportar antes como respaldo).');
-  if(!ok)return;
-  DATA.requerimientos.forEach(req=>{
-    req.entregables.forEach(ent=>{
-      ent.evidencia='';
-      ent.responsable='';
-      ent.estado='Pendiente';
-      delete ent.orgManual;
-    });
-  });
-  enrichOrg(DATA);
-  buildDomChips();buildTable();updateSummary();applyFilters();initForm();
-  renderPersonas();refreshFormOrg();
-  dbLimpiarTodosLosEntregables().catch(err=>toast('❌ No se pudo limpiar en la base de datos: '+err.message));
-  toast('🧹 Datos limpiados · ahora puedes exportar el JSON');
-});
 
 // INIT: carga los datos vivos desde la base de datos al abrir la página.
 dbCargarTodo().then(function(data){
