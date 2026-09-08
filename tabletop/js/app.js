@@ -329,7 +329,10 @@ function renderScenarioCard(s, container){
   el.innerHTML = `
     <div class="scn-head">
       <span class="scn-badge">${icon}${escapeHtml(s.name)}</span>
-      <span class="scn-check" aria-hidden="true"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.4 6.4 12 13 4.6"/></svg></span>
+      <div class="scn-head-actions">
+        <button class="scn-export-btn" type="button" title="Exportar este escenario a Word" aria-label="Exportar este escenario a Word">⇩</button>
+        <span class="scn-check" aria-hidden="true"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.4 6.4 12 13 4.6"/></svg></span>
+      </div>
     </div>
     <div class="scn-desc">${escapeHtml(blurb)}</div>
     <div class="scn-fields"><span class="scn-target">${escapeHtml(SCENARIO_TARGETS[s.id] || '—')}</span></div>`;
@@ -342,13 +345,101 @@ function renderScenarioCard(s, container){
   };
   el.addEventListener('click', choose);
   el.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); choose(); } });
+  el.querySelector('.scn-export-btn').addEventListener('click', e => {
+    e.stopPropagation();
+    const matrix = PARTICIPATION_MATRIX[s.id] || {};
+    const extraRoleKeys = ROLE_KEYS.filter(k => k !== 'ti' && k !== 'seguridad' && matrix[k]);
+    TibDocx.downloadScenarioDocx({
+      name: s.name, blurb: SCENARIO_BLURBS[s.id] || '', target: SCENARIO_TARGETS[s.id] || '',
+      extraRoleKeys, stages: QUESTIONS[s.id]
+    });
+  });
   container.appendChild(el);
 }
 function renderScenarioCards(){
   coreGridEl.innerHTML = '';
   SCENARIOS.forEach(s => renderScenarioCard(s, coreGridEl));
 }
+
+// ---------------- escenarios personalizados (importados desde Word) ----------------
+// Se guardan completos en localStorage (a diferencia del resto del setup, que solo guarda
+// referencias) porque son el contenido jugable en sí: sin esto se perderían al recargar.
+const CUSTOM_SCENARIOS_KEY = 'tabletop_custom_scenarios_v1';
+const CUSTOM_SCENARIO_ACCENT = ['#9FB4CE','#5A6E8C'];
+const CUSTOM_SCENARIO_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M5.4 2h9.2l5.4 5.4V21A1.8 1.8 0 0 1 18.2 22.8H5.4A1.8 1.8 0 0 1 3.6 21V3.8A1.8 1.8 0 0 1 5.4 2Zm8.2 1.6v4.6h4.6Z"/><path d="M7.2 13h9.6v1.8H7.2Zm0 3.6h9.6v1.8H7.2Z"/></svg>';
+
+function slugifyScenarioId(name){
+  const base = String(name || 'escenario').normalize('NFD').replace(/\p{M}/gu,'').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'') || 'escenario';
+  let id = 'custom_' + base, n = 2;
+  while(SCENARIOS.some(s => s.id === id)) id = `custom_${base}_${n++}`;
+  return id;
+}
+// Da de alta un escenario (nuevo o ya guardado) en las estructuras globales que usa el
+// resto de la app (SCENARIOS, QUESTIONS, PARTICIPATION_MATRIX, ...), tal como si viniera
+// de js/data/catalogo.js y escenarios.js. `data` viene de TibDocx.parseScenarioDocxFile
+// o de un registro ya persistido en localStorage.
+function registerCustomScenario(data){
+  const id = data.id || slugifyScenarioId(data.name);
+  if(!SCENARIOS.some(s => s.id === id)){
+    SCENARIOS.push({id, name: data.name, color:'slate', matrixValidated:false, custom:true});
+  }
+  SCENARIO_BLURBS[id] = data.blurb || '';
+  SCENARIO_TARGETS[id] = data.target || '';
+  SCENARIO_ACCENTS[id] = CUSTOM_SCENARIO_ACCENT;
+  SCENARIO_ICONS[id] = CUSTOM_SCENARIO_ICON;
+  const matrix = {seguridad:true, ti:true, legal:false, comunicaciones:false, rrhh:false, direccion:false};
+  (data.extraRoleKeys || []).forEach(r => { matrix[r] = true; });
+  PARTICIPATION_MATRIX[id] = matrix;
+  QUESTIONS[id] = data.stages;
+  return id;
+}
+function persistCustomScenarios(){
+  const list = SCENARIOS.filter(s => s.custom).map(s => ({
+    id: s.id, name: s.name, blurb: SCENARIO_BLURBS[s.id], target: SCENARIO_TARGETS[s.id],
+    extraRoleKeys: ROLE_KEYS.filter(r => r !== 'ti' && r !== 'seguridad' && PARTICIPATION_MATRIX[s.id][r]),
+    stages: QUESTIONS[s.id]
+  }));
+  try{ localStorage.setItem(CUSTOM_SCENARIOS_KEY, JSON.stringify(list)); }
+  catch(e){ /* localStorage no disponible o lleno; no es crítico para seguir usando la app */ }
+}
+function loadCustomScenarios(){
+  let list;
+  try{ list = JSON.parse(localStorage.getItem(CUSTOM_SCENARIOS_KEY) || '[]'); }
+  catch(e){ list = []; }
+  if(Array.isArray(list)) list.forEach(registerCustomScenario);
+}
+
+loadCustomScenarios();
 renderScenarioCards();
+
+document.getElementById('downloadTemplateBtn').addEventListener('click', () => {
+  TibDocx.downloadBlankTemplate();
+});
+const scenarioDocxInput = document.getElementById('scenarioDocxInput');
+const scenarioImportStatus = document.getElementById('scenarioImportStatus');
+scenarioDocxInput.addEventListener('change', async () => {
+  const file = scenarioDocxInput.files[0];
+  scenarioDocxInput.value = '';
+  if(!file) return;
+  scenarioImportStatus.style.color = 'var(--muted)';
+  scenarioImportStatus.textContent = 'Leyendo el documento…';
+  try{
+    const data = await TibDocx.parseScenarioDocxFile(file);
+    const id = registerCustomScenario(data);
+    persistCustomScenarios();
+    renderScenarioCards();
+    selectedScenarioId = id;
+    renderScenarioCards();
+    profileSaved = false;
+    updateBottomState();
+    saveSetupState();
+    scenarioImportStatus.style.color = 'var(--green)';
+    scenarioImportStatus.textContent = `Escenario "${data.name}" cargado y seleccionado.`;
+  }catch(e){
+    scenarioImportStatus.style.color = 'var(--red)';
+    scenarioImportStatus.textContent = e.message || 'No se pudo leer el documento.';
+  }
+});
 
 // ---------------- participants table ----------------
 const bodyEl = document.getElementById('participantsBody');
