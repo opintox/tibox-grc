@@ -162,8 +162,16 @@
         <section class="panel section-block wizard-step hidden" data-step="2" id="wizardStep2">
           <div class="setup-section-head">
             <h2 class="section-title">Tipo de ataque</h2>
-            <p class="section-sub">Elige el escenario que se va a discutir en la sesión.</p>
+            <p class="section-sub">Elige el escenario que se va a discutir en la sesión, o crea uno propio completando una plantilla Word.</p>
             <span class="setup-badge" id="scenarioBadge">Sin escenario</span>
+          </div>
+          <div class="scn-import-bar">
+            <button class="btn btn-sm" id="downloadTemplateBtn" type="button">Descargar plantilla Word</button>
+            <label class="btn btn-sm scn-import-label">
+              <span>Cargar escenario (Word)</span>
+              <input type="file" id="scenarioDocxInput" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+            </label>
+            <span class="scn-import-status" id="scenarioImportStatus" role="status" aria-live="polite"></span>
           </div>
           <div class="scn-grid" id="scenarioGridCore"></div>
         </section>
@@ -181,14 +189,17 @@
       </div>
 
       <div class="wizard-nav">
-        <button class="btn" id="setupBackBtn" type="button">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
-          <span>Atrás</span>
-        </button>
-        <button class="btn-cta" id="setupNextBtn" type="button" disabled>
-          <span id="setupNextBtnLabel">Siguiente</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-        </button>
+        <div class="wizard-nav-inner">
+          <button class="btn" id="setupBackBtn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+            <span>Atrás</span>
+          </button>
+          <button class="btn-cta" id="setupNextBtn" type="button" disabled>
+            <span id="setupNextBtnLabel">Siguiente</span>
+            <svg class="btn-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            <span class="btn-spinner" aria-hidden="true"></span>
+          </button>
+        </div>
       </div>
 
     </div>
@@ -300,6 +311,8 @@
 
 <script src="js/data/catalogo.js"></script>
 <script src="js/data/escenarios.js"></script>
+<script src="js/lib/jszip.min.js"></script>
+<script src="js/docx.js"></script>
 <script src="js/app.js"></script>
 
 </body>
