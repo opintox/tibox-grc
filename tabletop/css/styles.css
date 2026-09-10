@@ -823,12 +823,6 @@
     cursor:pointer; transition:background .15s ease, color .15s ease, border-color .15s ease;
   }
   .scn-export-btn:hover{background:var(--blue-dim); border-color:var(--blue); color:var(--text);}
-
-  /* ---------- importar/exportar escenarios en Word ---------- */
-  .scn-import-bar{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:var(--sp-3);}
-  .scn-import-label{position:relative; overflow:hidden; cursor:pointer;}
-  .scn-import-label input{position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer;}
-  .scn-import-status{font-size:var(--fs-xs); line-height:1.4; min-height:1.4em;}
   .scn-card.selected{
     border-color:#38bdf8; transform:translateY(-2px);
     box-shadow:0 14px 26px rgba(0,0,0,0.45), 0 0 15px rgba(56,189,248,0.25);

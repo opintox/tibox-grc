@@ -14,6 +14,7 @@ const TibDocx = (function(){
     DESC: 'DESCRIPCION CORTA',
     OBJ: 'OBJETIVO (ACTIVO AFECTADO)',
     EXTRA_ROLES: 'FUNCIONES ADICIONALES QUE PARTICIPAN',
+    FUNCION_ESCENARIO: 'FUNCION DEL ESCENARIO',
     ETAPA: 'ETAPA',
     FUNCION: 'FUNCION QUE RESPONDE',
     TITULO: 'TITULO DEL ACTO',
@@ -33,6 +34,24 @@ const TibDocx = (function(){
     const map = {};
     ROLE_KEYS.forEach(k => { map[normLabel(ROLE_NAMES[k])] = k; });
     return map;
+  }
+  // Fisher-Yates: [0,1,2,...,n-1] en un orden al azar.
+  function shuffledOrder(n){
+    const arr = Array.from({length: n}, (_, i) => i);
+    for(let i = arr.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+  // Genera una clave simple (sin tildes, minúscula, "_") a partir del nombre de una función
+  // propia del escenario, evitando choques entre nombres parecidos dentro del mismo documento.
+  function slugifyKey(name, used){
+    const base = stripAccents(name || 'funcion').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'') || 'funcion';
+    let key = base, n = 2;
+    while(used.has(key)) key = `${base}_${n++}`;
+    used.add(key);
+    return key;
   }
 
   // ================================================================
@@ -66,37 +85,52 @@ const TibDocx = (function(){
   function pBlank(){ return '<w:p/>'; }
 
   function buildScenarioParagraphsXml(scenario){
-    // scenario: {name, blurb, target, extraRoleKeys:[roleKey,...], stages:[{stage, questions:[...]}]}
+    // scenario: {name, blurb, target, stages:[{stage, questions:[...]}],
+    //   roleNames?: {roleKey: nombre a mostrar} (por defecto ROLE_NAMES),
+    //   customRoleList?: [{key, name}, ...] — si viene, el escenario declara sus propias
+    //     funciones (en vez de las 6 estándar) y se exporta el bloque FUNCIÓN DEL ESCENARIO;
+    //   extraRoleKeys?: [roleKey,...] — solo se usa cuando NO hay customRoleList.
+    const roleNames = scenario.roleNames || ROLE_NAMES;
     const out = [];
     out.push(pHeading('TABLETOP DE CIBERSEGURIDAD — PLANTILLA DE ESCENARIO', 30));
-    out.push(p('No borres las palabras en MAYÚSCULAS seguidas de dos puntos: son las etiquetas que la aplicación usa para leer este archivo. El texto que va después de cada una se puede editar libremente. Para agregar una situación extra dentro de la misma etapa, copia un bloque completo (desde "FUNCIÓN QUE RESPONDE" hasta "POR QUÉ RESPONDE ESTA FUNCIÓN") y pégalo antes de la siguiente línea "ETAPA:".', {spacingAfter:280}));
+    out.push(p('No borres las palabras en MAYÚSCULAS seguidas de dos puntos: son las etiquetas que la aplicación usa para leer este archivo. El texto que va después de cada una se puede editar libremente. Para agregar una situación extra dentro de la misma etapa, copia un bloque completo (desde "FUNCIÓN QUE RESPONDE" hasta "POR QUÉ RESPONDE ESTA FUNCIÓN") y pégalo antes de la siguiente línea "ETAPA:". Las etapas pueden llamarse y ser tantas como el ejercicio necesite: se juegan en el mismo orden en que aparecen acá.', {spacingAfter:280}));
     out.push(pBlank());
     out.push(pLabelValue(LABELS.NOMBRE, scenario.name));
     out.push(pLabelValue(LABELS.DESC, scenario.blurb));
     out.push(pLabelValue(LABELS.OBJ, scenario.target));
-    const extraNames = (scenario.extraRoleKeys || []).map(k => ROLE_NAMES[k] || k).join(', ');
-    out.push(pLabelValue(LABELS.EXTRA_ROLES, extraNames));
-    out.push(p('Seguridad y TI participan siempre en todo escenario; escribe aquí solo funciones adicionales, separadas por coma, eligiendo entre: Legal, Comunicaciones, RRHH, Dirección. Si ninguna otra función participa, deja la línea de arriba en blanco.', {spacingAfter:280}));
+    if(scenario.customRoleList && scenario.customRoleList.length){
+      scenario.customRoleList.forEach(r => out.push(pLabelValue(LABELS.FUNCION_ESCENARIO, r.name)));
+      out.push(p('Este escenario usa sus propias funciones (arriba, una línea "FUNCIÓN DEL ESCENARIO" por cada una) en vez de Seguridad/TI/Legal/Comunicaciones/RRHH/Dirección. Cada "FUNCIÓN QUE RESPONDE" más abajo debe repetir uno de esos nombres tal cual. Para agregar una función nueva, agrega otra línea "FUNCIÓN DEL ESCENARIO" acá arriba.', {spacingAfter:280}));
+    } else {
+      const extraNames = (scenario.extraRoleKeys || []).map(k => roleNames[k] || k).join(', ');
+      out.push(pLabelValue(LABELS.EXTRA_ROLES, extraNames));
+      out.push(p('Seguridad y TI participan siempre en todo escenario; escribe aquí solo funciones adicionales, separadas por coma, eligiendo entre: Legal, Comunicaciones, RRHH, Dirección. Si ninguna otra función participa, deja la línea de arriba en blanco. (Si en cambio tu ejercicio necesita funciones completamente distintas a estas 6 — otros cargos, otro organigrama — bórrala y usa líneas "FUNCIÓN DEL ESCENARIO:" en su lugar, una por función.)', {spacingAfter:280}));
+    }
     out.push(pBlank());
 
     scenario.stages.forEach(stageEntry => {
       out.push(pHeading(LABELS.ETAPA + ': ' + stageEntry.stage, 26));
-      if(stageEntry.stage === 'Cierre'){
+      if(stageEntry.stage === 'Cierre' && !scenario.customRoleList){
         out.push(p('En esta etapa, quién responde lo decide automáticamente la aplicación (Dirección si participa, o Seguridad si no); el valor que pongas abajo en "FUNCIÓN QUE RESPONDE" es solo referencial.', {spacingAfter:200}));
       }
       out.push(pBlank());
       stageEntry.questions.forEach(q => {
-        out.push(pLabelValue(LABELS.FUNCION, ROLE_NAMES[q.target] || q.target));
+        out.push(pLabelValue(LABELS.FUNCION, roleNames[q.target] || q.target));
         out.push(pLabelValue(LABELS.TITULO, q.title || ''));
         out.push(pLabelValue(LABELS.CONTEXTO, (q.meta || []).join(' · ')));
         out.push(pLabelValue(LABELS.SITUACION, ''));
         String(q.situation || '').split('\n\n').forEach(par => out.push(p(par)));
         out.push(pBlank());
+        // En los datos, el índice 0 siempre es la correcta (la app mezcla el orden al jugar);
+        // en el documento se escribe con un orden propio y al azar por acto, para que no quede
+        // "ALTERNATIVA CORRECTA: A" repetido en todos los actos al leerlo directamente.
+        const order = shuffledOrder(4);
         LETTERS.forEach((letter, idx) => {
-          out.push(pLabelValue('ALTERNATIVA ' + letter, (q.options || [])[idx] || ''));
-          out.push(pLabelValue('EXPLICACION ' + letter, (q.explanations || [])[idx] || ''));
+          const srcIdx = order[idx];
+          out.push(pLabelValue('ALTERNATIVA ' + letter, (q.options || [])[srcIdx] || ''));
+          out.push(pLabelValue('EXPLICACION ' + letter, (q.explanations || [])[srcIdx] || ''));
         });
-        out.push(pLabelValue(LABELS.ALT_CORRECTA, LETTERS[q.correctIndex || 0]));
+        out.push(pLabelValue(LABELS.ALT_CORRECTA, LETTERS[order.indexOf(q.correctIndex || 0)]));
         out.push(pLabelValue(LABELS.PORQUE, q.mismatchContext || ''));
         out.push(pBlank());
         out.push(pBlank());
@@ -181,7 +215,7 @@ const TibDocx = (function(){
       name: '[Nombre del nuevo escenario, ej: Ataque al proveedor de nómina]',
       blurb: '[Una frase corta que resuma el ataque — se muestra en la tarjeta de selección]',
       target: '[Activo principal afectado, ej: Servidor de nómina]',
-      extraRoleKeys: [],
+      extraRoleKeys: [], // si tu ejercicio tiene un organigrama propio (no Seguridad/TI/Legal/Comunicaciones/RRHH/Dirección), reemplaza esto por líneas "FUNCIÓN DEL ESCENARIO:" — ver docx.js
       stages: STAGE_LABELS.map((stage, i) => ({
         stage,
         questions: [{
@@ -254,6 +288,12 @@ const TibDocx = (function(){
     const errors = [];
     const ROLE_BY_NAME = roleByDisplayName();
     let name = null, desc = '', objetivo = '', extraRolesRaw = '';
+    // Funciones propias del escenario (bloque "FUNCIÓN DEL ESCENARIO", opcional): si el
+    // documento trae al menos una, reemplazan por completo a las 6 funciones estándar para
+    // resolver "FUNCIÓN QUE RESPONDE" en todos los actos de este escenario.
+    const customRoleList = [];
+    const customUsedKeys = new Set();
+    const customRoleByName = {};
     const stages = [];
     let currentStage = null;
     let currentQ = null;
@@ -317,10 +357,18 @@ const TibDocx = (function(){
       if(label === LABELS.DESC){ desc = value; situationActive = false; continue; }
       if(label === LABELS.OBJ){ objetivo = value; situationActive = false; continue; }
       if(label === LABELS.EXTRA_ROLES){ extraRolesRaw = value; situationActive = false; continue; }
+      if(label === LABELS.FUNCION_ESCENARIO){
+        if(value){
+          const key = slugifyKey(value, customUsedKeys);
+          customRoleList.push({key, name: value});
+          customRoleByName[normLabel(value)] = key;
+        }
+        situationActive = false;
+        continue;
+      }
       if(label === LABELS.ETAPA){
         closeStage();
-        const stageLabel = STAGE_LABELS.find(s => normLabel(s) === normLabel(value)) || value;
-        currentStage = {stage: stageLabel, questions: []};
+        currentStage = {stage: value, questions: []};
         situationActive = false;
         continue;
       }
@@ -328,10 +376,12 @@ const TibDocx = (function(){
 
       if(label === LABELS.FUNCION){
         closeQuestion();
-        const roleKey = ROLE_BY_NAME[normLabel(value)];
+        const usingCustomRoles = customRoleList.length > 0;
+        const roleKey = usingCustomRoles ? customRoleByName[normLabel(value)] : ROLE_BY_NAME[normLabel(value)];
         currentQ = {target: roleKey || null, title: null, meta: [], situation: '', options: {}, explanations: {}, mismatchContext: '', correctLetter: null};
         if(!roleKey){
-          errors.push(`En la etapa "${currentStage.stage}" hay un acto con "FUNCIÓN QUE RESPONDE" = "${value}", que no es ninguna de las funciones válidas (Seguridad, TI, Legal, Comunicaciones, RRHH, Dirección).`);
+          const validas = usingCustomRoles ? customRoleList.map(r => r.name).join(', ') : 'Seguridad, TI, Legal, Comunicaciones, RRHH, Dirección';
+          errors.push(`En la etapa "${currentStage.stage}" hay un acto con "FUNCIÓN QUE RESPONDE" = "${value}", que no es ninguna de las funciones válidas (${validas}).`);
         }
         situationActive = false;
         continue;
@@ -360,19 +410,12 @@ const TibDocx = (function(){
     closeStage();
 
     if(!name) errors.push(`Falta la línea "${LABELS.NOMBRE}:" con el nombre del escenario.`);
+    // Las etapas se toman tal cual el documento las declaró (nombre y orden libres): el juego
+    // simplemente recorre "ETAPA:" en el orden en que aparecen, así que un ejercicio puede tener
+    // más, menos o etapas con otro nombre que las 5 estándar (Detección/Clasificación/Contención/
+    // Recuperación/Cierre) de los escenarios que vienen con la app.
     if(stages.length === 0){
       errors.push('El documento no tiene ninguna etapa (falta al menos una línea "ETAPA: ...").');
-    } else {
-      STAGE_LABELS.forEach(s => {
-        if(!stages.some(st => st.stage === s)) errors.push(`Falta la etapa "${s}" (debe existir exactamente una, con ese nombre).`);
-      });
-      if(stages.length > STAGE_LABELS.length){
-        errors.push(`Hay ${stages.length} etapas y solo debe haber ${STAGE_LABELS.length}: una por cada una de ${STAGE_LABELS.join(', ')}.`);
-      }
-      const orderOk = stages.length === STAGE_LABELS.length && STAGE_LABELS.every((s,i) => stages[i].stage === s);
-      if(stages.length === STAGE_LABELS.length && !orderOk){
-        errors.push(`Las etapas deben ir en este orden: ${STAGE_LABELS.join(' → ')}.`);
-      }
     }
 
     if(errors.length){
@@ -384,7 +427,13 @@ const TibDocx = (function(){
     const extraRoleKeys = extraRolesRaw.split(',').map(s => s.trim()).filter(Boolean)
       .map(s => ROLE_BY_NAME[normLabel(s)]).filter(Boolean);
 
-    return {name: name.trim(), blurb: desc.trim(), target: objetivo.trim(), extraRoleKeys, stages};
+    return {
+      name: name.trim(), blurb: desc.trim(), target: objetivo.trim(),
+      extraRoleKeys,
+      customRoles: customRoleList.length ? customRoleList : null,
+      customStages: stages.map(s => s.stage),
+      stages
+    };
   }
 
   async function parseScenarioDocxFile(file){

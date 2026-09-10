@@ -29,6 +29,78 @@ const ROLE_DESCRIPTIONS = {
   direccion:'autoriza decisiones y declara el cierre formal'
 };
 
+// ---------------- funciones y etapas: fijas por defecto, o propias por escenario ----------------
+// Los 10 escenarios de catalogo.js comparten siempre estas 6 funciones y estas 5 etapas. Un
+// escenario importado desde Word puede traer su propia lista de funciones y/o de etapas (ver
+// docx.js) cuando el guion del cliente tiene un organigrama o un proceso distinto al estándar
+// (ej. un runbook con "TeamLeader", "Encargado Regulatorio", etapas de "Erradicación" y
+// "Notificación regulatoria", etc.). roleMetaFor()/stagesFor() son el único punto de lectura:
+// todo el resto de la app pide "la función activa" o "las etapas activas" de un escenario por
+// acá, en vez de leer ROLE_KEYS/STAGE_LABELS directo, así que un escenario con estructura propia
+// no toca en nada a los que usan la estructura estándar.
+const DEFAULT_ROLE_META = {
+  keys: ROLE_KEYS, names: ROLE_NAMES, icons: ROLE_ICONS, color: ROLE_COLOR,
+  desc: ROLE_DESCRIPTIONS, org: ROLE_ORG, accents: ROLE_ACCENTS
+};
+const CUSTOM_ROLE_PALETTE = [
+  {color:'blue', accent:['#5AD1E8','#0B8FD6']}, {color:'red', accent:['#FF6B7F','#D6224E']},
+  {color:'amber', accent:['#FFC414','#E09000']}, {color:'purple', accent:['#A9B4F7','#6B7BE8']},
+  {color:'green', accent:['#6EE7B7','#12A97C']}, {color:'blue', accent:['#9FB4CE','#5A6E8C']},
+  {color:'amber', accent:['#FFA200','#F07C10']}, {color:'purple', accent:['#C81FB0','#8E1490']}
+];
+function initialsIconSvg(name){
+  const initials = String(name || '?').trim().split(/\s+/).map(w => w[0]).slice(0,2).join('').toUpperCase() || '?';
+  return `<svg viewBox="0 0 24 24" width="13" height="13"><text x="12" y="16" text-anchor="middle" font-size="11" font-weight="700" fill="currentColor" font-family="inherit">${escapeHtml(initials)}</text></svg>`;
+}
+// roleList: [{key, name}] en el orden en que el documento las declaró.
+function buildCustomRoleMeta(roleList){
+  const keys = roleList.map(r => r.key);
+  const names = {}, icons = {}, color = {}, desc = {}, org = {}, accents = {};
+  roleList.forEach((r, i) => {
+    const palette = CUSTOM_ROLE_PALETTE[i % CUSTOM_ROLE_PALETTE.length];
+    names[r.key] = r.name;
+    icons[r.key] = initialsIconSvg(r.name);
+    color[r.key] = palette.color;
+    accents[r.key] = palette.accent;
+    desc[r.key] = '';
+    org[r.key] = 'Cliente';
+  });
+  return {keys, names, icons, color, desc, org, accents};
+}
+function roleMetaFor(scenarioId){
+  const s = SCENARIOS.find(x => x.id === scenarioId);
+  return (s && s.roleMeta) ? s.roleMeta : DEFAULT_ROLE_META;
+}
+function stagesFor(scenarioId){
+  const s = SCENARIOS.find(x => x.id === scenarioId);
+  return (s && s.customStages && s.customStages.length) ? s.customStages : STAGE_LABELS;
+}
+function defaultParticipantsFor(scenarioId){
+  return roleMetaFor(scenarioId).keys.map(k => ({roleKey:k, empresa:'', checked:true}));
+}
+// Frases variadas para el acierto (personaje y alternativa correcta): una sesión completa
+// acierta ~20 veces entre las dos pantallas, y repetir siempre la misma línea se siente
+// mecánico. Se elige una al azar cada vez en vez de un texto fijo.
+const CORRECT_CHARACTER_PHRASES = [
+  'Esta es la función que debe ejecutar la acción según el plan del ejercicio. Presiona «Siguiente» para elegir la respuesta.',
+  'Correcto: le corresponde a esta función actuar acá. Ahora falta decidir qué hace.',
+  'Bien identificado. El plan del ejercicio asigna esta acción a esta función — continúa para elegir la decisión.',
+  'Acertaste con quién responde. El siguiente paso es decidir qué hace.',
+  'Es la función correcta para este momento del incidente. Presiona «Siguiente» para elegir la alternativa.'
+];
+const CORRECT_ANSWER_TAGS = ['✓ Correcta', '✓ Acertaste', '✓ Es la decisión correcta', '✓ Bien resuelto', '✓ Elegida · Correcta'];
+function pickRandom(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+// Cambia el escenario elegido y, si sus funciones no son las mismas que ya están cargadas en
+// `participants` (ej. se pasa de un escenario estándar a uno con funciones propias, o viceversa),
+// reconstruye la lista de participantes desde cero para el nuevo set de funciones.
+function applyScenarioSelection(id){
+  const newKeys = roleMetaFor(id).keys;
+  const sameKeys = participants.length === newKeys.length && participants.every((p,i) => p.roleKey === newKeys[i]);
+  if(!sameKeys) participants = defaultParticipantsFor(id);
+  selectedScenarioId = id;
+  enforceMandatoryRoles();
+}
+
 let selectedScenarioId = null;
 
 let participants = DEFAULT_PARTICIPANTS.map(p => ({...p}));
@@ -58,10 +130,13 @@ let furthestSetupStep = 1;
 function getMatrix(scenarioId){
   if(!sessionMatrices[scenarioId]) sessionMatrices[scenarioId] = {...(PARTICIPATION_MATRIX[scenarioId] || {})};
   const m = sessionMatrices[scenarioId];
-  // TI y Seguridad son obligatorias en todo escenario: se fuerzan aquí para que nunca queden
-  // desactivadas por un error de datos, sin importar lo que diga PARTICIPATION_MATRIX.
-  m.ti = true;
-  m.seguridad = true;
+  // TI y Seguridad son obligatorias en todo escenario del organigrama estándar: se fuerzan aquí
+  // para que nunca queden desactivadas por un error de datos. Un escenario con funciones propias
+  // no tiene ese concepto (sus funciones ya vienen todas activas por defecto al registrarlo).
+  if(roleMetaFor(scenarioId) === DEFAULT_ROLE_META){
+    m.ti = true;
+    m.seguridad = true;
+  }
   return m;
 }
 // TI y Seguridad no se pueden desmarcar como participantes (ver getMatrix): se fuerza su
@@ -142,10 +217,14 @@ function deleteProfile(id){
 function loadProfileIntoForm(profile){
   clientName = profile.clientName || '';
   facilitatorName = profile.facilitatorName || '';
-  participants = Array.isArray(profile.participants) && profile.participants.length === ROLE_KEYS.length
-    ? profile.participants.map(p => ({...p})) : DEFAULT_PARTICIPANTS.map(p => ({...p}));
+  const expectedKeys = roleMetaFor(profile.selectedScenarioId || null).keys;
+  participants = Array.isArray(profile.participants) && profile.participants.length === expectedKeys.length
+    ? profile.participants.map(p => ({...p})) : defaultParticipantsFor(profile.selectedScenarioId || null);
   enforceMandatoryRoles();
   selectedScenarioId = profile.selectedScenarioId || null;
+  // Un escenario cargado desde Word solo vive en esta sesión (ver registerCustomScenario):
+  // si el perfil guardado apuntaba a uno, ya no existe tras recargar la página.
+  if(selectedScenarioId && !SCENARIOS.some(s => s.id === selectedScenarioId)) selectedScenarioId = null;
   sessionMatrices = profile.sessionMatrices ? JSON.parse(JSON.stringify(profile.sessionMatrices)) : {};
   document.getElementById('clientNameInput').value = clientName;
   document.getElementById('facilitatorNameInput').value = facilitatorName;
@@ -292,9 +371,14 @@ function loadSetupState(){
     if(!ok){ localStorage.removeItem(SETUP_STORAGE_KEY); return; }
     clientName = data.clientName || '';
     facilitatorName = data.facilitatorName || '';
-    if(Array.isArray(data.participants) && data.participants.length === ROLE_KEYS.length) participants = data.participants;
+    const expectedKeys = roleMetaFor(data.selectedScenarioId || null).keys;
+    if(Array.isArray(data.participants) && data.participants.length === expectedKeys.length) participants = data.participants;
+    else participants = defaultParticipantsFor(data.selectedScenarioId || null);
     enforceMandatoryRoles();
     selectedScenarioId = data.selectedScenarioId || null;
+    // Un escenario cargado desde Word solo vive en esta sesión (ver registerCustomScenario):
+    // si la configuración guardada apuntaba a uno, ya no existe tras recargar la página.
+    if(selectedScenarioId && !SCENARIOS.some(s => s.id === selectedScenarioId)) selectedScenarioId = null;
     sessionMatrices = data.sessionMatrices || {};
     document.getElementById('clientNameInput').value = clientName;
     document.getElementById('facilitatorNameInput').value = facilitatorName;
@@ -337,7 +421,8 @@ function renderScenarioCard(s, container){
     <div class="scn-desc">${escapeHtml(blurb)}</div>
     <div class="scn-fields"><span class="scn-target">${escapeHtml(SCENARIO_TARGETS[s.id] || '—')}</span></div>`;
   const choose = () => {
-    selectedScenarioId = s.id;
+    applyScenarioSelection(s.id);
+    renderParticipants();
     renderScenarioCards();
     profileSaved = false;
     updateBottomState();
@@ -347,11 +432,15 @@ function renderScenarioCard(s, container){
   el.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); choose(); } });
   el.querySelector('.scn-export-btn').addEventListener('click', e => {
     e.stopPropagation();
+    const rm = roleMetaFor(s.id);
+    const isCustomRoles = rm !== DEFAULT_ROLE_META;
     const matrix = PARTICIPATION_MATRIX[s.id] || {};
-    const extraRoleKeys = ROLE_KEYS.filter(k => k !== 'ti' && k !== 'seguridad' && matrix[k]);
     TibDocx.downloadScenarioDocx({
       name: s.name, blurb: SCENARIO_BLURBS[s.id] || '', target: SCENARIO_TARGETS[s.id] || '',
-      extraRoleKeys, stages: QUESTIONS[s.id]
+      roleNames: rm.names,
+      customRoleList: isCustomRoles ? rm.keys.map(k => ({key:k, name: rm.names[k]})) : null,
+      extraRoleKeys: isCustomRoles ? [] : ROLE_KEYS.filter(k => k !== 'ti' && k !== 'seguridad' && matrix[k]),
+      stages: QUESTIONS[s.id]
     });
   });
   container.appendChild(el);
@@ -362,9 +451,12 @@ function renderScenarioCards(){
 }
 
 // ---------------- escenarios personalizados (importados desde Word) ----------------
-// Se guardan completos en localStorage (a diferencia del resto del setup, que solo guarda
-// referencias) porque son el contenido jugable en sí: sin esto se perderían al recargar.
-const CUSTOM_SCENARIOS_KEY = 'tabletop_custom_scenarios_v1';
+// A propósito NO se guardan en localStorage: cargar un ejercicio desde Word es algo de "por
+// ahora", para la sesión actual del navegador — no debe pasar a formar parte permanente del
+// catálogo de la app. Al recargar la página o cerrarla, vuelve a desaparecer; si se quiere
+// retomar, se vuelve a cargar el mismo archivo (el .docx sigue siendo la fuente de verdad).
+const CUSTOM_SCENARIOS_MIGRATION_KEY = 'tabletop_custom_scenarios_v1'; // versión anterior, ya no se usa
+try{ localStorage.removeItem(CUSTOM_SCENARIOS_MIGRATION_KEY); }catch(e){ /* localStorage no disponible; no es crítico */ }
 const CUSTOM_SCENARIO_ACCENT = ['#9FB4CE','#5A6E8C'];
 const CUSTOM_SCENARIO_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M5.4 2h9.2l5.4 5.4V21A1.8 1.8 0 0 1 18.2 22.8H5.4A1.8 1.8 0 0 1 3.6 21V3.8A1.8 1.8 0 0 1 5.4 2Zm8.2 1.6v4.6h4.6Z"/><path d="M7.2 13h9.6v1.8H7.2Zm0 3.6h9.6v1.8H7.2Z"/></svg>';
 
@@ -380,81 +472,57 @@ function slugifyScenarioId(name){
 // o de un registro ya persistido en localStorage.
 function registerCustomScenario(data){
   const id = data.id || slugifyScenarioId(data.name);
-  if(!SCENARIOS.some(s => s.id === id)){
-    SCENARIOS.push({id, name: data.name, color:'slate', matrixValidated:false, custom:true});
+  let entry = SCENARIOS.find(s => s.id === id);
+  if(!entry){
+    entry = {id, name: data.name, color:'slate', matrixValidated:false, custom:true};
+    SCENARIOS.push(entry);
+  } else {
+    entry.name = data.name;
   }
+  // Etapas propias del documento (nombre y cantidad libres); si no vienen, el escenario usa
+  // las 5 estándar (STAGE_LABELS) como cualquiera de los que trae la app por defecto.
+  entry.customStages = (data.customStages && data.customStages.length) ? data.customStages : null;
+  // Funciones propias del documento (ver docx.js, bloque "FUNCIÓN DEL ESCENARIO"); si no vienen,
+  // el escenario usa las 6 funciones estándar (Seguridad/TI/Legal/Comunicaciones/RRHH/Dirección).
+  entry.roleMeta = (data.customRoles && data.customRoles.length) ? buildCustomRoleMeta(data.customRoles) : null;
   SCENARIO_BLURBS[id] = data.blurb || '';
   SCENARIO_TARGETS[id] = data.target || '';
   SCENARIO_ACCENTS[id] = CUSTOM_SCENARIO_ACCENT;
   SCENARIO_ICONS[id] = CUSTOM_SCENARIO_ICON;
-  const matrix = {seguridad:true, ti:true, legal:false, comunicaciones:false, rrhh:false, direccion:false};
-  (data.extraRoleKeys || []).forEach(r => { matrix[r] = true; });
-  PARTICIPATION_MATRIX[id] = matrix;
+  if(entry.roleMeta){
+    // Escenario con organigrama propio: todas sus funciones participan siempre (son las únicas
+    // que existen para este escenario; no hay concepto de "función que no aplica" aquí).
+    const matrix = {};
+    entry.roleMeta.keys.forEach(k => { matrix[k] = true; });
+    PARTICIPATION_MATRIX[id] = matrix;
+  } else {
+    const matrix = {seguridad:true, ti:true, legal:false, comunicaciones:false, rrhh:false, direccion:false};
+    (data.extraRoleKeys || []).forEach(r => { matrix[r] = true; });
+    PARTICIPATION_MATRIX[id] = matrix;
+  }
   QUESTIONS[id] = data.stages;
   return id;
 }
-function persistCustomScenarios(){
-  const list = SCENARIOS.filter(s => s.custom).map(s => ({
-    id: s.id, name: s.name, blurb: SCENARIO_BLURBS[s.id], target: SCENARIO_TARGETS[s.id],
-    extraRoleKeys: ROLE_KEYS.filter(r => r !== 'ti' && r !== 'seguridad' && PARTICIPATION_MATRIX[s.id][r]),
-    stages: QUESTIONS[s.id]
-  }));
-  try{ localStorage.setItem(CUSTOM_SCENARIOS_KEY, JSON.stringify(list)); }
-  catch(e){ /* localStorage no disponible o lleno; no es crítico para seguir usando la app */ }
-}
-function loadCustomScenarios(){
-  let list;
-  try{ list = JSON.parse(localStorage.getItem(CUSTOM_SCENARIOS_KEY) || '[]'); }
-  catch(e){ list = []; }
-  if(Array.isArray(list)) list.forEach(registerCustomScenario);
-}
 
-loadCustomScenarios();
 renderScenarioCards();
-
-document.getElementById('downloadTemplateBtn').addEventListener('click', () => {
-  TibDocx.downloadBlankTemplate();
-});
-const scenarioDocxInput = document.getElementById('scenarioDocxInput');
-const scenarioImportStatus = document.getElementById('scenarioImportStatus');
-scenarioDocxInput.addEventListener('change', async () => {
-  const file = scenarioDocxInput.files[0];
-  scenarioDocxInput.value = '';
-  if(!file) return;
-  scenarioImportStatus.style.color = 'var(--muted)';
-  scenarioImportStatus.textContent = 'Leyendo el documento…';
-  try{
-    const data = await TibDocx.parseScenarioDocxFile(file);
-    const id = registerCustomScenario(data);
-    persistCustomScenarios();
-    renderScenarioCards();
-    selectedScenarioId = id;
-    renderScenarioCards();
-    profileSaved = false;
-    updateBottomState();
-    saveSetupState();
-    scenarioImportStatus.style.color = 'var(--green)';
-    scenarioImportStatus.textContent = `Escenario "${data.name}" cargado y seleccionado.`;
-  }catch(e){
-    scenarioImportStatus.style.color = 'var(--red)';
-    scenarioImportStatus.textContent = e.message || 'No se pudo leer el documento.';
-  }
-});
 
 // ---------------- participants table ----------------
 const bodyEl = document.getElementById('participantsBody');
 function renderParticipants(){
   bodyEl.innerHTML = '';
+  const rm = roleMetaFor(selectedScenarioId);
   participants.forEach((p, i) => {
-    const locked = p.roleKey === 'ti' || p.roleKey === 'seguridad';
+    // TI y Seguridad son obligatorias solo en el organigrama estándar (6 funciones fijas); un
+    // escenario con funciones propias no tiene ese concepto y deja todas editables.
+    const locked = rm === DEFAULT_ROLE_META && (p.roleKey === 'ti' || p.roleKey === 'seguridad');
     const card = document.createElement('div');
-    card.className = 'p-card glow-' + ROLE_COLOR[p.roleKey] + (p.checked ? '' : ' row-inactive');
+    card.className = 'p-card glow-' + (rm.color[p.roleKey] || 'blue') + (p.checked ? '' : ' row-inactive');
     card.innerHTML = `
       <div class="p-card-head">
         <input type="checkbox" ${p.checked ? 'checked' : ''} ${locked ? 'disabled title="TI y Seguridad participan siempre"' : ''} data-i="${i}">
-        <span class="empresa-badge ${p.roleKey}">${ROLE_ICONS[p.roleKey]}${escapeHtml(ROLE_NAMES[p.roleKey])}</span>
+        <span class="empresa-badge ${p.roleKey}">${rm.icons[p.roleKey] || ''}${escapeHtml(rm.names[p.roleKey] || p.roleKey)}</span>
       </div>
-      <p class="p-card-desc" title="${escapeHtml(ROLE_DESCRIPTIONS[p.roleKey])}">${escapeHtml(ROLE_DESCRIPTIONS[p.roleKey])}</p>
+      <p class="p-card-desc" title="${escapeHtml(rm.desc[p.roleKey] || '')}">${escapeHtml(rm.desc[p.roleKey] || '')}</p>
       <div class="p-card-fields">
         <div class="p-card-field"><span class="p-card-field-label">Empresa</span><span class="p-card-field-value pf-empresa" data-i="${i}" data-field="empresa" tabindex="0" role="button" aria-label="Editar empresa" title="Doble clic o Enter para editar">${p.empresa ? escapeHtml(p.empresa) : '<span class="undefined-chip">+ Agregar</span>'}</span></div>
       </div>`;
@@ -653,15 +721,42 @@ playbookFileInput.addEventListener('change', () => {
   playbookStatus.textContent = '';
 });
 
-document.getElementById('loadPlaybookBtn').addEventListener('click', () => {
+document.getElementById('downloadTemplateBtn').addEventListener('click', () => {
+  TibDocx.downloadBlankTemplate();
+});
+
+// Un .docx se interpreta como un escenario a importar (ver formato de plantilla); cualquier
+// otro tipo de archivo (pdf/doc/txt/json) se trata como material de referencia sin procesar,
+// igual que antes.
+document.getElementById('loadPlaybookBtn').addEventListener('click', async () => {
   const file = playbookFileInput.files[0];
   if(!file){
     playbookStatus.textContent = 'Selecciona un archivo para cargarlo.';
     playbookStatus.style.color = 'var(--amber)';
     return;
   }
-  playbookStatus.style.color = 'var(--green)';
-  playbookStatus.textContent = `Playbook cargado: ${file.name}`;
+  if(!/\.docx$/i.test(file.name)){
+    playbookStatus.style.color = 'var(--green)';
+    playbookStatus.textContent = `Playbook cargado: ${file.name}`;
+    return;
+  }
+  playbookStatus.style.color = 'var(--muted)';
+  playbookStatus.textContent = 'Leyendo el escenario…';
+  try{
+    const data = await TibDocx.parseScenarioDocxFile(file);
+    const id = registerCustomScenario(data);
+    applyScenarioSelection(id);
+    renderParticipants();
+    renderScenarioCards();
+    profileSaved = false;
+    updateBottomState();
+    saveSetupState();
+    playbookStatus.style.color = 'var(--green)';
+    playbookStatus.textContent = `Escenario "${data.name}" cargado y seleccionado para esta sesión — continúa a "Tipo de ataque" para verlo.`;
+  }catch(e){
+    playbookStatus.style.color = 'var(--red)';
+    playbookStatus.textContent = e.message || 'No se pudo leer el documento.';
+  }
 });
 
 // ---------------- game screen ----------------
@@ -710,6 +805,11 @@ function sampleVariants(qs){
 function buildStagesForSession(scenarioId){
   const matrix = getMatrix(scenarioId);
   const rawStages = QUESTIONS[scenarioId];
+  const rm = roleMetaFor(scenarioId);
+  // El auto-cierre (Dirección/Seguridad) y la red de seguridad de "seguridad" son reglas del
+  // organigrama estándar; un escenario con funciones propias ya trae su propio cierre y no tiene
+  // una función universal a la que recurrir, así que usa su primera función declarada.
+  const isStandard = rm === DEFAULT_ROLE_META;
   return rawStages.map(stageEntry => {
     let qs = stageQuestions(stageEntry).filter(q => {
       // una pregunta solo entra si su función participa en el escenario (matriz) Y sigue
@@ -719,15 +819,14 @@ function buildStagesForSession(scenarioId){
       return !!matrix[q.target] && !!(participant && participant.checked);
     });
     qs = sampleVariants(qs);
-    if(stageEntry.stage === 'Cierre'){
+    if(isStandard && stageEntry.stage === 'Cierre'){
       // el cierre lo autoriza Dirección si participa (matriz) y sigue marcada hoy; si no, lo asume Seguridad
       const dirParticipant = participants.find(p => p.roleKey === 'direccion');
       const closingRole = (matrix.direccion && dirParticipant && dirParticipant.checked) ? 'direccion' : 'seguridad';
       qs = qs.map(q => ({...q, target: closingRole}));
     }
-    // red de seguridad: nunca dejar una etapa sin preguntas. Se reasigna a Seguridad porque es
-    // la única función garantizada disponible (obligatoria y sin poder desmarcarse).
-    if(qs.length === 0) qs = [{...stageQuestions(stageEntry)[0], target: 'seguridad'}];
+    // red de seguridad: nunca dejar una etapa sin preguntas.
+    if(qs.length === 0) qs = [{...stageQuestions(stageEntry)[0], target: isStandard ? 'seguridad' : rm.keys[0]}];
     return {stage: stageEntry.stage, questions: qs};
   });
 }
@@ -761,7 +860,7 @@ function startGame(){
   gameState.timerInterval = null;
   document.getElementById('gameTimer').textContent = '00:00';
 
-  buildStepper(STAGE_LABELS);
+  buildStepper(stagesFor(gameState.scenarioId));
   renderStage();
 }
 
@@ -885,8 +984,12 @@ function renderStage(opts){
   const subLabel = questions.length > 1 ? ` · Pregunta ${gameState.subIndex + 1} de ${questions.length} de esta etapa` : '';
   document.getElementById('storyScenarioLabel').textContent = `${scenarioMeta.name.toUpperCase()} · ${stageLabel.toUpperCase()}${subLabel}`;
   const clientLabel = clientName ? `<b>${escapeHtml(clientName)}</b>` : 'el equipo del cliente';
-  document.getElementById('opsContext').innerHTML =
-    `TIBOX ejecuta la respuesta técnica de forma remota; ${clientLabel} aporta la información y el contexto desde su infraestructura.`;
+  // Esta frase describe el modelo operativo estándar (TIBOX opera TI/Seguridad en remoto); un
+  // escenario con funciones propias ya deja ese reparto explícito en sus propios roles, así que
+  // no hace falta repetirlo acá.
+  document.getElementById('opsContext').innerHTML = roleMetaFor(gameState.scenarioId) === DEFAULT_ROLE_META
+    ? `TIBOX ejecuta la respuesta técnica de forma remota; ${clientLabel} aporta la información y el contexto desde su infraestructura.`
+    : '';
   // Escenarios narrados: título de acto, metadatos, relato y —en su propio panel— la doble pregunta.
   const storyEl = document.getElementById('storyText');
   const panelEl = document.getElementById('storyPanel');
@@ -927,12 +1030,13 @@ function renderStage(opts){
 // qué etapas realmente le corresponde actuar en esta partida (según gameState.stages ya armado
 // con la matriz de participación y el reasignado de Cierre aplicados).
 function roleContextInScenario(roleKey){
+  const rm = roleMetaFor(gameState.scenarioId);
   const stagesInvolved = [...new Set(
     gameState.stages
       .filter(st => stageQuestions(st).some(q => q.target === roleKey))
       .map(st => st.stage)
   )];
-  const base = `${ROLE_NAMES[roleKey]}: ${ROLE_DESCRIPTIONS[roleKey]}.`;
+  const base = `${rm.names[roleKey]}: ${rm.desc[roleKey] || ''}.`;
   if(stagesInvolved.length === 0) return base;
   const stageWord = stagesInvolved.length > 1 ? `las etapas de ${stagesInvolved.join(', ')}` : `la etapa de ${stagesInvolved[0]}`;
   return `${base} En este escenario le corresponde actuar en ${stageWord}.`;
@@ -943,9 +1047,11 @@ function renderCharGrid(){
   grid.innerHTML = '';
   grid.className = 'char-grid';
   const matrix = getMatrix(gameState.scenarioId);
-  // Se muestran las seis funciones, igual que los tipos de ataque en la pantalla principal.
-  // Solo quedan activas las que participan en este escenario y fueron marcadas en la configuración.
-  const todas = ROLE_KEYS.map(k => participants.find(p => p.roleKey === k)).filter(Boolean);
+  const rm = roleMetaFor(gameState.scenarioId);
+  // Se muestran todas las funciones del escenario (las 6 estándar, o las propias si el
+  // escenario las trae). Solo quedan activas las que participan y fueron marcadas en la
+  // configuración.
+  const todas = rm.keys.map(k => participants.find(p => p.roleKey === k)).filter(Boolean);
   const available = todas.filter(p => p.checked && matrix[p.roleKey]);
   grid.classList.add(`count-${Math.min(todas.length, 6)}`);
   if(available.length === 0){
@@ -962,7 +1068,7 @@ function renderCharGrid(){
     const activo = p.checked && !!matrix[p.roleKey];
     const el = document.createElement('div');
     el.className = 'char-card' + (activo ? '' : ' char-off');
-    const [a, a2] = ROLE_ACCENTS[p.roleKey] || ['#5AD1E8','#0B8FD6'];
+    const [a, a2] = rm.accents[p.roleKey] || ['#5AD1E8','#0B8FD6'];
     el.style.setProperty('--a', a);
     el.style.setProperty('--a2', a2);
     el.style.setProperty('--glow', hexToRgba(a2, 0.55));
@@ -970,16 +1076,16 @@ function renderCharGrid(){
     el.setAttribute('tabindex', activo ? '0' : '-1');
     if(!activo){ el.setAttribute('aria-disabled', 'true'); }
     el.title = activo ? roleContextInScenario(p.roleKey)
-                      : `${ROLE_NAMES[p.roleKey]} no participa en este escenario.`;
+                      : `${rm.names[p.roleKey]} no participa en este escenario.`;
     // Misma anatomía que las tarjetas de tipo de ataque: barra de acento, tile del ícono,
     // nombre, descripción y una fila inferior con el dato clave (quién la ejecuta).
     el.innerHTML = `
       <div class="c-head">
-        <span class="c-icon">${ROLE_ICONS[p.roleKey]}</span>
-        <span class="c-name">${escapeHtml(ROLE_NAMES[p.roleKey])}</span>
+        <span class="c-icon">${rm.icons[p.roleKey]}</span>
+        <span class="c-name">${escapeHtml(rm.names[p.roleKey])}</span>
       </div>
-      <div class="c-desc">${escapeHtml(ROLE_DESCRIPTIONS[p.roleKey] || '')}</div>
-      <div class="c-foot"><span class="c-foot-label">${activo ? 'Ejecuta' : 'No participa'}</span><span class="c-foot-value">${activo ? escapeHtml(p.empresa || ROLE_ORG[p.roleKey]) : '—'}</span></div>`;
+      <div class="c-desc">${escapeHtml(rm.desc[p.roleKey] || '')}</div>
+      <div class="c-foot"><span class="c-foot-label">${activo ? 'Ejecuta' : 'No participa'}</span><span class="c-foot-value">${activo ? escapeHtml(p.empresa || rm.org[p.roleKey]) : '—'}</span></div>`;
     if(activo){
       el.addEventListener('click', () => onCharacterPick(p, el));
       el.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); onCharacterPick(p, el); } });
@@ -1017,15 +1123,16 @@ function onCharacterPick(participant, el){
     c.setAttribute('tabindex', '-1');
     c.setAttribute('aria-disabled', 'true');
   });
+  const rmPick = roleMetaFor(gameState.scenarioId);
   showExplain(
-    `<div class="explanation-item is-correct"><span class="ex-tag">✓ Personaje correcto</span><div class="ex-opt">${escapeHtml(ROLE_LABELS[participant.roleKey])}</div><div class="ex-why">Esta es la función que debe ejecutar la acción según el plan del ejercicio. Presiona «Siguiente» para seleccionar la respuesta.</div></div>`);
+    `<div class="explanation-item is-correct"><span class="ex-tag">✓ Personaje correcto</span><div class="ex-opt">${escapeHtml(rmPick.names[participant.roleKey])}</div><div class="ex-why">${pickRandom(CORRECT_CHARACTER_PHRASES)}</div></div>`);
 
   gameState.nextAction = () => {
     document.getElementById('charPanel').classList.add('hidden');
     const s1 = document.getElementById('askStep1'), s2 = document.getElementById('askStep2');
     if(s1 && s2){ s1.classList.remove('on'); s2.classList.add('on'); }
 
-    document.getElementById('answeringAs').textContent = `${ROLE_LABELS[participant.roleKey]} · ${participant.empresa || ROLE_ORG[participant.roleKey]}`;
+    document.getElementById('answeringAs').textContent = `${rmPick.names[participant.roleKey]} · ${participant.empresa || rmPick.org[participant.roleKey]}`;
     hideExplain();
     renderAnswerOptions(q);
     document.getElementById('answerBlock').classList.remove('hidden');
@@ -1036,9 +1143,10 @@ function onCharacterPick(participant, el){
 }
 
 function renderWrongCharacterExplanation(participant, q){
+  const rm = roleMetaFor(gameState.scenarioId);
   const chosenKey = participant.roleKey;
-  const chosenLabel = ROLE_LABELS[chosenKey];
-  const chosenDesc = ROLE_DESCRIPTIONS[chosenKey] || 'cumple otra función dentro del ejercicio';
+  const chosenLabel = rm.names[chosenKey];
+  const chosenDesc = rm.desc[chosenKey] || 'cumple otra función dentro del ejercicio';
   const mismatch = q.mismatchContext || 'Esta acción específica requiere otra función dentro del equipo de respuesta.';
 
   const html = `<div class="explanation-item is-wrong">
@@ -1116,9 +1224,10 @@ function onAnswerPick(idx, btn, q){
 
 function renderExplanation(chosenIdx, correct, q){
   const p = gameState.chosenCorrectParticipant;
-  let html = `<div style="font-size:var(--fs-xs); color:var(--muted); margin-bottom:12px;">Respondió <b style="color:var(--text);">${escapeHtml(ROLE_LABELS[p.roleKey])}</b> · ${escapeHtml(p.empresa || ROLE_ORG[p.roleKey])}.</div>`;
+  const rm = roleMetaFor(gameState.scenarioId);
+  let html = `<div style="font-size:var(--fs-xs); color:var(--muted); margin-bottom:12px;">Respondió <b style="color:var(--text);">${escapeHtml(rm.names[p.roleKey])}</b> · ${escapeHtml(p.empresa || rm.org[p.roleKey])}.</div>`;
 
-  const tag = correct ? '✓ Elegida · Correcta' : '✕ Elegida · Incorrecta';
+  const tag = correct ? pickRandom(CORRECT_ANSWER_TAGS) : '✕ Elegida · Incorrecta';
   const cls = correct ? 'is-correct' : 'is-wrong';
   html += `<div class="explanation-item ${cls}">
     <span class="ex-tag">${tag}</span>
@@ -1139,9 +1248,7 @@ document.getElementById('backToSetupBtn').addEventListener('click', backToSetup)
 
 // ---------------- informe ejecutivo narrativo ----------------
 function roleLabelWithName(roleKey){
-  const p = participants.find(pp => pp.roleKey === roleKey);
-  const label = ROLE_NAMES[roleKey];
-  return label;
+  return roleMetaFor(gameState.scenarioId).names[roleKey];
 }
 
 function buildExecutiveReport(){
@@ -1180,7 +1287,8 @@ function buildExecutiveReport(){
   });
 
   // --- fortalezas: etapas sin ningún error, de ningún tipo ---
-  const strengths = STAGE_LABELS.filter(s => {
+  const scenarioStages = stagesFor(gameState.scenarioId);
+  const strengths = scenarioStages.filter(s => {
     const noCharMistakes = !mistakesByStage[s];
     const noRetries = !attemptsByStage[s] || attemptsByStage[s].firstTry === attemptsByStage[s].total;
     return noCharMistakes && noRetries;
@@ -1240,8 +1348,8 @@ function buildExecutiveReport(){
 
   // 4. Fortalezas
   let fortalezasHtml;
-  if(strengths.length === STAGE_LABELS.length){
-    fortalezasHtml = `<p>Las cinco etapas del ejercicio se resolvieron sin errores de ningún tipo — un resultado excelente y poco común en una primera corrida.</p>`;
+  if(strengths.length === scenarioStages.length){
+    fortalezasHtml = `<p>Todas las etapas del ejercicio se resolvieron sin errores de ningún tipo — un resultado excelente y poco común en una primera corrida.</p>`;
   } else if(strengths.length > 0){
     fortalezasHtml = `<p>${strengths.length === 1 ? 'La etapa' : 'Las etapas'} de <b>${strengths.join(', ')}</b> se resolvieron sin errores de personaje ni reintentos — un buen punto de partida que vale la pena reconocer con el equipo.</p>`;
   } else {
@@ -1255,7 +1363,7 @@ function buildExecutiveReport(){
   if(confusionList.length > 0){
     const top = confusionList[0];
     recs.push(`Reforzar con ${roleLabelWithName(top.chosenRole)} y ${roleLabelWithName(top.targetRole)} la diferencia entre sus responsabilidades, idealmente con ejemplos concretos del propio incidente simulado.`);
-    planAccion.push({accion:`Reforzar la diferencia de responsabilidades entre ${ROLE_NAMES[top.chosenRole]} y ${ROLE_NAMES[top.targetRole]} con ejemplos del propio ejercicio`, responsable:`${ROLE_NAMES[top.chosenRole]} y ${ROLE_NAMES[top.targetRole]}`, plazo:'15 días'});
+    planAccion.push({accion:`Reforzar la diferencia de responsabilidades entre ${roleLabelWithName(top.chosenRole)} y ${roleLabelWithName(top.targetRole)} con ejemplos del propio ejercicio`, responsable:`${roleLabelWithName(top.chosenRole)} y ${roleLabelWithName(top.targetRole)}`, plazo:'15 días'});
   }
   if(worstStage && worstRate < 85){
     recs.push(`Revisar el procedimiento de la etapa de <b>${worstStage}</b> con el equipo — fue donde más costó identificar la acción correcta a la primera.`);
@@ -1299,6 +1407,8 @@ function showResults(){
   enterEls.forEach(el => { el.style.animation = 'none'; void el.offsetWidth; el.style.animation = ''; });
 
   const scenarioMeta = SCENARIOS.find(s => s.id === gameState.scenarioId);
+  const resultsRoleMeta = roleMetaFor(gameState.scenarioId);
+  const resultsStages = stagesFor(gameState.scenarioId);
   const duration = gameState.startTime ? fmtElapsed(new Date() - gameState.startTime) : '00:00';
   const total = gameState.totalQuestions;
   const wrongA = gameState.wrongAnswerCount;
@@ -1351,11 +1461,11 @@ function showResults(){
   document.getElementById('resDonutChar').setAttribute('transform', `rotate(${-90 + ((correctLen + altLen) / circumference) * 360} 66 66)`);
 
   const stageChartEl = document.getElementById('resStageChart');
-  const stageBarMax = Math.max(1, ...STAGE_LABELS.map(s => {
+  const stageBarMax = Math.max(1, ...resultsStages.map(s => {
     const st = gameState.stageStats[s];
     return st ? Math.max(st.wrongAnswers, st.wrongCharacters) : 0;
   }));
-  stageChartEl.innerHTML = STAGE_LABELS.map((stageName, idx) => {
+  stageChartEl.innerHTML = resultsStages.map((stageName, idx) => {
     const stat = gameState.stageStats[stageName];
     if(!stat) return '';
     return `
@@ -1391,7 +1501,7 @@ function showResults(){
   document.getElementById('actaFecha').textContent = fechaLegible;
   document.getElementById('actaFacilitador').textContent = facilitatorName || 'Sin registrar';
   document.getElementById('actaCliente').textContent = clientName || 'Sin registrar';
-  document.getElementById('actaParticipantes').textContent = `${activeParticipants.length} de 6 funciones`;
+  document.getElementById('actaParticipantes').textContent = `${activeParticipants.length} de ${resultsRoleMeta.keys.length} funciones`;
   document.getElementById('actaNotes').value = '';
 
   function buildResultsExport(){
@@ -1407,7 +1517,7 @@ function showResults(){
       total_preguntas: total,
       errores_alternativas: wrongA,
       errores_personaje: wrongC,
-      desglose_por_etapa: STAGE_LABELS.map(stageName => ({
+      desglose_por_etapa: resultsStages.map(stageName => ({
         etapa: stageName, ...gameState.stageStats[stageName]
       })),
       informe_ejecutivo: {
@@ -1428,7 +1538,7 @@ function showResults(){
         notas_facilitador: document.getElementById('actaNotes').value || null
       },
       participantes: activeParticipants.map(p => ({
-        funcion: ROLE_NAMES[p.roleKey], empresa: p.empresa || null
+        funcion: resultsRoleMeta.names[p.roleKey], empresa: p.empresa || null
       }))
     };
   }

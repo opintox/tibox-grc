@@ -147,13 +147,14 @@
           <div class="playbook-panel">
             <div class="eyebrow">Material opcional</div>
             <h2 class="section-title">Si dispone de un playbook, cargar aquí</h2>
-            <p class="section-sub">Puedes adjuntar el material de referencia que usarán durante la simulación.</p>
+            <p class="section-sub">Adjunta material de referencia para la simulación, o un escenario personalizado en Word (descarga la plantilla, complétala y súbela aquí para que aparezca como tarjeta en "Tipo de ataque").</p>
             <div class="playbook-actions">
               <label class="playbook-file">
                 <span id="playbookFileName">Ningún archivo seleccionado</span>
                 <input type="file" id="playbookFile" accept=".json,.pdf,.doc,.docx,.txt,application/json,application/pdf,text/plain">
               </label>
               <button class="btn btn-primary" id="loadPlaybookBtn" type="button">Cargar playbook</button>
+              <button class="btn btn-sm" id="downloadTemplateBtn" type="button">Descargar plantilla Word</button>
             </div>
             <p class="playbook-status" id="playbookStatus" role="status" aria-live="polite"></p>
           </div>
@@ -162,16 +163,8 @@
         <section class="panel section-block wizard-step hidden" data-step="2" id="wizardStep2">
           <div class="setup-section-head">
             <h2 class="section-title">Tipo de ataque</h2>
-            <p class="section-sub">Elige el escenario que se va a discutir en la sesión, o crea uno propio completando una plantilla Word.</p>
+            <p class="section-sub">Elige el escenario que se va a discutir en la sesión.</p>
             <span class="setup-badge" id="scenarioBadge">Sin escenario</span>
-          </div>
-          <div class="scn-import-bar">
-            <button class="btn btn-sm" id="downloadTemplateBtn" type="button">Descargar plantilla Word</button>
-            <label class="btn btn-sm scn-import-label">
-              <span>Cargar escenario (Word)</span>
-              <input type="file" id="scenarioDocxInput" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
-            </label>
-            <span class="scn-import-status" id="scenarioImportStatus" role="status" aria-live="polite"></span>
           </div>
           <div class="scn-grid" id="scenarioGridCore"></div>
         </section>
