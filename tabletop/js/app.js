@@ -1145,7 +1145,7 @@ function renderStage(opts){
   }
   askEl.innerHTML = `
     <div class="sit-ask">
-      <span class="sit-ask-q">¿Quién debe actuar? ¿Qué decisión debe tomar?</span>
+      <span class="sit-ask-q" id="askQuestion">¿Quién debe actuar?</span>
       <span class="sit-ask-step on" id="askStep1">1 · Función</span>
       <span class="sit-ask-step" id="askStep2">2 · Decisión</span>
     </div>`;
@@ -1270,6 +1270,8 @@ function onCharacterPick(participant, el){
     document.getElementById('charPanel').classList.add('hidden');
     const s1 = document.getElementById('askStep1'), s2 = document.getElementById('askStep2');
     if(s1 && s2){ s1.classList.remove('on'); s2.classList.add('on'); }
+    const askQ = document.getElementById('askQuestion');
+    if(askQ) askQ.textContent = '¿Qué decisión debe tomar?';
 
     document.getElementById('answeringAs').textContent = `${rmPick.names[participant.roleKey]} · ${participant.empresa || rmPick.org[participant.roleKey]}`;
     hideExplain();
