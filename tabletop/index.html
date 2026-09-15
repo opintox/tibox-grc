@@ -18,6 +18,17 @@
   </div>
   <div class="topbar-right">
     <div class="status"><span class="dot"></span><span id="statusLabel">CONFIGURACIÓN</span></div>
+    <div class="setup-nav" id="setupNav">
+      <button class="btn" id="setupBackBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+        <span>Atrás</span>
+      </button>
+      <button class="btn-cta" id="setupNextBtn" type="button" disabled>
+        <span id="setupNextBtnLabel">Siguiente</span>
+        <svg class="btn-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        <span class="btn-spinner" aria-hidden="true"></span>
+      </button>
+    </div>
   </div>
 
   <!-- Controles del ejercicio en curso: viven en la misma barra superior (no una segunda
@@ -61,10 +72,16 @@
     <div class="intro-content">
 
     <div class="intro-right-column">
-      <div class="panel section-block intro-panel">
-        <div class="eyebrow">Qué es</div>
-        <h2 class="section-title">Un ensayo, no un examen</h2>
-        <p class="section-sub" style="margin-bottom:0;">Un <b>tabletop</b> es un ejercicio de simulación: el equipo se sienta a discutir, sobre un caso de ciberseguridad inventado pero realista, cómo respondería si pasara de verdad. Nada de lo que ocurre acá toca sistemas reales — es puro criterio y coordinación entre las personas que tendrían que actuar en un incidente de verdad. No hay que saberse el procedimiento de memoria: para eso está el ejercicio.</p>
+      <div class="panel section-block intro-panel intro-panel-split">
+        <div class="intro-panel-text">
+          <div class="eyebrow">Qué es</div>
+          <h2 class="section-title">Un ensayo, no un examen</h2>
+        </div>
+        <ul class="intro-highlights">
+          <li><span class="intro-hl-icon">✓</span><span class="intro-hl-text"><b>Sin tocar</b> sistemas reales</span></li>
+          <li><span class="intro-hl-icon">✓</span><span class="intro-hl-text"><b>Puro criterio</b> y coordinación</span></li>
+          <li><span class="intro-hl-icon">✓</span><span class="intro-hl-text"><b>No hay que memorizar</b> nada</span></li>
+        </ul>
       </div>
 
       <div class="panel section-block intro-panel">
@@ -74,36 +91,31 @@
           <div class="rule-step">
             <span class="rule-step-num">1</span>
             <div>
-              <div class="rule-step-title">Configuren la sesión</div>
-              <p class="rule-step-desc">Elijan el tipo de ataque a simular y marquen qué funciones participan hoy (TI, Legal, Comunicaciones, RRHH, Dirección — Seguridad y TI siempre están). Guarden el perfil del cliente: es lo último que falta para poder empezar.</p>
+              <div class="rule-step-title">Configuren la <b>sesión</b></div>
             </div>
           </div>
           <div class="rule-step">
             <span class="rule-step-num">2</span>
             <div>
-              <div class="rule-step-title">El incidente avanza en 5 etapas</div>
-              <p class="rule-step-desc">Detección → Clasificación → Contención → Recuperación → Cierre. Cada una plantea una situación nueva dentro del mismo caso, en orden.</p>
+              <div class="rule-step-title">El incidente avanza en <b>5 etapas</b></div>
             </div>
           </div>
           <div class="rule-step">
             <span class="rule-step-num">3</span>
             <div>
-              <div class="rule-step-title">Decidan quién actúa</div>
-              <p class="rule-step-desc">Frente a cada situación, el equipo elige qué función debe hacerse cargo de esa acción específica. Elegir a alguien a quien no le corresponde cuenta como error.</p>
+              <div class="rule-step-title">Decidan <b>quién actúa</b></div>
             </div>
           </div>
           <div class="rule-step">
             <span class="rule-step-num">4</span>
             <div>
-              <div class="rule-step-title">Decidan qué hacer</div>
-              <p class="rule-step-desc">Con la función correcta ya elegida, discutan entre varias alternativas y elijan la respuesta. Si se equivocan, se explica por qué antes de dejarlos reintentar.</p>
+              <div class="rule-step-title">Decidan <b>qué hacer</b></div>
             </div>
           </div>
           <div class="rule-step">
             <span class="rule-step-num">5</span>
             <div>
-              <div class="rule-step-title">Cierren con el informe</div>
-              <p class="rule-step-desc">Al terminar la última etapa se genera un puntaje, un informe ejecutivo con lo que conviene reforzar, y un acta que pueden guardar o descargar.</p>
+              <div class="rule-step-title">Cierren con el <b>informe</b></div>
             </div>
           </div>
         </div>
@@ -126,33 +138,40 @@
 
       <div class="wizard-body">
 
-        <section class="panel section-block wizard-step" data-step="1" id="wizardStep1">
-          <div class="setup-section-head">
-            <h2 class="section-title">Perfil del cliente</h2>
-            <p class="section-sub">Nombre del cliente y facilitador de la sesión. Puedes adjuntar un playbook de referencia si lo tienes.</p>
-          </div>
-          <div class="field-row" style="margin-bottom:0;">
-            <label>Nombre del cliente</label>
-            <input type="text" id="clientNameInput" placeholder="Ej: Quintero Energía">
-          </div>
-          <div class="field-row">
-            <label>Facilitador</label>
-            <input type="text" id="facilitatorNameInput" placeholder="Quién conduce la sesión">
-          </div>
-          <div class="profile-actions">
-            <button class="btn btn-sm btn-primary" id="saveProfileBtn">Guardar perfil</button>
-            <button class="btn btn-sm" id="profilesToggleBtn">Perfiles guardados</button>
+        <section class="wizard-step wizard-step1-cols" data-step="1" id="wizardStep1">
+          <div class="panel section-block wizard-col">
+            <div class="setup-section-head">
+              <h2 class="section-title">Perfil del cliente</h2>
+              <p class="section-sub">Nombre del cliente y facilitador de la sesión. Puedes adjuntar un playbook de referencia si lo tienes.</p>
+            </div>
+            <div class="field-row" style="margin-bottom:0;">
+              <label>Nombre del cliente</label>
+              <input type="text" id="clientNameInput" placeholder="Ej: Quintero Energía">
+            </div>
+            <div class="field-row">
+              <label>Facilitador</label>
+              <input type="text" id="facilitatorNameInput" placeholder="Quién conduce la sesión">
+            </div>
+            <div class="profile-actions">
+              <button class="btn btn-sm btn-primary" id="saveProfileBtn">Guardar perfil</button>
+              <button class="btn btn-sm" id="profilesToggleBtn">Perfiles guardados</button>
+            </div>
           </div>
 
-          <div class="playbook-panel">
+          <div class="panel section-block wizard-col playbook-panel">
             <div class="eyebrow">Material opcional</div>
             <h2 class="section-title">Si dispone de un playbook, cargar aquí</h2>
             <p class="section-sub">Adjunta material de referencia para la simulación, o un escenario personalizado en Word (descarga la plantilla, complétala y súbela aquí para que aparezca como tarjeta en "Tipo de ataque").</p>
+            <label class="playbook-dropzone" id="playbookDropzone">
+              <svg class="playbook-dropzone-icon" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 15V3m0 0 4 4m-4-4L8 7"/>
+                <path d="M3 15v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4"/>
+              </svg>
+              <span class="playbook-dropzone-text">Arrastra tu archivo aquí o <b>haz clic para examinar</b></span>
+              <span class="playbook-dropzone-filename" id="playbookFileName">Ningún archivo seleccionado</span>
+              <input type="file" id="playbookFile" accept=".json,.pdf,.doc,.docx,.txt,application/json,application/pdf,text/plain">
+            </label>
             <div class="playbook-actions">
-              <label class="playbook-file">
-                <span id="playbookFileName">Ningún archivo seleccionado</span>
-                <input type="file" id="playbookFile" accept=".json,.pdf,.doc,.docx,.txt,application/json,application/pdf,text/plain">
-              </label>
               <button class="btn btn-primary" id="loadPlaybookBtn" type="button">Cargar playbook</button>
               <button class="btn btn-sm" id="downloadTemplateBtn" type="button">Descargar plantilla Word</button>
             </div>
@@ -179,20 +198,6 @@
           <div class="participants-grid" id="participantsBody"></div>
         </section>
 
-      </div>
-
-      <div class="wizard-nav">
-        <div class="wizard-nav-inner">
-          <button class="btn" id="setupBackBtn" type="button">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
-            <span>Atrás</span>
-          </button>
-          <button class="btn-cta" id="setupNextBtn" type="button" disabled>
-            <span id="setupNextBtnLabel">Siguiente</span>
-            <svg class="btn-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-            <span class="btn-spinner" aria-hidden="true"></span>
-          </button>
-        </div>
       </div>
 
     </div>

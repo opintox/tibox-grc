@@ -42,15 +42,28 @@ const DEFAULT_ROLE_META = {
   keys: ROLE_KEYS, names: ROLE_NAMES, icons: ROLE_ICONS, color: ROLE_COLOR,
   desc: ROLE_DESCRIPTIONS, org: ROLE_ORG, accents: ROLE_ACCENTS
 };
+// Los 4 colores oficiales de TIBOX (brand book "TIBOX AI Knowledge v0.2", ver también
+// SCENARIO_ACCENTS en catalogo.js): las tres caras del cubo — cian, amarillo, naranjo — y el
+// degradado de la unidad de Ciberseguridad (magenta → rojo coral), la unidad de esta herramienta.
+// Se ciclan en este orden para cualquier cantidad de funciones propias que traiga un escenario.
 const CUSTOM_ROLE_PALETTE = [
-  {color:'blue', accent:['#5AD1E8','#0B8FD6']}, {color:'red', accent:['#FF6B7F','#D6224E']},
-  {color:'amber', accent:['#FFC414','#E09000']}, {color:'purple', accent:['#A9B4F7','#6B7BE8']},
-  {color:'green', accent:['#6EE7B7','#12A97C']}, {color:'blue', accent:['#9FB4CE','#5A6E8C']},
-  {color:'amber', accent:['#FFA200','#F07C10']}, {color:'purple', accent:['#C81FB0','#8E1490']}
+  {color:'blue', accent:['#0FC7F6','#0B8FD6']},   // cian
+  {color:'amber', accent:['#F3E006','#D9A800']},  // amarillo
+  {color:'amber', accent:['#FF8A3D','#F0651D']},  // naranjo
+  {color:'purple', accent:['#E0219A','#FF4D6A']}  // magenta → rojo coral (Ciberseguridad)
 ];
 function initialsIconSvg(name){
   const initials = String(name || '?').trim().split(/\s+/).map(w => w[0]).slice(0,2).join('').toUpperCase() || '?';
   return `<svg viewBox="0 0 24 24" width="13" height="13"><text x="12" y="16" text-anchor="middle" font-size="11" font-weight="700" fill="currentColor" font-family="inherit">${escapeHtml(initials)}</text></svg>`;
+}
+// Mismo lenguaje visual que .scn-icon en las tarjetas de escenario: el ícono de cada
+// función vive en su propio chip circular, con el acento de esa función (rm.accents,
+// ya definido por función tanto en el organigrama estándar como en uno propio importado
+// desde Word) en vez de quedar suelto dentro de la píldora de texto neutra.
+function roleIconChipHtml(rm, roleKey){
+  const icon = (rm.icons && rm.icons[roleKey]) || '';
+  const [c1] = (rm.accents && rm.accents[roleKey]) || ['#8592AE'];
+  return `<span class="p-role-icon" style="background:${hexToRgba(c1, 0.18)}; color:${c1};">${icon}</span>`;
 }
 // roleList: [{key, name}] en el orden en que el documento las declaró.
 function buildCustomRoleMeta(roleList){
@@ -397,6 +410,38 @@ document.getElementById('facilitatorNameInput').addEventListener('input', e => {
 // ---------------- scenario cards ----------------
 const coreGridEl = document.getElementById('scenarioGridCore');
 
+// Imagen de fondo propia por escenario (opcional): si un id no está acá, la tarjeta
+// se ve exactamente igual que antes (solo el degradado oscuro de siempre).
+// Rutas relativas a tabletop/css/styles.css (no al HTML): un url() dentro del valor de
+// una variable CSS se resuelve relativo a la hoja de estilos donde vive la propiedad que
+// lo consume (background-image en .scn-card), no al archivo que setea la variable.
+const SCENARIO_BG_IMAGES = {
+  dispositivo: '../assets/scenario-bg/dispositivo.jpg',
+  recuperacion_fallida: '../assets/scenario-bg/recuperacion_fallida.jpg',
+  insider: '../assets/scenario-bg/insider.jpg',
+  terceros: '../assets/scenario-bg/terceros.jpg',
+  credenciales: '../assets/scenario-bg/credenciales.jpg',
+  ddos: '../assets/scenario-bg/ddos.jpg',
+  phishing_bec: '../assets/scenario-bg/phishing_bec.jpg',
+  '0day': '../assets/scenario-bg/0day.jpg',
+  exfiltracion: '../assets/scenario-bg/exfiltracion.png',
+  ransomware: '../assets/scenario-bg/ransomware.png'
+};
+// Encuadre por escenario: por defecto "center" (mitad vertical de la imagen), pero
+// dispositivo.jpg tiene el personaje y el globo de diálogo en el tercio superior — con
+// center a secas, una tarjeta baja y ancha recorta justo esa parte y deja solo el pecho
+// y el fondo naranjo (la "imagen desalineada" reportada).
+const SCENARIO_BG_POS = {
+  dispositivo: 'center 22%',
+  // El apretón de manos (lo más reconocible de "compromiso de terceros") queda casi
+  // fuera de cuadro con el center por defecto — la imagen es más alta que ancha y el
+  // encuadre corto de la tarjeta termina mostrando sobre todo el espacio vacío del medio.
+  terceros: 'center 85%',
+  // Con center a secas se alcanzaba a ver un resto suelto de los puntitos de la barra
+  // de navegador (arriba) sin mostrar completo ni el candado/gancho ni el campo de
+  // contraseña — bajar el encuadre deja ambos elementos dentro de la tarjeta.
+  credenciales: '65% 65%'
+};
 function renderScenarioCard(s, container){
   const el = document.createElement('div');
   el.className = 'scn-card' + (selectedScenarioId === s.id ? ' selected' : '');
@@ -404,6 +449,8 @@ function renderScenarioCard(s, container){
   el.style.setProperty('--a', accent);
   el.style.setProperty('--a2', accent2);
   el.style.setProperty('--glow', hexToRgba(accent2, 0.55));
+  if(SCENARIO_BG_IMAGES[s.id]) el.style.setProperty('--scn-bg-image', `url(${SCENARIO_BG_IMAGES[s.id]})`);
+  if(SCENARIO_BG_POS[s.id]) el.style.setProperty('--scn-bg-pos', SCENARIO_BG_POS[s.id]);
   el.setAttribute('role', 'button');
   el.setAttribute('tabindex', '0');
   el.setAttribute('aria-pressed', selectedScenarioId === s.id ? 'true' : 'false');
@@ -412,7 +459,7 @@ function renderScenarioCard(s, container){
   const blurb = SCENARIO_BLURBS[s.id] || '';
   el.innerHTML = `
     <div class="scn-head">
-      <span class="scn-badge">${icon}${escapeHtml(s.name)}</span>
+      <span class="scn-badge"><span class="scn-icon">${icon}</span>${escapeHtml(s.name)}</span>
       <div class="scn-head-actions">
         <button class="scn-export-btn" type="button" title="Exportar este escenario a Word" aria-label="Exportar este escenario a Word">⇩</button>
         <span class="scn-check" aria-hidden="true"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.4 6.4 12 13 4.6"/></svg></span>
@@ -517,10 +564,12 @@ function renderParticipants(){
     const locked = rm === DEFAULT_ROLE_META && (p.roleKey === 'ti' || p.roleKey === 'seguridad');
     const card = document.createElement('div');
     card.className = 'p-card glow-' + (rm.color[p.roleKey] || 'blue') + (p.checked ? '' : ' row-inactive');
+    const [pBarColor] = (rm.accents && rm.accents[p.roleKey]) || ['#8592AE'];
+    card.style.setProperty('--p-bar', pBarColor);
     card.innerHTML = `
       <div class="p-card-head">
         <input type="checkbox" ${p.checked ? 'checked' : ''} ${locked ? 'disabled title="TI y Seguridad participan siempre"' : ''} data-i="${i}">
-        <span class="empresa-badge ${p.roleKey}">${rm.icons[p.roleKey] || ''}${escapeHtml(rm.names[p.roleKey] || p.roleKey)}</span>
+        <span class="empresa-badge ${p.roleKey}">${roleIconChipHtml(rm, p.roleKey)}${escapeHtml(rm.names[p.roleKey] || p.roleKey)}</span>
       </div>
       <p class="p-card-desc" title="${escapeHtml(rm.desc[p.roleKey] || '')}">${escapeHtml(rm.desc[p.roleKey] || '')}</p>
       <div class="p-card-fields">
@@ -719,6 +768,31 @@ playbookFileInput.addEventListener('change', () => {
   const file = playbookFileInput.files[0];
   playbookFileName.textContent = file ? file.name : 'Ningún archivo seleccionado';
   playbookStatus.textContent = '';
+});
+
+// Arrastrar y soltar sobre la dropzone: el <label> ya abre el selector de archivos al
+// hacer clic (input anidado adentro); esto suma soltar un archivo arrastrado, asignándolo
+// al mismo <input> y disparando su evento 'change' para reusar la lógica de arriba.
+const playbookDropzone = document.getElementById('playbookDropzone');
+['dragenter', 'dragover'].forEach(evt => {
+  playbookDropzone.addEventListener(evt, e => {
+    e.preventDefault();
+    playbookDropzone.classList.add('dragover');
+  });
+});
+['dragleave', 'dragend'].forEach(evt => {
+  playbookDropzone.addEventListener(evt, e => {
+    e.preventDefault();
+    playbookDropzone.classList.remove('dragover');
+  });
+});
+playbookDropzone.addEventListener('drop', e => {
+  e.preventDefault();
+  playbookDropzone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if(!file) return;
+  playbookFileInput.files = e.dataTransfer.files;
+  playbookFileInput.dispatchEvent(new Event('change'));
 });
 
 document.getElementById('downloadTemplateBtn').addEventListener('click', () => {
@@ -1072,6 +1146,9 @@ function renderCharGrid(){
     el.style.setProperty('--a', a);
     el.style.setProperty('--a2', a2);
     el.style.setProperty('--glow', hexToRgba(a2, 0.55));
+    // La barra superior a color es solo para escenarios con funciones propias (ver
+    // .char-card::before en styles.css); los 6 roles estándar mantienen su diseño sin color.
+    if(rm !== DEFAULT_ROLE_META) el.style.setProperty('--card-bar', `linear-gradient(90deg, ${a}, ${a2})`);
     el.setAttribute('role', 'button');
     el.setAttribute('tabindex', activo ? '0' : '-1');
     if(!activo){ el.setAttribute('aria-disabled', 'true'); }
