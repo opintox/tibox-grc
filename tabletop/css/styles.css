@@ -98,7 +98,11 @@
   .eyebrow::before{content:''; width:14px; height:1px; background:var(--muted-2);}
   h2.section-title{font-family:var(--display); font-size:var(--fs-xl); font-weight:800; margin:0 0 6px; letter-spacing:-0.01em;}
   p.section-sub{color:var(--muted); margin:0 0 22px; font-size:var(--fs-sm); line-height:1.5;}
-  .section-block{padding:24px; margin-bottom:16px;}
+  /* Ancho único para todos los paneles de sección (bienvenida, wizard de configuración,
+     resultados, informe): 1430px = 1100px (medida previa del wizard) + 30%. Cada .wrap/
+     .intro-shell que los contiene ya es al menos así de ancho (ver más abajo), así que esto
+     es el tope real que ve el usuario; se centra solo si el contenedor es más ancho todavía. */
+  .section-block{padding:24px; margin-bottom:16px; max-width:1430px; width:100%; margin-left:auto; margin-right:auto;}
 
   /* ---------- attack cards ---------- */
   .scenario-grid{display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-bottom:10px;}
@@ -129,12 +133,12 @@
   .participants-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; align-items:flex-start;}
   @media (max-width:1000px){.participants-grid{grid-template-columns:repeat(2,1fr);}}
   @media (max-width:560px){.participants-grid{grid-template-columns:1fr;}}
-  .p-card{padding:14px 16px; border-radius:12px; border:1px solid var(--border); border-bottom:2px solid rgba(255,255,255,0.35); background:var(--panel-2); box-shadow:0 10px 22px -14px rgba(255,255,255,0.28); transition:opacity .15s;}
+  /* La barra inferior toma el mismo acento que el ícono de esa función (--p-bar, seteada
+     por JS en renderParticipants con el mismo color exacto que roleIconChipHtml usa para
+     el ícono) — antes quedaba fija en blanco para las 6 funciones sin importar el color
+     del chip de al lado. */
+  .p-card{padding:14px 16px; border-radius:12px; border:1px solid var(--border); border-bottom:2px solid var(--p-bar, rgba(255,255,255,0.35)); background:var(--panel-2); box-shadow:0 10px 22px -14px rgba(255,255,255,0.28); transition:opacity .15s;}
 
-  /* Sin color por función/escenario: todas las tarjetas brillan igual, en blanco. */
-  .glow-blue, .glow-red, .glow-green, .glow-amber, .glow-purple{
-    border-bottom-color:rgba(255,255,255,0.35); box-shadow:0 10px 22px -14px rgba(255,255,255,0.28);
-  }
   .scenario-grid .scenario-card.selected{border-bottom-color:#fff; box-shadow:0 10px 22px -14px rgba(255,255,255,0.55);}
 
   .p-card.row-inactive{opacity:0.45;}
@@ -155,8 +159,16 @@
   table.ptable tr:last-child td{border-bottom:none;}
   table.ptable input[type="checkbox"]{width:17px; height:17px; accent-color:var(--green); cursor:pointer;}
 
-  input[type="text"], select{width:100%; background:var(--panel-2); border:1px solid var(--border); color:var(--text); padding:9px 12px; border-radius:6px; font-family:var(--sans); font-size:var(--fs-sm);}
-  input[type="text"]:focus, select:focus{outline:none; border-color:var(--blue);}
+  input[type="text"], select{
+    width:100%; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15); color:var(--text);
+    padding:9px 12px; border-radius:6px; font-family:var(--sans); font-size:var(--fs-sm);
+    box-shadow:inset 0 1px 3px rgba(0,0,0,0.35);
+    transition:border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+  }
+  input[type="text"]:focus, select:focus{
+    outline:none; border-color:#FF8A3D; background:rgba(255,255,255,0.07);
+    box-shadow:inset 0 1px 3px rgba(0,0,0,0.35), 0 0 0 3px rgba(255,138,61,0.22);
+  }
 
   .btn{
     font-family:var(--sans); font-weight:600; font-size:var(--fs-sm); padding:9px 16px; border-radius:10px;
@@ -175,9 +187,17 @@
   .btn-primary:hover{box-shadow:0 0 0 1px rgba(34,211,166,0.2) inset, 0 8px 28px -8px rgba(34,211,166,0.55);}
 
 
-  .empresa-badge{display:inline-flex; align-items:center; gap:5px; font-family:var(--mono); font-size:var(--fs-2xs); letter-spacing:0.04em; padding:4px 10px; border-radius:20px; border:1px solid var(--border);}
+  .empresa-badge{display:inline-flex; align-items:center; gap:8px; font-family:var(--mono); font-size:var(--fs-2xs); letter-spacing:0.04em; padding:4px 10px 4px 4px; border-radius:20px; border:1px solid var(--border);}
   .empresa-badge svg{flex-shrink:0; opacity:0.9;}
-  /* Sin color por función: todas las insignias son neutras. */
+  /* Ícono de cada función en su propio chip circular con el acento de esa función
+     (mismo lenguaje visual que .scn-icon en las tarjetas de escenario) — el fondo/color
+     los pone JS inline por función (roleIconChipHtml), acá solo el tamaño y la forma. */
+  .p-role-icon{
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    width:24px; height:24px; border-radius:50%;
+  }
+  .p-role-icon svg{width:13px; height:13px; opacity:1;}
+  /* La píldora de texto sigue neutra: el color queda solo en el ícono. */
   .empresa-badge, .empresa-badge.seguridad, .empresa-badge.ti, .empresa-badge.legal,
   .empresa-badge.comunicaciones, .empresa-badge.rrhh, .empresa-badge.direccion{
     color:var(--text); border-color:rgba(255,255,255,0.14); background:rgba(255,255,255,0.06);
@@ -231,12 +251,19 @@
   .hidden{display:none !important;}
 
   /* ---------- game screen ---------- */
-  .story-panel{background:linear-gradient(160deg, var(--panel) 55%, var(--panel-3)); border-color:rgba(255,255,255,0.14); box-shadow:inset 2px 0 0 rgba(255,255,255,0.14);}
-  /* Preguntas: tipografía más compacta y fluida para aprovechar mejor el panel. */
-  .story-text{font-family:var(--sans); font-size:var(--fs-lg); line-height:1.5; margin:0; font-weight:400; overflow-wrap:anywhere;}
+  /* Tarjeta moderna para leer el caso: fondo con un degradado muy suave (ya no la línea
+     dura inset a la izquierda, que se sentía más técnica que elegante) y borde delicado. */
+  .story-panel{
+    background:linear-gradient(160deg, var(--panel) 55%, var(--panel-3));
+    border-color:rgba(255,255,255,0.12);
+    padding:clamp(18px, 2vw, 26px);
+  }
+  /* Preguntas: tipografía más compacta y fluida para aprovechar mejor el panel. Interlineado
+     algo más generoso (1.5→1.6, 1.66→1.72) para que la lectura larga se sienta más cómoda. */
+  .story-text{font-family:var(--sans); font-size:var(--fs-lg); line-height:1.6; margin:0; font-weight:400; overflow-wrap:anywhere;}
   .story-text br + br{line-height:.65;}
-  @media (max-width:1100px){.story-text{font-size:var(--fs-md); line-height:1.45;}}
-  @media (max-width:700px){.story-text{font-size:var(--fs-sm); line-height:1.48;}}
+  @media (max-width:1100px){.story-text{font-size:var(--fs-md); line-height:1.5;}}
+  @media (max-width:700px){.story-text{font-size:var(--fs-sm); line-height:1.52;}}
   /* ---------- situación del ejercicio ---------- */
   .sit-meta{display:flex; flex-wrap:wrap; gap:var(--sp-2); margin-bottom:var(--sp-4);}
   .sit-body p{break-inside:avoid;}
@@ -246,17 +273,23 @@
     background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.10); white-space:nowrap;
   }
   .sit-chip::before{content:''; width:5px; height:5px; border-radius:50%; background:rgba(255,255,255,0.55); flex-shrink:0;}
-  .sit-body{font-size:var(--fs-md); line-height:1.66; color:#D9E3F2; margin:0; max-width:none;}
-  .sit-body p{margin:0 0 12px;}
+  .sit-body{font-size:var(--fs-md); line-height:1.72; color:#D9E3F2; margin:0; max-width:none;}
+  .sit-body p{margin:0 0 15px;}
   .sit-body p:last-child{margin-bottom:0;}
   .sit-title{
     font-family:var(--display); font-weight:800; font-size:var(--fs-xl); color:#fff;
-    letter-spacing:-0.015em; margin:0 0 var(--sp-2);
+    letter-spacing:-0.015em; margin:0 0 var(--sp-3);
   }
-  /* La doble pregunta vive en su propio panel, bajo la presentación del caso. */
+  /* La doble pregunta vive en su propio panel, bajo la presentación del caso, con un
+     tratamiento de vidrio esmerilado propio para que se distinga de inmediato del resto de
+     la interfaz: degradado muy sutil, borde delicado y un halo suave con el acento del
+     escenario (--a, ya seteado por JS) en vez de la barra sólida de 3px que traía antes. */
   #askPanel{
     display:flex; flex-wrap:wrap; align-items:center; gap:var(--sp-4);
-    padding:14px 18px; border-left:3px solid rgba(255,255,255,0.4); overflow:visible;
+    padding:18px 24px; overflow:visible;
+    background:linear-gradient(135deg, rgba(255,255,255,0.075), rgba(255,255,255,0.02));
+    border:1px solid rgba(255,255,255,0.16);
+    box-shadow:0 10px 32px -14px rgba(0,0,0,0.5), 0 0 46px -22px var(--a, rgba(94,197,255,0.4)), 0 1px 0 0 rgba(255,255,255,0.06) inset;
   }
   .sit-ask{display:flex; flex-wrap:wrap; align-items:center; gap:var(--sp-3); width:100%;}
   .sit-ask-q{font-family:var(--display); font-weight:800; font-size:var(--fs-xl); color:#fff; letter-spacing:-0.012em; margin-right:auto;}
@@ -264,7 +297,7 @@
     font-family:var(--mono); font-size:var(--fs-3xs); letter-spacing:0.1em; text-transform:uppercase;
     color:var(--muted); padding:4px 10px; border-radius:999px; border:1px dashed var(--border);
   }
-  .sit-ask-step.on{color:#fff; border-style:solid; border-color:rgba(255,255,255,0.55);}
+  .sit-ask-step.on{color:#fff; border-style:solid; border-color:rgba(255,255,255,0.55); background:rgba(255,255,255,0.08);}
   .ops-context{font-size:var(--fs-2xs); font-style:italic; color:var(--muted); line-height:1.5; margin:0 0 12px; padding-bottom:10px; border-bottom:1px dashed var(--border);}
   .ops-context b{color:var(--muted); font-style:normal;}
   .org-tag{font-family:var(--mono); font-size:var(--fs-4xs); letter-spacing:0.05em; opacity:0.7; font-weight:600;}
@@ -312,17 +345,29 @@
   .char-card{
     position:relative; overflow:hidden; cursor:pointer; text-align:left; min-width:0;
     display:flex; flex-direction:column; gap:5px; padding:11px 15px 10px; min-height:92px;
-    border-radius:var(--radius-lg); border:1px solid rgba(255,255,255,0.09);
-    background-image:linear-gradient(158deg, #0C1730 0%, #080F1E 100%);
-    box-shadow:0 16px 30px -22px rgba(255,255,255,0.22);
-    transition:transform .16s ease, box-shadow .2s ease, border-color .16s ease;
+    border-radius:var(--radius-lg); border:1px solid rgba(255,255,255,0.10);
+    /* Fondo oscuro translúcido en vez del degradado sólido anterior (#0C1730→#080F1E):
+       deja ver un poco del panel de fondo, más "vidrio suave" que placa opaca. */
+    background-color:rgba(255,255,255,0.035);
+    background-image:linear-gradient(158deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%);
+    box-shadow:0 16px 30px -22px rgba(0,0,0,0.55);
+    transition:transform .18s ease, box-shadow .2s ease, border-color .18s ease, background-color .18s ease;
   }
-  /* Sin color por función: la insignia y el brillo de todas las tarjetas son blancos. */
+  /* Sin color por función en los 6 roles estándar: la barra queda blanca (--card-bar sin
+     definir, usa el valor por defecto). Un escenario con funciones propias (importado desde
+     Word) sí fija --card-bar por tarjeta, con los colores de marca de TIBOX — ver renderCharGrid. */
   .char-card::before{
     content:''; position:absolute; top:0; left:0; right:0; height:3px;
-    background:rgba(255,255,255,0.35);
+    background:var(--card-bar, rgba(255,255,255,0.35));
   }
-  .char-card:hover{transform:translateY(-3px); box-shadow:0 22px 40px -20px rgba(255,255,255,0.3);}
+  /* Hover sutil pero claramente interactivo: leve elevación + borde iluminado, con un halo
+     del acento de la función/escenario (--glow, ya seteado por JS) en vez de un blanco
+     genérico — así cada tarjeta "enciende" en su propio color al pasar el cursor. */
+  .char-card:hover{
+    transform:translateY(-4px); border-color:rgba(255,255,255,0.28);
+    background-color:rgba(255,255,255,0.055);
+    box-shadow:0 22px 40px -20px rgba(0,0,0,0.6), 0 0 0 1px var(--glow, rgba(255,255,255,0.22)) inset, 0 0 26px -8px var(--glow, rgba(255,255,255,0.3));
+  }
   .char-card .c-head{display:flex; align-items:center; gap:9px;}
   .char-card .c-icon{
     width:35px; height:35px; border-radius:10px; flex-shrink:0;
@@ -340,15 +385,24 @@
        una tira casi invisible en vez de mostrar el texto completo. */
     flex-shrink:0;
   }
+  /* "Ejecuta"/"No participa" + el responsable, como una insignia compacta y discreta en
+     vez de una fila de ancho completo con línea divisoria — el label queda como un chip
+     propio adentro del badge, y el valor lo acompaña como texto simple. */
   .char-card .c-foot{
-    display:flex; align-items:baseline; gap:8px; margin-top:auto; padding-top:6px;
-    border-top:1px solid rgba(255,255,255,0.08); font-family:var(--mono);
+    display:inline-flex; align-items:center; gap:6px; align-self:flex-start; margin-top:auto;
+    padding:3px 10px 3px 3px; border-radius:999px; font-family:var(--mono);
+    background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.10);
   }
-  .char-card .c-foot-label{font-size:var(--fs-3xs); letter-spacing:0.12em; text-transform:uppercase; color:var(--muted-2);}
-  .char-card .c-foot-value{font-size:var(--fs-3xs); color:var(--text); margin-left:auto; text-align:right;}
+  .char-card .c-foot-label{
+    font-size:var(--fs-4xs); letter-spacing:0.1em; text-transform:uppercase; color:var(--muted-2);
+    background:rgba(255,255,255,0.08); padding:3px 8px; border-radius:999px; line-height:1.4;
+  }
+  .char-card .c-foot-value{font-size:var(--fs-3xs); color:var(--text); font-weight:600;}
+  /* Claramente desaturada y apagada, para que no compita con las opciones activas de la
+     ronda: grayscale completo (antes 0.65, parcial) más un toque de oscurecimiento. */
   .char-card.char-off{
-    opacity:0.34; cursor:not-allowed; filter:grayscale(0.65);
-    box-shadow:none; pointer-events:none;
+    opacity:0.38; cursor:not-allowed; filter:grayscale(1) brightness(0.7);
+    box-shadow:none; pointer-events:none; border-color:rgba(255,255,255,0.06);
   }
   .char-card.char-off::before{background:var(--border);}
   .char-card.correct-flash{border-color:var(--green);}
@@ -388,11 +442,39 @@
   .client-row{display:flex; align-items:flex-end; gap:14px; flex-wrap:wrap;}
   .client-actions{display:flex; gap:8px; flex-wrap:wrap;}
 
-  .intro-card{display:grid; grid-template-columns:1fr 1fr; gap:32px;}
-  @media (max-width:760px){.intro-card{grid-template-columns:1fr;}}
-  .intro-col-form{display:flex; flex-direction:column; gap:14px;}
-  .intro-col-desc{border-left:1px solid var(--border); padding-left:32px;}
-  @media (max-width:760px){.intro-col-desc{border-left:none; border-top:1px solid var(--border); padding-left:0; padding-top:20px;}}
+  /* "Qué es" con el texto a la izquierda y, a la derecha, 3 ideas clave destacadas.
+     Ya no es grid con columnas por fracción (1.7fr/1fr): eso estiraba la columna del
+     título a un ancho fijo del panel sin importar qué tan corto fuera el texto,
+     dejando un hueco enorme antes de llegar a la lista. Con flex, cada bloque mide
+     lo que su contenido necesita y el grupo se centra como una unidad en el ancho
+     del panel — el espacio sobrante queda repartido a los lados, no metido en medio. */
+  .intro-panel-split{display:flex; align-items:center; justify-content:center; gap:48px; flex-wrap:wrap;}
+  .intro-panel-text{flex:0 1 auto;}
+  .intro-highlights{
+    list-style:none; margin:0; padding:0 0 0 32px; display:flex; flex-direction:column; gap:16px;
+    border-left:1px solid var(--border); flex:0 1 auto;
+  }
+  /* Ojo con "gap" en un <li> flex: si el texto en negrita y el resto de la frase
+     quedan como hijos directos sueltos, cada uno cuenta como un flex-item aparte y
+     el gap mete un espacio extra ENTRE ellos (el hueco raro entre "Sin tocar" y
+     "sistemas reales"). Por eso el texto completo de cada punto vive en un solo
+     span (.intro-hl-text): un único flex-item, con el <b> fluyendo como texto
+     normal adentro — así el espacio entre palabras es el espacio normal de una
+     frase, no el gap del contenedor. */
+  .intro-highlights li{display:flex; align-items:center; gap:12px; text-align:left;}
+  .intro-hl-text{font-family:var(--display); font-weight:700; font-size:var(--fs-enlarged); color:var(--text);}
+  .intro-highlights li b, .rule-step-title b{color:var(--blue); font-weight:800;}
+  /* Mismo círculo naranja (color del botón #continueBtn) que los números de paso,
+     para que ambos sistemas de íconos de esta pantalla se lean como una sola familia. */
+  .intro-hl-icon{
+    flex-shrink:0; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:var(--fs-sm); color:#fff; background:linear-gradient(135deg,#FF8A3D,#F0401D);
+    box-shadow:0 6px 16px -8px rgba(240,64,29,0.6);
+  }
+  @media (max-width:760px){
+    .intro-panel-split{flex-direction:column; align-items:stretch; gap:20px;}
+    .intro-highlights{border-left:none; border-top:1px solid var(--border); padding:18px 0 0;}
+  }
   /* ---------- pantalla de bienvenida (reglas del ejercicio) ---------- */
   /* La barra superior (.topbar) ya no se oculta acá: se ve siempre del mismo tamaño y con el
      logo en el mismo lugar en todas las pantallas, incluida la de bienvenida. El título grande
@@ -410,50 +492,79 @@
      libre en vez de dejarlo todo abajo. Si el contenido llegara a ser más alto que la pantalla
      (ventana muy baja, zoom alto), #screen-intro simplemente crece y la página vuelve a
      scrollear — nunca se recorta contenido. */
-  #screen-intro{display:flex; flex-direction:column; min-height:calc(100vh - var(--topbar-h)); min-height:calc(100dvh - var(--topbar-h));}
+  #screen-intro{display:flex; flex-direction:column; justify-content:center; min-height:calc(100vh - var(--topbar-h)); min-height:calc(100dvh - var(--topbar-h));}
   /* Una sola columna: el perfil/playbook ya no vive acá (es el paso 1 del wizard de
-     Configuración), así que esta pantalla vuelve a ser solo contenido de lectura. */
+     Configuración), así que esta pantalla vuelve a ser solo contenido de lectura.
+     Ya no fuerza flex:1 (que la estiraba a ocupar todo el alto sobrante, dejando un
+     colchón de espacio vacío bajo el botón ahora que los paneles son más bajos sin
+     los párrafos) — su alto es el del contenido, y #screen-intro centra el conjunto
+     verticalmente en el espacio disponible. */
   .intro-shell{
-    flex:1; display:flex; flex-direction:column; align-items:center;
-    gap:20px; max-width:900px; width:100%; margin:0 auto; padding:32px clamp(20px, 3vw, 48px);
+    display:flex; flex-direction:column; align-items:center;
+    gap:20px; max-width:1430px; width:100%; margin:0 auto; padding:32px clamp(20px, 3vw, 48px);
   }
   .intro-content{width:100%;}
   .intro-right-column{display:flex; flex-direction:column; gap:20px; min-width:0;}
   .intro-continue-btn{margin-top:4px; align-self:center;}
+  /* Selector por ID: .btn-cta:hover (definida más abajo en el archivo) tiene la misma
+     especificidad que una regla de clase y, al venir después, la pisaría — el ID gana
+     siempre y deja el translateY(-2px) + sombra más marcada específico de este botón. */
+  #continueBtn:hover{transform:translateY(-2px); box-shadow:0 22px 42px -14px rgba(240,64,29,0.95), 0 0 0 1px rgba(255,255,255,0.14) inset;}
   .intro-panel .section-title{margin-bottom:12px;}
-  /* Las tarjetas ocupan todo el ancho de la columna, pero el texto se limita a una
-     medida legible en vez de estirarse de borde a borde de la tarjeta. */
-  .intro-panel .section-sub{max-width:62ch;}
-  /* Los 5 pasos se acomodan en 2 columnas para aprovechar el ancho; el último (el cierre)
-     ocupa el ancho completo como remate de la secuencia. */
-  .rule-steps{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:22px 32px;}
-  .rule-step:last-child{grid-column:1 / -1;}
-  .rule-step{display:flex; gap:14px; align-items:flex-start;}
-  .rule-step-num{
-    flex-shrink:0; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center;
-    font-family:var(--mono); font-weight:700; font-size:var(--fs-sm); color:#0A1020;
-    background:linear-gradient(135deg,#0FC7F6,#0B8FD6); box-shadow:0 6px 16px -8px rgba(14,165,233,0.6);
+  /* El panel "Qué es" ahora es solo título (sin párrafo de cuerpo), así que su texto
+     se agranda para llenar el espacio y equilibrar visualmente la columna de destacados
+     de al lado, en vez de quedar un título chico flotando junto a una lista más alta. */
+  .intro-panel-split .section-title{font-size:var(--fs-2xl); margin-bottom:0;}
+  /* Línea vertical de "timeline" en una sola columna: conecta los 5 pasos en secuencia,
+     pasando por detrás de los círculos numerados (que la tapan al ser opacos) y visible
+     en el tramo entre una tarjeta y la siguiente. */
+  .rule-steps{display:flex; flex-direction:column; gap:12px; margin-top:26px; position:relative;}
+  .rule-steps::before{
+    content:''; position:absolute; z-index:0; left:33px; top:22px; bottom:22px; width:2px;
+    background:linear-gradient(to bottom, rgba(255,255,255,0.22), rgba(255,255,255,0.05));
   }
-  .rule-step-title{font-family:var(--display); font-weight:700; font-size:var(--fs-md); color:var(--text); margin-bottom:3px;}
-  .rule-step-desc{font-size:var(--fs-sm); line-height:1.55; color:var(--muted); margin:0; max-width:58ch;}
+  /* Cada paso es una tarjeta suave con hover: fondo semitransparente, borde sutil que se
+     resalta en naranjo y un leve desplazamiento hacia la derecha al pasar el cursor. */
+  .rule-step{
+    display:flex; gap:16px; align-items:center; position:relative; z-index:1;
+    padding:14px 18px; border-radius:14px; background:rgba(255,255,255,0.03);
+    border:1px solid rgba(255,255,255,0.08);
+    transition:transform .15s ease, border-color .15s ease, background-color .15s ease;
+  }
+  .rule-step:hover{transform:translateX(6px); border-color:rgba(255,138,61,0.45); background:rgba(255,255,255,0.055);}
+  .rule-step-num{
+    flex-shrink:0; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-family:var(--mono); font-weight:700; font-size:var(--fs-sm); color:#fff;
+    background:linear-gradient(135deg,#FF8A3D,#F0401D); box-shadow:0 6px 16px -8px rgba(240,64,29,0.6);
+  }
+  .rule-step-title{font-family:var(--display); font-weight:700; font-size:var(--fs-lg); color:var(--text); margin:0;}
   .playbook-panel{margin-top:var(--sp-5); margin-bottom:0;}
   @media (max-width:480px){
     .profile-actions{flex-direction:column; align-items:stretch;}
     .profile-actions .btn{width:100%; justify-content:center;}
   }
+  /* Zona de carga tipo "dropzone": borde punteado, ícono y texto de arrastre, con el
+     <input type="file"> anidado adentro (igual que antes) para que el <label> completo
+     sea clickeable sin necesitar for/id. El dragover real (arrastrar y soltar el
+     archivo) lo maneja app.js agregando/quitando la clase .dragover. */
+  .playbook-dropzone{
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:9px; text-align:center;
+    padding:28px 20px; margin-bottom:14px; border:2px dashed rgba(255,255,255,0.2); border-radius:14px;
+    background:rgba(255,255,255,0.025); cursor:pointer;
+    transition:border-color .15s ease, background-color .15s ease;
+  }
+  .playbook-dropzone:hover, .playbook-dropzone.dragover{border-color:#FF8A3D; background:rgba(255,138,61,0.07);}
+  .playbook-dropzone-icon{color:var(--muted-2); transition:color .15s ease;}
+  .playbook-dropzone:hover .playbook-dropzone-icon, .playbook-dropzone.dragover .playbook-dropzone-icon{color:#FF8A3D;}
+  .playbook-dropzone-text{font-size:var(--fs-sm); color:var(--muted); line-height:1.5;}
+  .playbook-dropzone-text b{color:#FF8A3D; font-weight:700;}
+  .playbook-dropzone-filename{
+    font-size:var(--fs-xs); font-weight:600; color:var(--text); max-width:100%;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .playbook-dropzone input{position:absolute; width:1px; height:1px; opacity:0; pointer-events:none;}
   .playbook-actions{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
-  .playbook-file{
-    display:flex; align-items:center; min-width:0; flex:1 1 220px; min-height:40px; padding:9px 12px;
-    border:1px dashed var(--border); border-radius:8px; background:var(--panel-2); color:var(--muted);
-    font-size:var(--fs-xs); cursor:pointer; transition:border-color .15s, color .15s, background .15s;
-  }
-  .playbook-file:hover{border-color:var(--blue); color:var(--text); background:var(--blue-dim);}
-  .playbook-file span{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-  .playbook-file input{position:absolute; width:1px; height:1px; opacity:0; pointer-events:none;}
   .playbook-status{min-height:1.4em; color:var(--green); font-size:var(--fs-xs); line-height:1.4; margin:10px 0 0;}
-  @media (max-width:700px){
-    .rule-steps{grid-template-columns:1fr;}
-  }
   @media (max-width:640px){
     .intro-welcome{padding:20px 20px 4px;}
     .intro-shell{padding:26px 20px;}
@@ -461,13 +572,9 @@
   @media (min-width:861px){
     .intro-shell{gap:16px; padding:16px clamp(20px, 3vw, 48px) 18px;}
     .intro-panel{padding:18px;}
-    .intro-panel .section-title{font-size:var(--fs-lg); margin-bottom:8px;}
-    .intro-panel .section-sub{font-size:var(--fs-xs); line-height:1.4;}
-    .rule-steps{gap:10px;}
-    .rule-step{gap:10px;}
-    .rule-step-num{width:26px; height:26px; font-size:var(--fs-xs);}
-    .rule-step-title{font-size:var(--fs-sm); margin-bottom:2px;}
-    .rule-step-desc{font-size:var(--fs-xs); line-height:1.35;}
+    .intro-panel .section-title{margin-bottom:8px;}
+    .intro-panel-split .section-title{margin-bottom:0;}
+    .rule-steps{gap:10px; margin-top:18px;}
   }
 
   .intro-desc-text{font-size:var(--fs-sm); line-height:1.6; color:var(--muted); margin:0 0 10px;}
@@ -507,7 +614,7 @@
   .acta-field{display:flex; flex-direction:column; gap:4px; padding:12px 14px; border-radius:10px; background:var(--panel-2); border:1px solid var(--border);}
   .acta-label{font-family:var(--mono); font-size:var(--fs-3xs); letter-spacing:0.08em; text-transform:uppercase; color:var(--muted);}
   .acta-value{font-size:var(--fs-sm); font-weight:600; color:var(--text);}
-  .field-row label{display:block; font-family:var(--mono); font-size:var(--fs-3xs); letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); margin-bottom:6px;}
+  .field-row label{display:block; font-family:var(--sans); font-weight:700; font-size:var(--fs-xs); letter-spacing:0.04em; text-transform:uppercase; color:#C7D2E3; margin-bottom:7px;}
 
   /* ---------- two-column game layout ---------- */
   .game-layout.grid4{display:grid; grid-template-columns:minmax(0,1fr); grid-template-rows:minmax(0,6fr) auto minmax(0,4fr); gap:12px; min-height:0; flex:1;}
@@ -651,7 +758,15 @@
   .answer-btn:focus-visible,.scenario-card:focus-visible,.char-card:focus-visible{outline:2px solid var(--blue);outline-offset:2px;}
   .game-action-bar{position:sticky;top:var(--topbar-h);z-index:20;background:linear-gradient(var(--bg) 70%,transparent);padding-bottom:10px;}
   .game-timer{padding:7px 11px;border:1px solid var(--green-dim);background:var(--green-dim);border-radius:8px;}
-  .story-panel{border-top:2px solid rgba(255,255,255,0.4);}
+  /* Antes era un borde sólido de 2px, bastante marcado; un degradado tenue como acento
+     superior (vía pseudo-elemento, no border-image, para no alterar los otros 3 bordes
+     que ya trae .panel) se siente más elegante y menos "técnico" en una tarjeta de lectura. */
+  .story-panel{position:relative;}
+  .story-panel::before{
+    content:''; position:absolute; top:-1px; left:18px; right:18px; height:1px;
+    background:linear-gradient(90deg, rgba(255,255,255,0.4), rgba(255,255,255,0.02));
+    pointer-events:none;
+  }
 
   .explanation-placeholder{padding:10px 12px;border:1px dashed var(--border);border-radius:8px;}
   .results-actions .btn{min-height:42px;}
@@ -780,32 +895,50 @@
     position:relative; overflow:hidden; isolation:isolate; cursor:pointer; text-align:left;
     border-radius:12px; padding:14px 16px; min-height:132px;
     display:flex; flex-direction:column; gap:0;
-    background-image:linear-gradient(158deg, #0F1B36 0%, #080F1E 100%);
-    border:1px solid rgba(255,255,255,0.08); border-bottom:2px solid rgba(255,255,255,0.35);
-    box-shadow:0 10px 20px rgba(0,0,0,0.4), 0 10px 22px -14px rgba(255,255,255,0.14);
-    transition:transform .16s ease, box-shadow .2s ease, border-color .16s ease;
+    /* Fondo propio de la tarjeta (antes solo el degradado, casi invisible contra el
+       --bg de la página) para que se lea como una superficie propia incluso sin
+       imagen de escenario. --scn-bg-image (seteada por JS solo en las tarjetas que
+       traen imagen, ver renderScenarioCard) se dibuja encima; sin esa variable
+       "none" no hace nada y solo queda el fondo + degradado. --scn-bg-pos, también
+       por JS, ajusta el encuadre por escenario (por defecto centrado). */
+    background-color:rgba(255,255,255,0.04);
+    background-image:linear-gradient(158deg, rgba(15,27,54,0.4) 0%, rgba(8,15,30,0.82) 100%), var(--scn-bg-image, none);
+    background-size:cover; background-position:var(--scn-bg-pos, center);
+    border:1px solid rgba(255,255,255,0.08);
+    box-shadow:0 10px 20px rgba(0,0,0,0.4);
+    transition:transform .16s ease, box-shadow .2s ease, border-color .16s ease, background-color .16s ease;
   }
   .scn-card:hover{
-    transform:translateY(-3px); border-color:rgba(56,189,248,0.4);
-    box-shadow:0 14px 26px rgba(0,0,0,0.45), 0 16px 30px -16px rgba(255,255,255,0.2);
+    transform:translateY(-4px); border-color:rgba(255,107,0,0.4);
+    box-shadow:0 8px 24px rgba(0,0,0,0.4);
   }
   .scn-card:focus-visible{outline:2px solid #38bdf8; outline-offset:2px;}
   .scn-head{display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:10px;}
+  /* Letra blanca en las tres piezas de texto de la tarjeta, con una sombra suave para que
+     siga siendo legible incluso sobre las tarjetas con imagen de fondo (--scn-bg-image). */
   .scn-badge{
-    display:inline-flex; align-items:center; gap:6px;
+    display:inline-flex; align-items:center; gap:8px;
     font-family:var(--mono); font-size:var(--fs-2xs); letter-spacing:0.04em;
-    padding:4px 10px; border-radius:20px; border:1px solid rgba(255,255,255,0.18);
-    background:rgba(255,255,255,0.06); color:#38bdf8;
+    color:#fff; text-shadow:0 1px 3px rgba(0,0,0,0.55);
   }
-  .scn-badge svg{flex-shrink:0; width:14px; height:14px;}
-  .scn-desc{font-size:var(--fs-2xs); color:var(--muted); line-height:1.4; margin:0 0 12px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
+  /* Ícono de cada categoría en su propio chip circular naranjo tenue — antes iba
+     suelto dentro de la píldora del badge, sin distinguirse como "ícono" aparte. */
+  .scn-icon{
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    width:24px; height:24px; border-radius:50%;
+    background:rgba(255,107,0,0.18); color:#FFAB70;
+  }
+  .scn-icon svg{width:13px; height:13px;}
+  .scn-desc{font-size:var(--fs-2xs); color:#fff; text-shadow:0 1px 3px rgba(0,0,0,0.55); line-height:1.4; margin:0 0 12px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
   .scn-fields{margin-top:auto;}
   /* Reemplaza el antiguo label "Objetivo" + valor: el valor solo, como badge, sin
-     texto redundante repetido en cada una de las 10 tarjetas. */
+     texto redundante repetido en cada una de las 10 tarjetas. Píldora neutra sutil
+     (blanco muy transparente) en vez de negro puro, para que no desentone sobre las
+     tarjetas con imagen de fondo ni sobre las que no la tienen. */
   .scn-target{
     display:inline-flex; align-items:center; font-family:var(--mono); font-size:var(--fs-4xs);
-    letter-spacing:0.04em; color:var(--muted-2); padding:3px 9px; border-radius:999px;
-    border:1px solid var(--border); max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    letter-spacing:0.04em; color:#fff; text-shadow:0 1px 3px rgba(0,0,0,0.55); padding:4px 10px; border-radius:999px;
+    border:1px solid rgba(255,255,255,0.16); background:rgba(255,255,255,0.08); max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
   /* LED de estado: apagado (gris, sin brillo) hasta que la tarjeta se selecciona. */
   .scn-check{
@@ -823,17 +956,17 @@
     cursor:pointer; transition:background .15s ease, color .15s ease, border-color .15s ease;
   }
   .scn-export-btn:hover{background:var(--blue-dim); border-color:var(--blue); color:var(--text);}
+  /* Estado seleccionado: borde sólido naranjo + relleno tenue del mismo tono (en vez
+     del cian usado en el resto de la app) para que la tarjeta activa sea inconfundible
+     de un vistazo, y el LED de estado (ya en la esquina superior, junto al botón de
+     exportar) pasa a naranjo brillante con resplandor propio como marca de selección. */
   .scn-card.selected{
-    border-color:#38bdf8; transform:translateY(-2px);
-    box-shadow:0 14px 26px rgba(0,0,0,0.45), 0 0 15px rgba(56,189,248,0.25);
-  }
-  .scn-card.selected::after{
-    content:''; position:absolute; inset:0; border-radius:12px; pointer-events:none;
-    box-shadow:0 0 0 1px #38bdf8 inset;
+    border:2px solid #FF6B00; background-color:rgba(255,107,0,0.1);
+    box-shadow:0 0 16px rgba(255,107,0,0.25);
   }
   .scn-card.selected .scn-check{
-    background:#38bdf8; border-color:#38bdf8; color:#04121F;
-    box-shadow:0 0 8px rgba(56,189,248,0.8);
+    background:#FF6B00; border-color:#FF6B00; color:#fff;
+    box-shadow:0 0 8px rgba(255,107,0,0.8);
   }
 
   /* ---------- panel de cliente ---------- */
@@ -870,6 +1003,7 @@
     --fs-xl:1.25rem;     /* 20px · títulos de sección */
     --fs-2xl:1.75rem;    /* 28px · título del riel */
     --fs-3xl:2.25rem;    /* 36px · display */
+    --fs-enlarged:calc(var(--fs-sm) * 1.2); /* cuerpo de "Las reglas del ejercicio" y del paso 1 del wizard */
     /* espaciado */
     --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:22px; --sp-6:30px; --sp-7:40px;
     /* radios */
@@ -948,23 +1082,41 @@
      cada uno con height:auto (nada de position:absolute ni alturas fijas) para que
      nunca haya tarjetas solapadas ni contenido recortado.
      ============================================================ */
-  body.setup-mode .wrap{max-width:1100px; width:100%; margin:0 auto; padding:var(--sp-6) clamp(20px, 3vw, 48px) 0;}
+  body.setup-mode .wrap{max-width:1430px; width:100%; margin:0 auto; padding:var(--sp-6) clamp(20px, 3vw, 48px) 0;}
 
   .wizard{display:flex; flex-direction:column; align-items:stretch; gap:var(--sp-5); width:100%;}
-  /* Deja aire abajo para que la barra fixed (sacada del flujo normal) nunca tape
-     el final del contenido del último paso. */
-  .wizard-body{width:100%; padding-bottom:calc(88px + env(safe-area-inset-bottom));}
+  /* Paso 1: "Perfil del cliente" y "Material opcional" son dos tarjetas propias, en dos
+     columnas que entre ambas ocupan el ancho completo del paso (no una tarjeta con las dos
+     secciones apiladas adentro, como antes). */
+  .wizard-step1-cols{display:grid; grid-template-columns:1fr 1fr; gap:var(--sp-5); align-items:start;}
+  .wizard-step1-cols .wizard-col{margin-bottom:0; height:100%;}
+  .wizard-step1-cols .playbook-panel{margin-top:0;}
+  /* Mismo tamaño de letra agrandado (1.2x) que "Las reglas del ejercicio" en el texto de
+     ambas columnas del paso 1. */
+  .wizard-step1-cols .section-sub, .wizard-step1-cols label, .wizard-step1-cols input,
+  .wizard-step1-cols .playbook-dropzone-text, .wizard-step1-cols .playbook-status{font-size:var(--fs-enlarged);}
+  @media (max-width:820px){
+    .wizard-step1-cols{grid-template-columns:1fr;}
+  }
+  /* La navegación Atrás/Siguiente ahora vive en el topbar (.setup-nav), no en una
+     barra fija abajo, así que ya no hace falta reservar aire extra al final. */
+  .wizard-body{width:100%; padding-bottom:var(--sp-6);}
   .wizard-step{height:auto;}
 
-  .wizard-stepper{display:flex; justify-content:space-between; align-items:center; gap:8px; width:100%; max-width:100%; box-sizing:border-box;}
+  /* Contenedor propio (fondo + borde) para que el stepper se lea como una barra
+     distinta del panel de fondo, no como texto flotando directo sobre --bg. */
+  .wizard-stepper{
+    display:flex; justify-content:space-between; align-items:center; gap:8px; width:100%; max-width:100%; box-sizing:border-box;
+    background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:6px;
+  }
   .wizard-step-item{
     flex:1; min-width:0; display:flex; align-items:center; justify-content:center; gap:8px;
-    padding:9px 10px; border-radius:999px; border:1px solid var(--border); background:var(--panel-2);
-    font-family:var(--mono); font-size:var(--fs-3xs); letter-spacing:0.04em; color:var(--muted-2);
+    padding:9px 10px; border-radius:999px; border:1px solid transparent; background:transparent;
+    font-family:var(--mono); font-size:var(--fs-3xs); letter-spacing:0.04em; color:#AEB9CC;
     cursor:default; transition:color .2s, border-color .2s, background .2s;
   }
   .wizard-step-item.clickable{cursor:pointer;}
-  .wizard-step-item.clickable:hover{border-color:var(--muted-2); color:var(--text);}
+  .wizard-step-item.clickable:hover{border-color:rgba(255,255,255,0.16); color:var(--text); background:rgba(255,255,255,0.04);}
   .wizard-step-n{
     width:20px; height:20px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
     background:var(--panel-3); font-size:var(--fs-4xs); color:inherit;
@@ -972,47 +1124,62 @@
   /* Único texto sin ancho fijo del grupo: si el contenedor se angosta (mobile, 3
      columnas de igual ancho) trunca con "…" en vez de romper en dos líneas apretadas. */
   .wizard-step-label{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;}
-  .wizard-step-item.active{color:#CFF7FA; border-color:rgba(14,165,233,0.55); background:var(--blue-dim);}
-  .wizard-step-item.active .wizard-step-n{background:var(--blue); color:#04121F;}
+  /* Paso activo: pill naranja (color corporativo, el mismo de #continueBtn y los
+     círculos numerados de la pantalla de bienvenida) sobre fondo semitransparente. */
+  .wizard-step-item.active{color:#FFDAC0; border-color:rgba(255,138,61,0.55); background:rgba(255,138,61,0.14);}
+  .wizard-step-item.active .wizard-step-n{background:linear-gradient(135deg,#FF8A3D,#F0401D); color:#fff;}
   .wizard-step-item.done{color:var(--green);}
   .wizard-step-item.done .wizard-step-n{background:var(--green-dim); color:var(--green);}
 
   .wizard-step3-summary{font-size:var(--fs-sm); color:var(--muted); margin:0 0 var(--sp-4);}
   .profile-actions{display:flex; gap:var(--sp-2); flex-wrap:wrap; margin-top:var(--sp-3);}
+  /* Botones del Paso 1 del wizard: primarios en naranjo corporativo (mismo gradiente
+     que #continueBtn, para no sumar un tercer tono de naranjo distinto en la misma
+     pantalla) y los secundarios en estilo ghost/outline explícito. Va por ID —
+     .btn-primary sigue verde/cian en el resto de la app (ej. "Ver informe
+     ejecutivo →"), esto no debía tocar esos otros botones. */
+  #saveProfileBtn, #loadPlaybookBtn{
+    background:linear-gradient(135deg,#FF8A3D,#F0401D); border-color:transparent; color:#fff;
+    box-shadow:0 8px 24px -10px rgba(240,64,29,0.55), 0 0 0 1px rgba(255,255,255,0.10) inset;
+  }
+  #saveProfileBtn:hover, #loadPlaybookBtn:hover{
+    box-shadow:0 10px 28px -8px rgba(240,64,29,0.7), 0 0 0 1px rgba(255,255,255,0.14) inset; filter:brightness(1.05);
+  }
+  #profilesToggleBtn, #downloadTemplateBtn{
+    background:transparent; border-color:rgba(255,255,255,0.22); color:#D7E2F2;
+  }
+  #profilesToggleBtn:hover, #downloadTemplateBtn:hover{
+    background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.38);
+  }
 
-  /* Barra inferior flotante: position:fixed (no sticky) para que quede fija de
-     verdad sin importar el largo del paso actual ni su scroll. Fondo translúcido +
-     blur en vez de una franja sólida, y sin línea dura arriba (solo una sombra
-     suave hacia arriba para separarla del contenido). Mismo tratamiento de
-     safe-area que ya usa el resto de la app para no quedar tapada por la barra
-     de Safari / home indicator. */
-  .wizard-nav{
-    position:fixed; left:0; right:0; bottom:0; z-index:80;
-    padding:var(--sp-3) clamp(20px, 3vw, 48px) calc(var(--sp-4) + env(safe-area-inset-bottom));
-    background:rgba(7,14,30,0.55);
-    box-shadow:0 -12px 24px -16px rgba(0,0,0,0.5);
-    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+  /* Navegación del wizard (Atrás / Siguiente): vive en la barra superior, igual que
+     los controles del ejercicio en curso (.game-head) — no una franja aparte abajo.
+     Solo se muestra en body.setup-mode (ver más abajo); en el resto de las pantallas
+     (intro, juego) queda oculta con display:none. */
+  .setup-nav{display:none; align-items:center; gap:8px;}
+  body.setup-mode .setup-nav{display:flex;}
+  /* Mismo alto, padding, radio, tamaño de letra y peso para los dos botones (antes
+     .btn y .btn-cta traían valores propios — sobre todo font-size distinto, que los
+     hacía verse de tamaño distinto aunque el alto coincidiera). Más chicos que el
+     resto de los .btn/.btn-cta de la app para que quepan cómodos en el topbar. */
+  .setup-nav .btn, .setup-nav .btn-cta{
+    display:inline-flex; align-items:center; justify-content:center; gap:6px; height:32px;
+    min-width:112px; padding:0 14px; border-radius:8px;
+    font-size:var(--fs-xs); font-weight:700;
   }
-  /* El fondo/blur de .wizard-nav sigue de borde a borde, pero los botones se
-     alinean al mismo ancho máximo que el resto del contenido (.wrap, 1100px) en
-     vez de quedar pegados a los bordes extremos de pantallas anchas. */
-  .wizard-nav-inner{
-    max-width:1100px; margin:0 auto; width:100%;
-    display:flex; align-items:center; justify-content:space-between; gap:var(--sp-3);
-  }
-  /* Mismo radio, alto y peso tipográfico para los dos botones (antes .btn y
-     .btn-cta traían valores distintos), e ícono+texto alineados con flex. */
-  .wizard-nav .btn, .wizard-nav .btn-cta{
-    display:inline-flex; align-items:center; gap:8px; height:44px; padding:0 20px; border-radius:10px; font-weight:700;
-  }
-  /* "Atrás" es un .btn genérico (borde/fondo casi invisibles por diseño); sobre
-     el fondo ahora translúcido necesita más contraste para seguir siendo legible. */
-  .wizard-nav #setupBackBtn{
+  .setup-nav .btn-cta svg{width:12px; height:12px;}
+  .setup-nav #setupBackBtn{
     border-color:rgba(255,255,255,0.28); color:#fff; background:rgba(255,255,255,0.06);
   }
-  .wizard-nav #setupBackBtn:hover{border-color:rgba(255,255,255,0.5); background:rgba(255,255,255,0.14);}
-  .wizard-nav .btn-cta:hover{box-shadow:0 0 15px rgba(255,100,0,0.4), 0 20px 38px -14px rgba(240,64,29,0.95), 0 0 0 1px rgba(255,255,255,0.14) inset;}
+  .setup-nav #setupBackBtn:hover{border-color:rgba(255,255,255,0.5); background:rgba(255,255,255,0.14);}
+  .setup-nav .btn-cta:hover{box-shadow:0 0 15px rgba(255,100,0,0.4), 0 20px 38px -14px rgba(240,64,29,0.95), 0 0 0 1px rgba(255,255,255,0.14) inset;}
   #setupNextBtn:disabled{opacity:.35; cursor:not-allowed; transform:none; filter:none; box-shadow:none;}
+  @media (max-width:640px){
+    /* .topbar-right ya pasa a ocupar el ancho completo en su propia fila (ver la
+       regla general más arriba); el status y la navegación se separan a los extremos
+       de esa fila en vez de quedar apretados uno junto al otro. */
+    .topbar-right{justify-content:space-between;}
+  }
   /* Spinner de carga: reemplaza la flecha en .loading. No hay ninguna acción
      async todavía detrás de "Comenzar ejercicio" (arranca el juego al toque),
      así que esta clase queda lista para usar pero nada la activa por ahora. */
