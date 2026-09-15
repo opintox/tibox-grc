@@ -747,6 +747,68 @@ function goToStep(n){
   updateBottomState();
 }
 
+// ---------------- reglas del ejercicio: detalle en modal al hacer clic ----------------
+// Mismo texto que tenían los pasos antes de dejarlos solo con título (ver historial):
+// se mantiene disponible bajo demanda en vez de ocupar espacio siempre visible.
+const RULE_DETAILS = {
+  1: {
+    title: 'Configuren la sesión',
+    body: 'Elijan el tipo de ataque a simular y marquen qué funciones participan hoy (TI, Legal, Comunicaciones, RRHH, Dirección — Seguridad y TI siempre están). Guarden el perfil del cliente: es lo último que falta para poder empezar.'
+  },
+  2: {
+    title: 'El incidente avanza en 5 etapas',
+    body: 'Detección → Clasificación → Contención → Recuperación → Cierre. Cada una plantea una situación nueva dentro del mismo caso, en orden.'
+  },
+  3: {
+    title: 'Decidan quién actúa',
+    body: 'Frente a cada situación, el equipo elige qué función debe hacerse cargo de esa acción específica. Elegir a alguien a quien no le corresponde cuenta como error.'
+  },
+  4: {
+    title: 'Decidan qué hacer',
+    body: 'Con la función correcta ya elegida, discutan entre varias alternativas y elijan la respuesta. Si se equivocan, se explica por qué antes de dejarlos reintentar.'
+  },
+  5: {
+    title: 'Cierren con el informe',
+    body: 'Al terminar la última etapa se genera un puntaje, un informe ejecutivo con lo que conviene reforzar, y un acta que pueden guardar o descargar.'
+  }
+};
+let activeRuleModal = null;
+function showRuleModal(ruleN){
+  const rule = RULE_DETAILS[ruleN];
+  if(!rule) return;
+  closeRuleModal();
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'ruleModal';
+  overlay.innerHTML = `
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="ruleModalTitle">
+      <div class="modal-head">
+        <div class="modal-title" id="ruleModalTitle">${escapeHtml(rule.title)}</div>
+        <button class="modal-close-btn" id="ruleModalClose" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal-message">${escapeHtml(rule.body)}</div>
+    </div>`;
+  document.body.appendChild(overlay);
+  activeRuleModal = overlay;
+  const onKey = e => { if(e.key === 'Escape') closeRuleModal(); };
+  overlay.addEventListener('mousedown', e => { if(e.target === overlay) closeRuleModal(); });
+  overlay.querySelector('#ruleModalClose').addEventListener('click', closeRuleModal);
+  document.addEventListener('keydown', onKey);
+  overlay._onKey = onKey;
+  overlay.querySelector('#ruleModalClose').focus();
+}
+function closeRuleModal(){
+  if(!activeRuleModal) return;
+  document.removeEventListener('keydown', activeRuleModal._onKey);
+  activeRuleModal.remove();
+  activeRuleModal = null;
+}
+document.querySelectorAll('.rule-step[data-rule]').forEach(el => {
+  const open = () => showRuleModal(el.dataset.rule);
+  el.addEventListener('click', open);
+  el.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); open(); } });
+});
+
 document.getElementById('continueBtn').addEventListener('click', enterSetup);
 document.getElementById('setupBackBtn').addEventListener('click', () => {
   if(currentSetupStep === 1) goHome();
@@ -1146,9 +1208,9 @@ function renderCharGrid(){
     el.style.setProperty('--a', a);
     el.style.setProperty('--a2', a2);
     el.style.setProperty('--glow', hexToRgba(a2, 0.55));
-    // La barra superior a color es solo para escenarios con funciones propias (ver
-    // .char-card::before en styles.css); los 6 roles estándar mantienen su diseño sin color.
-    if(rm !== DEFAULT_ROLE_META) el.style.setProperty('--card-bar', `linear-gradient(90deg, ${a}, ${a2})`);
+    // Mismo color plano (no degradado) que --p-bar en renderParticipants, para que la
+    // barra se vea idéntica en tamaño y efecto en ambas pantallas.
+    el.style.setProperty('--card-bar', a);
     el.setAttribute('role', 'button');
     el.setAttribute('tabindex', activo ? '0' : '-1');
     if(!activo){ el.setAttribute('aria-disabled', 'true'); }

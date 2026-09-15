@@ -130,22 +130,35 @@
   /* ---------- participants table ---------- */
   table.ptable{width:100%; border-collapse:collapse;}
 
-  .participants-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; align-items:flex-start;}
+  /* Misma grilla (3 columnas, gap 16px, stretch) que .char-grid en el juego — con
+     align-items:stretch (antes flex-start) todas las tarjetas de una fila quedan a la
+     misma altura sin importar cuánto texto tenga la descripción de cada una. */
+  .participants-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:16px; align-items:stretch;}
   @media (max-width:1000px){.participants-grid{grid-template-columns:repeat(2,1fr);}}
   @media (max-width:560px){.participants-grid{grid-template-columns:1fr;}}
-  /* La barra inferior toma el mismo acento que el ícono de esa función (--p-bar, seteada
-     por JS en renderParticipants con el mismo color exacto que roleIconChipHtml usa para
-     el ícono) — antes quedaba fija en blanco para las 6 funciones sin importar el color
-     del chip de al lado. */
-  .p-card{padding:14px 16px; border-radius:12px; border:1px solid var(--border); border-bottom:2px solid var(--p-bar, rgba(255,255,255,0.35)); background:var(--panel-2); box-shadow:0 10px 22px -14px rgba(255,255,255,0.28); transition:opacity .15s;}
+  /* Misma estructura base que .char-card (juego): columna flex con la descripción
+     creciendo para absorber el espacio sobrante, así el pie (Empresa/+Agregar) siempre
+     queda en el borde inferior y las tarjetas de una fila se ven parejas en alto — antes
+     el alto lo daba solo el contenido, sin piso mínimo ni reparto de espacio interno. */
+  .p-card{
+    padding:16px; border-radius:12px; border:1px solid rgba(255,255,255,0.1); box-sizing:border-box;
+    border-bottom:2px solid var(--p-bar, rgba(255,255,255,0.35)); background:rgba(15,23,42,0.6);
+    box-shadow:0 10px 22px -14px rgba(255,255,255,0.28); transition:opacity .15s;
+    display:flex; flex-direction:column; justify-content:space-between; min-width:0; min-height:160px; height:100%;
+  }
 
   .scenario-grid .scenario-card.selected{border-bottom-color:#fff; box-shadow:0 10px 22px -14px rgba(255,255,255,0.55);}
 
-  .p-card.row-inactive{opacity:0.45;}
-  .p-card-head{display:flex; align-items:flex-start; gap:10px; margin-bottom:10px;}
+  /* Misma opacidad que .char-off (juego) para que una función inactiva se vea igual de
+     apagada en las dos pantallas. */
+  .p-card.row-inactive{opacity:0.55;}
+  .p-card-head{display:flex; align-items:flex-start; gap:10px; margin-bottom:10px; flex:0 0 auto;}
   .p-card-head input[type="checkbox"]{width:17px; height:17px; accent-color:var(--green); cursor:pointer; margin-top:2px; flex-shrink:0;}
-  .p-card-desc{font-size:var(--fs-2xs); color:var(--muted); line-height:1.4; margin:6px 0 12px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
-  .p-card-fields{display:flex; flex-direction:column; gap:6px;}
+  /* Sin line-clamp/overflow:hidden (cortaba a 2 líneas) ni scroll: el texto completo
+     entra holgado con este tamaño/interlineado — las descripciones reales son siempre
+     cortas (una frase), así que en la práctica rara vez pasan de 1-2 líneas igual. */
+  .p-card-desc{font-size:var(--fs-sm); color:var(--muted); line-height:1.35; margin:8px 0; overflow:visible; flex:1 1 auto;}
+  .p-card-fields{display:flex; flex-direction:column; gap:6px; flex:0 0 auto;}
   .p-card-field{display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:var(--fs-xs);}
   .p-card-field-label{font-family:var(--mono); font-size:var(--fs-4xs); letter-spacing:0.06em; color:var(--muted-2); text-transform:uppercase; flex-shrink:0; width:64px;}
   .p-card-field-value{cursor:pointer; text-align:right; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
@@ -246,7 +259,17 @@
   }
   .modal-title{font-family:var(--display); font-weight:800; font-size:var(--fs-lg); margin-bottom:10px;}
   .modal-message{font-size:var(--fs-sm); color:var(--muted); line-height:1.55; margin-bottom:20px;}
+  .modal-message:last-child{margin-bottom:0;}
   .modal-actions{display:flex; justify-content:flex-end; gap:10px;}
+  /* Cabecera título + botón ✕ (modal de detalle de regla, sin fila de acciones al pie). */
+  .modal-head{display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:10px;}
+  .modal-head .modal-title{margin-bottom:0;}
+  .modal-close-btn{
+    flex-shrink:0; width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center;
+    background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14); color:var(--muted);
+    font-size:var(--fs-sm); line-height:1; cursor:pointer; transition:background .15s ease, color .15s ease;
+  }
+  .modal-close-btn:hover{background:rgba(255,255,255,0.12); color:var(--text);}
 
   .hidden{display:none !important;}
 
@@ -328,9 +351,12 @@
   .mini-bar-fill{height:100%; border-radius:3px; transition:width .25s ease;}
   .mini-bar-val{font-family:var(--mono); font-size:var(--fs-3xs); width:16px; text-align:right; flex-shrink:0;}
 
-  /* Selección de funciones: el grid se adapta a la cantidad real de opciones.
-     Con 2 opciones cada tarjeta ocupa exactamente el 50% del ancho disponible. */
-  .char-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(0,1fr)); gap:10px; width:100%; align-content:start; grid-auto-rows:minmax(92px, auto); padding-bottom:2px;}
+  /* Selección de funciones: el grid se adapta a la cantidad real de opciones (2 a 6 según
+     el escenario) — a diferencia de .participants-grid, que siempre tiene 6 tarjetas fijas
+     y por eso puede ser siempre 3 columnas. Con 2 opciones cada tarjeta ocupa el 50% del
+     ancho; forzar 3 columnas fijas acá dejaría una tarjeta sola y estirada en escenarios
+     con menos funciones activas. Mismo gap (16px) y stretch que .participants-grid. */
+  .char-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:16px; width:100%; align-items:stretch; align-content:start; grid-auto-rows:minmax(160px, auto); padding-bottom:2px;}
   .char-grid.count-1{grid-template-columns:minmax(0,1fr);}
   .char-grid.count-2{grid-template-columns:repeat(2,minmax(0,1fr));}
   .char-grid.count-3{grid-template-columns:repeat(3,minmax(0,1fr));}
@@ -342,30 +368,29 @@
   @media (max-width:440px){
     .char-grid,.char-grid.count-2,.char-grid.count-3,.char-grid.count-4,.char-grid.count-5,.char-grid.count-6{grid-template-columns:1fr;}
   }
+  /* Misma barra de acento que .p-card (Participantes): abajo, 2px, color plano — antes
+     era una franja de 3px arriba con degradado de dos tonos; ahora es el mismo mecanismo
+     (border-bottom) y el mismo grosor/efecto en ambas pantallas. --card-bar la fija JS con
+     el acento de la función (mismo valor que --p-bar en renderParticipants). */
+  /* Mismo fondo/borde que .p-card (Participantes) — antes .char-card tenía un
+     degradado translúcido-blanco propio que, aunque sutil, se veía como un material
+     distinto al panel sólido de Participantes. Ahora ambas usan el mismo relleno. */
   .char-card{
     position:relative; overflow:hidden; cursor:pointer; text-align:left; min-width:0;
-    display:flex; flex-direction:column; gap:5px; padding:11px 15px 10px; min-height:92px;
-    border-radius:var(--radius-lg); border:1px solid rgba(255,255,255,0.10);
-    /* Fondo oscuro translúcido en vez del degradado sólido anterior (#0C1730→#080F1E):
-       deja ver un poco del panel de fondo, más "vidrio suave" que placa opaca. */
-    background-color:rgba(255,255,255,0.035);
-    background-image:linear-gradient(158deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%);
+    display:flex; flex-direction:column; justify-content:space-between; gap:5px;
+    padding:16px; min-height:160px; height:100%; box-sizing:border-box;
+    border-radius:var(--radius-lg); border:1px solid rgba(255,255,255,0.1);
+    border-bottom:2px solid var(--card-bar, rgba(255,255,255,0.35));
+    background:rgba(15,23,42,0.6);
     box-shadow:0 16px 30px -22px rgba(0,0,0,0.55);
     transition:transform .18s ease, box-shadow .2s ease, border-color .18s ease, background-color .18s ease;
-  }
-  /* Sin color por función en los 6 roles estándar: la barra queda blanca (--card-bar sin
-     definir, usa el valor por defecto). Un escenario con funciones propias (importado desde
-     Word) sí fija --card-bar por tarjeta, con los colores de marca de TIBOX — ver renderCharGrid. */
-  .char-card::before{
-    content:''; position:absolute; top:0; left:0; right:0; height:3px;
-    background:var(--card-bar, rgba(255,255,255,0.35));
   }
   /* Hover sutil pero claramente interactivo: leve elevación + borde iluminado, con un halo
      del acento de la función/escenario (--glow, ya seteado por JS) en vez de un blanco
      genérico — así cada tarjeta "enciende" en su propio color al pasar el cursor. */
   .char-card:hover{
     transform:translateY(-4px); border-color:rgba(255,255,255,0.28);
-    background-color:rgba(255,255,255,0.055);
+    background-color:rgba(30,41,59,0.7);
     box-shadow:0 22px 40px -20px rgba(0,0,0,0.6), 0 0 0 1px var(--glow, rgba(255,255,255,0.22)) inset, 0 0 26px -8px var(--glow, rgba(255,255,255,0.3));
   }
   .char-card .c-head{display:flex; align-items:center; gap:9px;}
@@ -377,13 +402,16 @@
   }
   .char-card .c-icon svg{width:18px; height:18px;}
   .char-card .c-name{font-family:var(--display); font-weight:800; font-size:var(--fs-md); color:#fff; line-height:1.15;}
+  /* Sin line-clamp/overflow:hidden ni scroll (mismo criterio que .p-card-desc): el texto
+     completo siempre visible, con tamaño/interlineado pensado para que quepa holgado. */
   .char-card .c-desc{
-    font-size:var(--fs-xs); line-height:1.35; color:#9DACC6;
-    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
-    /* Sin esto, cuando la grilla estira la tarjeta a una altura ligeramente distinta a la
-       que necesitan sus 2 líneas, flexbox encoge esta caja y el line-clamp la recorta a
-       una tira casi invisible en vez de mostrar el texto completo. */
-    flex-shrink:0;
+    font-size:var(--fs-sm); line-height:1.35; color:#9DACC6; margin:8px 0; overflow:visible;
+    /* flex-grow:1 (mismo mecanismo que .p-card-desc): absorbe el espacio sobrante de la
+       tarjeta para que el pie quede siempre pegado abajo, en vez de solo el margin-top:auto
+       del pie — así todas las tarjetas de una fila (con min-height parejo por el grid en
+       stretch) quedan con la descripción y el pie alineados igual, sin importar cuánto
+       texto tenga cada una. */
+    flex:1 1 auto;
   }
   /* "Ejecuta"/"No participa" + el responsable, como una insignia compacta y discreta en
      vez de una fila de ancho completo con línea divisoria — el label queda como un chip
@@ -398,13 +426,16 @@
     background:rgba(255,255,255,0.08); padding:3px 8px; border-radius:999px; line-height:1.4;
   }
   .char-card .c-foot-value{font-size:var(--fs-3xs); color:var(--text); font-weight:600;}
-  /* Claramente desaturada y apagada, para que no compita con las opciones activas de la
-     ronda: grayscale completo (antes 0.65, parcial) más un toque de oscurecimiento. */
+  /* Apagada con solo opacidad (antes sumaba grayscale+brightness, que le quitaba
+     demasiado contraste al título y la descripción) para que no compita con las opciones
+     activas de la ronda pero el texto se siga leyendo bien — misma estructura/dimensiones
+     (min-height, padding, grid), nada colapsa ni desaparece de golpe. Misma opacidad que
+     .p-card.row-inactive en Participantes. */
   .char-card.char-off{
-    opacity:0.38; cursor:not-allowed; filter:grayscale(1) brightness(0.7);
+    opacity:0.55; cursor:not-allowed;
     box-shadow:none; pointer-events:none; border-color:rgba(255,255,255,0.06);
+    border-bottom-color:var(--border);
   }
-  .char-card.char-off::before{background:var(--border);}
   .char-card.correct-flash{border-color:var(--green);}
   .char-card.correct-flash::after{content:''; position:absolute; inset:0; border-radius:var(--radius-lg); box-shadow:0 0 0 2px var(--green) inset; pointer-events:none;}
   .char-card.wrong-flash{border-color:var(--red); animation:shake .3s;}
@@ -524,14 +555,17 @@
     background:linear-gradient(to bottom, rgba(255,255,255,0.22), rgba(255,255,255,0.05));
   }
   /* Cada paso es una tarjeta suave con hover: fondo semitransparente, borde sutil que se
-     resalta en naranjo y un leve desplazamiento hacia la derecha al pasar el cursor. */
+     resalta en naranjo y un leve desplazamiento hacia la derecha al pasar el cursor. Ahora
+     también son clicables (abren el detalle de esa regla en un modal), de ahí el cursor y
+     el estado de foco por teclado. */
   .rule-step{
     display:flex; gap:16px; align-items:center; position:relative; z-index:1;
     padding:14px 18px; border-radius:14px; background:rgba(255,255,255,0.03);
-    border:1px solid rgba(255,255,255,0.08);
+    border:1px solid rgba(255,255,255,0.08); cursor:pointer;
     transition:transform .15s ease, border-color .15s ease, background-color .15s ease;
   }
   .rule-step:hover{transform:translateX(6px); border-color:rgba(255,138,61,0.45); background:rgba(255,255,255,0.055);}
+  .rule-step:focus-visible{outline:2px solid #FF8A3D; outline-offset:2px;}
   .rule-step-num{
     flex-shrink:0; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center;
     font-family:var(--mono); font-weight:700; font-size:var(--fs-sm); color:#fff;
@@ -617,12 +651,41 @@
   .field-row label{display:block; font-family:var(--sans); font-weight:700; font-size:var(--fs-xs); letter-spacing:0.04em; text-transform:uppercase; color:#C7D2E3; margin-bottom:7px;}
 
   /* ---------- two-column game layout ---------- */
-  .game-layout.grid4{display:grid; grid-template-columns:minmax(0,1fr); grid-template-rows:minmax(0,6fr) auto minmax(0,4fr); gap:12px; min-height:0; flex:1;}
+  /* Mismo ancho de contenedor que la pantalla de Configuración (body.setup-mode .wrap,
+     1430px) — sin esto, .wrap quedaba en su máximo por defecto (1800px) solo en el juego,
+     y las tarjetas de función terminaban visiblemente más anchas que las de Participantes
+     en pantallas grandes, aunque el alto ya coincidiera. */
+  body.game-mode .wrap{max-width:1430px; margin:0 auto;}
+  /* La fila 3 (funciones/respuesta) ya no reparte el alto por proporción fija (antes
+     6fr/4fr, luego 5fr/5fr): con 2 filas de tarjetas de 160px, una proporción fija podía
+     quedarse corta según el viewport y forzarle scroll propio al grid de tarjetas — que es
+     justo el peor lugar para un scrollbar, porque son opciones clicables y una podía quedar
+     fuera de vista sin avisar. Con "auto" la fila 3 toma exactamente el alto que sus
+     tarjetas necesitan (nunca scrollea) y la fila 1 (la historia) se queda con lo que sobra;
+     si un relato es muy largo, es el panel de texto el que scrollea — más natural que
+     scrollear una grilla de opciones. */
+  .game-layout.grid4{display:grid; grid-template-columns:minmax(0,1fr); grid-template-rows:minmax(0,1fr) auto auto; gap:12px; min-height:0; flex:1;}
   .grid4-cell{padding:clamp(14px,1.35vw,20px); margin-bottom:0; overflow:auto; min-height:0; min-width:0; display:flex; flex-direction:column;}
+  /* Scrollbar flotante (solo aparece al pasar el mouse sobre el panel): pista siempre
+     transparente, thumb invisible en reposo y semi-transparente en :hover — para que el
+     panel de la historia (u otro que llegue a necesitar scroll) no se sienta genérico con
+     la barra por defecto del navegador siempre encima del texto. */
+  .grid4-cell{scrollbar-width:thin; scrollbar-color:transparent transparent; transition:scrollbar-color .2s ease;}
+  .grid4-cell:hover{scrollbar-color:rgba(255,255,255,0.22) transparent;}
+  .grid4-cell::-webkit-scrollbar{width:7px;}
+  .grid4-cell::-webkit-scrollbar-track{background:transparent;}
+  .grid4-cell::-webkit-scrollbar-thumb{background:transparent; border-radius:4px;}
+  .grid4-cell:hover::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.22);}
+  .grid4-cell::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.38);}
   .grid4-cell > .eyebrow{flex:0 0 auto;}
   #actionPanel > #charPanel, #actionPanel > #answerBlock{display:flex; flex-direction:column; min-height:0; height:100%;}
   #actionPanel .section-sub{flex:0 0 auto;}
-  #actionPanel .char-grid{flex:1 1 auto; min-height:0; overflow-y:auto;}
+  /* Sin scroll propio: con las tarjetas ya del mismo alto que en Participantes y la fila 3
+     del layout con más aire (ver .game-layout.grid4 arriba), las 6 caben sin necesitar un
+     scrollbar interno acá. .grid4-cell (el panel completo) conserva su overflow:auto como
+     respaldo general para casos extremos (viewport muy bajo + historia muy larga), pero ya
+     no es el .char-grid el que scrollea por su cuenta. */
+  #actionPanel .char-grid{flex:1 1 auto; min-height:0;}
   #storyPanel .ops-context{flex:0 0 auto;}
   #storyPanel #storyText{flex:0 1 auto;}
   .grid4-cell > *:last-child{margin-bottom:0;}
