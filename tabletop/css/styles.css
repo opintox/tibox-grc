@@ -81,10 +81,6 @@
   .wrap{max-width:1800px; width:100%; margin:0 auto; padding:34px clamp(20px, 3vw, 48px) 90px;}
   @media (max-height:820px){
     .wrap{padding-top:18px;}
-    .game-topline{margin-bottom:10px;}
-    .stepper{margin-bottom:10px;}
-    .global-progress{margin-bottom:10px;}
-    .game-action-bar{margin-bottom:10px; padding-top:8px;}
   }
   @media (max-width:640px){.wrap{padding:20px 14px 70px;}}
   @media (max-width:640px){.section-block{padding:18px;}}
@@ -103,29 +99,6 @@
      .intro-shell que los contiene ya es al menos así de ancho (ver más abajo), así que esto
      es el tope real que ve el usuario; se centra solo si el contenedor es más ancho todavía. */
   .section-block{padding:24px; margin-bottom:16px; max-width:1430px; width:100%; margin-left:auto; margin-right:auto;}
-
-  /* ---------- attack cards ---------- */
-  .scenario-grid{display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-bottom:10px;}
-  @media (max-width:900px){.scenario-grid{grid-template-columns:repeat(4,1fr);}}
-  @media (max-width:700px){.scenario-grid{grid-template-columns:repeat(3,1fr);}}
-  @media (max-width:520px){.scenario-grid{grid-template-columns:repeat(2,1fr); gap:8px;}}
-  @media (max-width:360px){.scenario-grid{grid-template-columns:1fr;}}
-  .scenario-card{
-    display:flex; flex-direction:column; align-items:center; text-align:center; gap:8px;
-    padding:14px 10px 12px; border-radius:12px; cursor:pointer; border:1px solid var(--border);
-    border-bottom:2px solid var(--accent, var(--border));
-    box-shadow:0 10px 20px -14px var(--accent-glow, transparent);
-    background:var(--panel-2); font-size:var(--fs-xs); font-weight:600; line-height:1.25;
-    transition:border-color .15s, background .15s, transform .15s, box-shadow .15s;
-  }
-  .scenario-card:hover{border-color:var(--muted-2); transform:translateY(-2px);}
-  .scenario-grid .scenario-card.selected{border-color:var(--blue); background:var(--blue-dim); color:#CFF7FA; border-bottom-color:var(--blue); box-shadow:0 10px 22px -14px rgba(14,165,233,0.7);}
-  .scenario-icon{
-    width:34px; height:34px; border-radius:9px; display:flex; align-items:center; justify-content:center;
-    flex-shrink:0; color:#fff;
-  }
-  .scenario-icon svg{width:17px; height:17px;}
-
 
   /* ---------- participants table ---------- */
   table.ptable{width:100%; border-collapse:collapse;}
@@ -147,8 +120,6 @@
     display:flex; flex-direction:column; justify-content:space-between; min-width:0; min-height:160px; height:100%;
   }
 
-  .scenario-grid .scenario-card.selected{border-bottom-color:#fff; box-shadow:0 10px 22px -14px rgba(255,255,255,0.55);}
-
   /* Misma opacidad que .char-off (juego) para que una función inactiva se vea igual de
      apagada en las dos pantallas. */
   .p-card.row-inactive{opacity:0.55;}
@@ -167,7 +138,6 @@
   .p-card-field-value:hover .undefined-chip{border-color:var(--blue); color:var(--blue);}
   .p-card-field-value:hover{color:var(--blue);}
   table.ptable th{text-align:left; font-family:var(--mono); font-size:var(--fs-3xs); letter-spacing:0.1em; color:var(--muted); text-transform:uppercase; padding:0 10px 10px; border-bottom:1px solid var(--border);}
-  table.ptable th.th-check{width:40px;}
   table.ptable td{padding:10px; border-bottom:1px solid var(--border-soft, var(--border)); vertical-align:middle;}
   table.ptable tr:last-child td{border-bottom:none;}
   table.ptable input[type="checkbox"]{width:17px; height:17px; accent-color:var(--green); cursor:pointer;}
@@ -323,8 +293,6 @@
   .sit-ask-step.on{color:#fff; border-style:solid; border-color:rgba(255,255,255,0.55); background:rgba(255,255,255,0.08);}
   .ops-context{font-size:var(--fs-2xs); font-style:italic; color:var(--muted); line-height:1.5; margin:0 0 12px; padding-bottom:10px; border-bottom:1px dashed var(--border);}
   .ops-context b{color:var(--muted); font-style:normal;}
-  .org-tag{font-family:var(--mono); font-size:var(--fs-4xs); letter-spacing:0.05em; opacity:0.7; font-weight:600;}
-
   .ring-legend-item{display:flex; align-items:center; gap:7px;}
   .ring-dot{width:8px; height:8px; border-radius:50%; flex-shrink:0;}
   .ring-legend-item b{font-family:var(--mono); margin-left:auto; padding-left:12px;}
@@ -448,30 +416,6 @@
   .answer-btn.chosen-wrong{border-color:var(--red); background:var(--red-dim);}
   .answer-btn:disabled{cursor:default;}
 
-  /* ---------- stepper ---------- */
-  .stepper{display:flex; align-items:flex-start; margin-bottom:16px;}
-  .step{display:flex; flex-direction:column; align-items:center; gap:8px; flex:1; min-width:0;}
-  .step-circle{width:30px; height:30px; border-radius:50%; border:2px solid var(--border); background:var(--panel-2); display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-size:var(--fs-xs); font-weight:700; color:var(--muted); transition:all .2s; flex-shrink:0;}
-  @media (max-width:480px){.step-circle{width:22px; height:22px; font-size:var(--fs-3xs);}}
-  .step-label{font-family:var(--mono); font-size:var(--fs-3xs); letter-spacing:0.05em; color:var(--muted); text-transform:uppercase; text-align:center; white-space:nowrap;}
-  @media (max-width:700px){.step-label{font-size:var(--fs-4xs);}}
-  @media (max-width:480px){.step-label{font-size:var(--fs-4xs); white-space:normal; line-height:1.2; letter-spacing:0.01em;} .stepper{gap:2px;} .step-line{margin:11px -4px 0;}}
-  .step.active .step-circle{border-color:var(--blue); background:var(--blue-dim); color:#CFF7FA; box-shadow:0 0 0 4px rgba(14,165,233,0.18);}
-  .step.active .step-label{color:var(--blue);}
-  .step.completed .step-circle{border-color:var(--green); background:var(--green-dim); color:var(--green);}
-  .step.completed .step-label{color:var(--green);}
-  .step-line{flex:1; height:2px; background:var(--border); margin:15px -8px 0; transition:background .3s;}
-  .step-line.filled{background:var(--green);}
-
-  .global-progress{margin-bottom:16px;}
-  .global-progress-label{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; font-family:var(--mono); font-size:var(--fs-2xs);}
-  .global-progress-label #globalProgressText{color:var(--text); font-weight:600;}
-  .global-progress-label #globalProgressRemaining{color:var(--muted);}
-  .global-progress-track{height:5px; background:var(--panel-3); border-radius:3px; overflow:hidden;}
-  .global-progress-fill{height:100%; background:linear-gradient(90deg, var(--blue), var(--purple)); transition:width .3s ease;}
-
-  .client-row{display:flex; align-items:flex-end; gap:14px; flex-wrap:wrap;}
-  .client-actions{display:flex; gap:8px; flex-wrap:wrap;}
 
   /* "Qué es" con el texto a la izquierda y, a la derecha, 3 ideas clave destacadas.
      Ya no es grid con columnas por fracción (1.7fr/1fr): eso estiraba la columna del
@@ -611,9 +555,6 @@
     .rule-steps{gap:10px; margin-top:18px;}
   }
 
-  .intro-desc-text{font-size:var(--fs-sm); line-height:1.6; color:var(--muted); margin:0 0 10px;}
-  .intro-desc-text:last-child{margin-bottom:0;}
-  .intro-desc-text b{color:var(--text);}
   .btn-sm{padding:8px 12px; font-size:var(--fs-xs);}
 
   .results-actions{display:flex; gap:10px; flex-wrap:wrap;}
@@ -716,17 +657,6 @@
     body.game-mode #screen-game{height:auto; overflow:visible;}
   }
   .grid4-scroll{overflow-y:auto;}
-  .game-action-bar{
-    display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
-    margin-bottom:14px; padding-top:12px; border-top:1px solid var(--border);
-  }
-  .game-action-bar .back-link{margin-bottom:0;}
-  .game-action-bar #restartGameBtn{width:auto; margin-top:0;}
-  @media (max-width:560px){
-    .game-action-bar{flex-direction:column; align-items:stretch;}
-    .game-action-bar #prevQuestionBtn, .game-action-bar #restartGameBtn{width:100%; text-align:center;}
-  }
-  .game-action-bar #restartGameBtn:disabled{opacity:0.35; cursor:not-allowed; filter:grayscale(0.4);}
   .explanation-placeholder{color:var(--muted-2); font-family:var(--mono); font-size:var(--fs-xs); font-style:italic; line-height:1.6;}
   /* La explicación dejó de ser un panel fijo: aparece como popout al responder. */
   .explain-pop{
@@ -763,9 +693,6 @@
   .explanation-item.is-wrong .ex-tag{color:var(--red);}
   .explanation-item .ex-opt{font-size:var(--fs-sm); font-weight:600; margin-bottom:5px;}
   .explanation-item .ex-why{font-size:var(--fs-xs); color:var(--muted); line-height:1.5;}
-  .back-link{background:none; border:none; color:var(--muted); font-family:var(--mono); font-size:var(--fs-2xs); cursor:pointer; padding:0; margin-bottom:16px; display:inline-flex; align-items:center; gap:6px;}
-  .back-link:hover{color:var(--text);}
-  .game-topline{display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:8px;}
   .game-timer{font-family:var(--mono); font-size:var(--fs-md); font-weight:700; color:var(--green); letter-spacing:0.04em;}
 
 
@@ -790,10 +717,6 @@
     .results-side{position:static; padding-left:0; border-left:none; padding-top:var(--sp-5); border-top:1px solid var(--border);}
     .results-side .donut-result-wrap{flex-direction:row; justify-content:center;}
   }
-  .results-head{
-    display:flex; align-items:center; justify-content:space-between; gap:var(--sp-4); flex-wrap:wrap;
-    padding-bottom:var(--sp-4); margin-bottom:var(--sp-5); border-bottom:1px solid var(--border);
-  }
   .grade-badge{display:flex; flex-direction:column; align-items:center; padding:14px 26px; border-radius:12px; border:1px solid var(--border); background:var(--panel-2); min-width:140px;}
   .grade-badge.grade-excelente{border-color:var(--green); background:var(--green-dim);}
   .grade-badge.grade-bueno{border-color:var(--blue); background:var(--blue-dim);}
@@ -802,24 +725,15 @@
   .grade-pct{font-family:var(--display); font-size:var(--fs-3xl); font-weight:800;}
   @media (max-width:480px){.grade-badge{min-width:0; width:100%; padding:12px 18px;}}
   .grade-label{font-family:var(--mono); font-size:var(--fs-2xs); letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); margin-top:4px;}
-  .result-stat{padding:16px 18px;}
-  .stat-label{font-family:var(--mono); font-size:var(--fs-3xs); color:var(--muted); letter-spacing:0.08em; text-transform:uppercase; margin-bottom:6px;}
-  .stat-value{font-size:var(--fs-xl); font-weight:700; font-family:var(--mono);}
 
   /* ---------- refinamientos visuales y de accesibilidad ---------- */
   :root{--focus-ring:rgba(14,165,233,0.28);--surface-hover:rgba(255,255,255,0.055);}
   ::selection{background:rgba(14,165,233,0.28);color:#fff;}
   .panel{box-shadow:0 1px 0 rgba(255,255,255,.045) inset,0 18px 45px -30px rgba(0,0,0,.75);}
   .section-block{scroll-margin-top:calc(var(--topbar-h) + 28px);}
-  .scenario-card{position:relative;overflow:hidden;min-height:118px;justify-content:center;}
-  .scenario-card::after{content:'';position:absolute;inset:0;background:linear-gradient(120deg,transparent 35%,rgba(255,255,255,.055),transparent 65%);transform:translateX(-120%);transition:transform .5s ease;pointer-events:none;}
-  .scenario-card:hover::after,.scenario-card.selected::after{transform:translateX(120%);}
-  .scenario-card.selected{transform:translateY(-1px);}
-  .scenario-card > span:last-child{max-width:150px;}
   .answer-btn{line-height:1.4;min-height:46px;}
   .answer-btn:hover:not(:disabled){background:var(--surface-hover);transform:translateX(2px);}
-  .answer-btn:focus-visible,.scenario-card:focus-visible,.char-card:focus-visible{outline:2px solid var(--blue);outline-offset:2px;}
-  .game-action-bar{position:sticky;top:var(--topbar-h);z-index:20;background:linear-gradient(var(--bg) 70%,transparent);padding-bottom:10px;}
+  .answer-btn:focus-visible,.char-card:focus-visible{outline:2px solid var(--blue);outline-offset:2px;}
   .game-timer{padding:7px 11px;border:1px solid var(--green-dim);background:var(--green-dim);border-radius:8px;}
   /* Antes era un borde sólido de 2px, bastante marcado; un degradado tenue como acento
      superior (vía pseudo-elemento, no border-image, para no alterar los otros 3 bordes
@@ -835,66 +749,8 @@
   .results-actions .btn{min-height:42px;}
   .game-session-badge{font-family:var(--mono);font-size:var(--fs-4xs);letter-spacing:.1em;color:var(--blue);padding:6px 9px;border:1px solid var(--blue-dim);background:var(--blue-dim);border-radius:7px;margin-right:auto;}
   .grade-meta{font-family:var(--mono);font-size:var(--fs-3xs);color:var(--muted);margin-top:6px;text-align:center;}
-  @media(max-width:700px){.game-action-bar{top:var(--topbar-h)}.scenario-card{min-height:104px}.game-layout.grid4{gap:12px}.grid4-cell{padding:18px;}}
+  @media(max-width:700px){.game-layout.grid4{gap:12px}.grid4-cell{padding:18px;}}
 
-  /* ============================================================
-     REDISEÑO — PANTALLA DE CONFIGURACIÓN (pantalla principal)
-     Lenguaje visual TIBOX: hero espacial, píldora con punto,
-     titular con acento, CTA naranja y tarjetas con degradado.
-     ============================================================ */
-
-  /* ---------- hero ---------- */
-  .setup-hero{
-    position:relative; overflow:hidden; border-radius:20px; margin-bottom:16px;
-    padding:clamp(26px,3.6vw,46px) clamp(22px,3.2vw,46px);
-    border:1px solid rgba(255,255,255,0.08);
-    background:
-      radial-gradient(120% 95% at 82% 6%, rgba(14,165,233,0.30), transparent 58%),
-      radial-gradient(95% 85% at 6% 96%, rgba(124,140,240,0.24), transparent 60%),
-      linear-gradient(158deg,#0A1226 0%,#0B1A34 46%,#060E1E 100%);
-    box-shadow:0 1px 0 rgba(255,255,255,0.05) inset, 0 26px 60px -34px rgba(0,0,0,0.9);
-  }
-  .setup-hero::before{
-    content:''; position:absolute; inset:0; pointer-events:none; opacity:0.7;
-    background-image:
-      radial-gradient(1.6px 1.6px at 8% 18%, #fff, transparent),
-      radial-gradient(1.2px 1.2px at 17% 62%, rgba(255,255,255,.8), transparent),
-      radial-gradient(1.7px 1.7px at 26% 30%, #fff, transparent),
-      radial-gradient(1.1px 1.1px at 34% 78%, rgba(255,255,255,.7), transparent),
-      radial-gradient(1.5px 1.5px at 43% 12%, #fff, transparent),
-      radial-gradient(1.2px 1.2px at 52% 52%, rgba(255,255,255,.75), transparent),
-      radial-gradient(1.8px 1.8px at 61% 86%, #fff, transparent),
-      radial-gradient(1.1px 1.1px at 69% 26%, rgba(255,255,255,.7), transparent),
-      radial-gradient(1.6px 1.6px at 76% 66%, #fff, transparent),
-      radial-gradient(1.2px 1.2px at 84% 40%, rgba(255,255,255,.8), transparent),
-      radial-gradient(1.4px 1.4px at 91% 74%, #fff, transparent),
-      radial-gradient(1.1px 1.1px at 96% 16%, rgba(255,255,255,.7), transparent),
-      radial-gradient(1.3px 1.3px at 12% 88%, rgba(255,255,255,.75), transparent),
-      radial-gradient(1.5px 1.5px at 47% 94%, #fff, transparent);
-  }
-  .setup-hero::after{
-    content:''; position:absolute; width:min(46vw,420px); aspect-ratio:1; border-radius:50%;
-    top:-22%; right:-10%; pointer-events:none;
-    background:radial-gradient(circle at 30% 30%, rgba(255,255,255,0.10), rgba(255,255,255,0.02) 55%, transparent 70%);
-  }
-  .hero-inner{position:relative; z-index:1; max-width:760px;}
-  .hero-pill{
-    display:inline-flex; align-items:center; gap:9px; padding:7px 14px; border-radius:999px;
-    background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14);
-    font-family:var(--mono); font-size:var(--fs-3xs); letter-spacing:0.16em; text-transform:uppercase; color:#DCE6F7;
-  }
-  .hero-pill .dot{width:7px; height:7px; border-radius:50%; background:var(--blue); box-shadow:0 0 10px var(--blue); animation:pulseDot 2.4s ease-in-out infinite;}
-  @keyframes pulseDot{0%,100%{opacity:1; transform:scale(1);} 50%{opacity:.45; transform:scale(.8);}}
-  .hero-title{
-    font-family:var(--display); font-weight:800; letter-spacing:-0.022em; line-height:1.1;
-    font-size:var(--fs-3xl); margin:18px 0 0; color:#fff;
-  }
-  .hero-title .accent{
-    background:linear-gradient(90deg,#0FC7F6 0%,#7C8CF0 100%);
-    -webkit-background-clip:text; background-clip:text; color:transparent;
-  }
-  .hero-sub{font-size:var(--fs-lg); line-height:1.6; color:#A9B7CE; margin:14px 0 0; max-width:62ch;}
-  .hero-actions{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:26px;}
   .btn-cta{
     display:inline-flex; align-items:center; gap:10px; font-family:var(--sans); font-weight:700; font-size:var(--fs-md);
     padding:13px 22px; border-radius:12px; border:none; cursor:pointer; color:#fff;
@@ -906,21 +762,6 @@
   .btn-cta:active{transform:scale(0.98);}
   .btn-cta:focus-visible{outline:2px solid #FFB07A; outline-offset:3px;}
   .btn-cta svg{flex-shrink:0;}
-  .btn-ghost{
-    display:inline-flex; align-items:center; gap:8px; font-family:var(--sans); font-weight:600; font-size:var(--fs-sm);
-    padding:12px 18px; border-radius:12px; cursor:pointer; color:#D7E2F2;
-    background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.14);
-    transition:background .15s, border-color .15s;
-  }
-  .btn-ghost:hover{background:rgba(255,255,255,0.10); border-color:rgba(255,255,255,0.24);}
-  .hero-stats{display:flex; gap:10px; flex-wrap:wrap; margin-top:26px; position:relative; z-index:1;}
-  .hero-stat{
-    display:flex; align-items:baseline; gap:7px; padding:9px 14px; border-radius:12px;
-    background:rgba(255,255,255,0.045); border:1px solid rgba(255,255,255,0.09);
-  }
-  .hero-stat b{font-family:var(--mono); font-size:var(--fs-md); color:#fff;}
-  .hero-stat span{font-size:var(--fs-2xs); color:var(--muted);}
-  @media (max-width:560px){.hero-actions .btn-cta, .hero-actions .btn-ghost{width:100%; justify-content:center;}}
 
   /* ---------- tarjetas de escenario ---------- */
   /* Grid limpio de 2 columnas: el escenario ahora vive en su propio paso del wizard

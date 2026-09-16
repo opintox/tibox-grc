@@ -1457,18 +1457,26 @@ function buildExecutiveReport(){
     asignacionHtml = `<p>No se registró ninguna confusión de responsables durante el ejercicio: cada vez que se necesitó una acción, el grupo identificó de inmediato a la función correcta.</p>`;
   } else {
     const top = confusionList[0];
-    const stageWord = top.stages.size > 1 ? `las etapas de ${[...top.stages].join(', ')}` : `la etapa de ${[...top.stages][0]}`;
+    // Nombres de función/etapa escapados: en un escenario importado desde Word pueden venir
+    // de "FUNCIÓN DEL ESCENARIO"/"ETAPA" tal cual las escribió quien armó el documento —
+    // mismo criterio de escape que el resto de la pantalla del juego (renderStage, etc.),
+    // que este informe no venía aplicando.
+    const chosenName = escapeHtml(roleLabelWithName(top.chosenRole));
+    const targetName = escapeHtml(roleLabelWithName(top.targetRole));
+    const stageWord = top.stages.size > 1
+      ? `las etapas de ${[...top.stages].map(escapeHtml).join(', ')}`
+      : `la etapa de ${escapeHtml([...top.stages][0])}`;
     let topSentence;
     if(top.count >= 3){
-      topSentence = `El patrón más marcado fue confundir a <b>${roleLabelWithName(top.chosenRole)}</b> con <b>${roleLabelWithName(top.targetRole)}</b> — ocurrió ${top.count} veces, principalmente en ${stageWord}. Vale la pena revisar con el grupo la diferencia entre ambas funciones antes del próximo ejercicio.`;
+      topSentence = `El patrón más marcado fue confundir a <b>${chosenName}</b> con <b>${targetName}</b> — ocurrió ${top.count} veces, principalmente en ${stageWord}. Vale la pena revisar con el grupo la diferencia entre ambas funciones antes del próximo ejercicio.`;
     } else if(top.count === 2){
-      topSentence = `Se repitió al menos dos veces la confusión entre <b>${roleLabelWithName(top.chosenRole)}</b> y <b>${roleLabelWithName(top.targetRole)}</b> (en ${stageWord}), lo que sugiere que el límite entre ambas funciones no está del todo interiorizado.`;
+      topSentence = `Se repitió al menos dos veces la confusión entre <b>${chosenName}</b> y <b>${targetName}</b> (en ${stageWord}), lo que sugiere que el límite entre ambas funciones no está del todo interiorizado.`;
     } else {
-      topSentence = `Se registró una confusión puntual entre <b>${roleLabelWithName(top.chosenRole)}</b> y <b>${roleLabelWithName(top.targetRole)}</b> en ${stageWord} — aislada, no parece ser un patrón sistemático.`;
+      topSentence = `Se registró una confusión puntual entre <b>${chosenName}</b> y <b>${targetName}</b> en ${stageWord} — aislada, no parece ser un patrón sistemático.`;
     }
     asignacionHtml = `<p>${topSentence}</p>`;
     if(confusionList.length > 1){
-      const others = confusionList.slice(1, 3).map(c => `${roleLabelWithName(c.chosenRole)} → ${roleLabelWithName(c.targetRole)} (${c.count}×)`).join(', ');
+      const others = confusionList.slice(1, 3).map(c => `${escapeHtml(roleLabelWithName(c.chosenRole))} → ${escapeHtml(roleLabelWithName(c.targetRole))} (${c.count}×)`).join(', ');
       asignacionHtml += `<p>Otras confusiones registradas, con menor frecuencia: ${others}.</p>`;
     }
   }
@@ -1481,9 +1489,9 @@ function buildExecutiveReport(){
   } else if(firstTryPct >= 90){
     primerIntentoHtml = `<p>El <b>${firstTryPct}%</b> de las preguntas se resolvieron a la primera, sin necesidad de reintentar. Es un indicador fuerte de que el equipo no solo sabe quién actúa, sino también qué acción corresponde en cada momento.</p>`;
   } else if(firstTryPct >= 65){
-    primerIntentoHtml = `<p>El <b>${firstTryPct}%</b> de las preguntas se resolvieron al primer intento. La etapa donde más costó dar con la acción correcta fue <b>${worstStage}</b>, con un ${Math.round(worstRate)}% de aciertos inmediatos — conviene revisarla con el grupo en la revisión posterior (hot-wash).</p>`;
+    primerIntentoHtml = `<p>El <b>${firstTryPct}%</b> de las preguntas se resolvieron al primer intento. La etapa donde más costó dar con la acción correcta fue <b>${escapeHtml(worstStage)}</b>, con un ${Math.round(worstRate)}% de aciertos inmediatos — conviene revisarla con el grupo en la revisión posterior (hot-wash).</p>`;
   } else {
-    primerIntentoHtml = `<p>Solo el <b>${firstTryPct}%</b> de las preguntas se resolvieron al primer intento, lo que indica que buena parte del ejercicio se resolvió por descarte más que por certeza. <b>${worstStage}</b> fue la etapa más costosa, con apenas ${Math.round(worstRate)}% de aciertos inmediatos.</p>`;
+    primerIntentoHtml = `<p>Solo el <b>${firstTryPct}%</b> de las preguntas se resolvieron al primer intento, lo que indica que buena parte del ejercicio se resolvió por descarte más que por certeza. <b>${escapeHtml(worstStage)}</b> fue la etapa más costosa, con apenas ${Math.round(worstRate)}% de aciertos inmediatos.</p>`;
   }
   parts.push({title:'Primera respuesta correcta', html:primerIntentoHtml});
 
@@ -1492,7 +1500,7 @@ function buildExecutiveReport(){
   if(strengths.length === scenarioStages.length){
     fortalezasHtml = `<p>Todas las etapas del ejercicio se resolvieron sin errores de ningún tipo — un resultado excelente y poco común en una primera corrida.</p>`;
   } else if(strengths.length > 0){
-    fortalezasHtml = `<p>${strengths.length === 1 ? 'La etapa' : 'Las etapas'} de <b>${strengths.join(', ')}</b> se resolvieron sin errores de personaje ni reintentos — un buen punto de partida que vale la pena reconocer con el equipo.</p>`;
+    fortalezasHtml = `<p>${strengths.length === 1 ? 'La etapa' : 'Las etapas'} de <b>${strengths.map(escapeHtml).join(', ')}</b> se resolvieron sin errores de personaje ni reintentos — un buen punto de partida que vale la pena reconocer con el equipo.</p>`;
   } else {
     fortalezasHtml = `<p>Ninguna etapa quedó completamente libre de errores o reintentos, aunque eso es información igual de valiosa: señala que el refuerzo debe ser transversal, no puntual.</p>`;
   }
@@ -1503,11 +1511,14 @@ function buildExecutiveReport(){
   const planAccion = [];
   if(confusionList.length > 0){
     const top = confusionList[0];
-    recs.push(`Reforzar con ${roleLabelWithName(top.chosenRole)} y ${roleLabelWithName(top.targetRole)} la diferencia entre sus responsabilidades, idealmente con ejemplos concretos del propio incidente simulado.`);
+    // recs[] se inserta como <li> sin re-escapar (ver más abajo), así que acá también hay
+    // que escapar los nombres antes de interpolarlos. planAccion en cambio SÍ se escapa al
+    // volcarse en la tabla (más abajo), así que ahí puede ir el texto plano.
+    recs.push(`Reforzar con ${escapeHtml(roleLabelWithName(top.chosenRole))} y ${escapeHtml(roleLabelWithName(top.targetRole))} la diferencia entre sus responsabilidades, idealmente con ejemplos concretos del propio incidente simulado.`);
     planAccion.push({accion:`Reforzar la diferencia de responsabilidades entre ${roleLabelWithName(top.chosenRole)} y ${roleLabelWithName(top.targetRole)} con ejemplos del propio ejercicio`, responsable:`${roleLabelWithName(top.chosenRole)} y ${roleLabelWithName(top.targetRole)}`, plazo:'15 días'});
   }
   if(worstStage && worstRate < 85){
-    recs.push(`Revisar el procedimiento de la etapa de <b>${worstStage}</b> con el equipo — fue donde más costó identificar la acción correcta a la primera.`);
+    recs.push(`Revisar el procedimiento de la etapa de <b>${escapeHtml(worstStage)}</b> con el equipo — fue donde más costó identificar la acción correcta a la primera.`);
     planAccion.push({accion:`Revisar el procedimiento y las decisiones de la etapa de ${worstStage} con todo el equipo`, responsable:'Equipo completo', plazo:'15 días'});
   }
   if(totalIssues === 0){
