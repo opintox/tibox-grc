@@ -567,11 +567,17 @@
     background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.16); color:var(--muted-2);
     transition:color .15s ease, background-color .15s ease, border-color .15s ease;
   }
-  .answer-btn:hover:not(:disabled){
-    border-color:rgba(249,115,22,0.4); background:rgba(249,115,22,0.08);
-    box-shadow:0 0 12px rgba(249,115,22,0.18); transform:translateX(2px);
+  /* Scoped a "hover real" (mouse): en pantallas táctiles el navegador puede aplicar :hover
+     al tocar y dejarlo "pegado" hasta el siguiente toque en otro lado — sin este media
+     query, esa opción se queda con el tinte naranjo aunque no se haya elegido, y se lee
+     como si estuviera premarcada. */
+  @media (hover:hover) and (pointer:fine){
+    .answer-btn:hover:not(:disabled){
+      border-color:rgba(249,115,22,0.4); background:rgba(249,115,22,0.08);
+      box-shadow:0 0 12px rgba(249,115,22,0.18); transform:translateX(2px);
+    }
+    .answer-btn:hover:not(:disabled)::before{border-color:rgba(249,115,22,0.5); color:#FFC28A; background:rgba(249,115,22,0.15);}
   }
-  .answer-btn:hover:not(:disabled)::before{border-color:rgba(249,115,22,0.5); color:#FFC28A; background:rgba(249,115,22,0.15);}
   .answer-btn.chosen-correct{border-color:var(--green); background:var(--green-dim);}
   .answer-btn.chosen-correct::before{background:var(--green-dim); border-color:var(--green); color:var(--green);}
   .answer-btn.chosen-wrong{border-color:var(--red); background:var(--red-dim);}
