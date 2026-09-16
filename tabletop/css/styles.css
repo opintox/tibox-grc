@@ -187,11 +187,16 @@
      entra holgado con este tamaño/interlineado — las descripciones reales son siempre
      cortas (una frase), así que en la práctica rara vez pasan de 1-2 líneas igual. */
   .pc-desc{font-size:var(--fs-sm); color:var(--muted); line-height:1.35; margin:0 0 12px; overflow:visible; flex:1 1 auto;}
-  /* Barra de entrada integrada: "Empresa" + el valor (o el CTA "+ Agregar") viven dentro
+  /* Barra de entrada integrada: "Empresa" + el valor (o el botón "+ Agregar") viven dentro
      de un único contenedor estilizado, en vez de una fila de tabla suelta como antes. Con
      empresa cargada, el valor se ve como chip removible (botón × propio); vacío, el
-     contenedor completo se ve como una zona de carga punteada clicable. */
-  .pc-empresa{display:flex; align-items:center; gap:8px; margin-top:auto; padding-top:12px; flex:0 0 auto;}
+     contenedor completo se ve como un action badge naranjo de alto contraste — antes era
+     texto punteado gris que pasaba desapercibido, sin leerse como un botón. Borde superior
+     separa esta franja del resto de la tarjeta (info del rol arriba, datos de empresa abajo). */
+  .pc-empresa{
+    display:flex; align-items:center; gap:8px; margin-top:auto; padding-top:12px; flex:0 0 auto;
+    border-top:1px solid rgba(255,255,255,0.08);
+  }
   .pc-empresa-label{font-family:var(--mono); font-size:var(--fs-4xs); letter-spacing:0.06em; color:var(--muted-2); text-transform:uppercase; flex-shrink:0;}
   .pc-empresa-input{
     display:flex; align-items:center; gap:2px; flex:1; min-width:0; padding-right:4px;
@@ -199,8 +204,6 @@
     transition:border-color .15s ease, background-color .15s ease;
   }
   .pc-empresa-input:hover{border-color:rgba(255,255,255,0.26);}
-  .pc-empresa-input.is-empty{border-style:dashed; background:transparent;}
-  .pc-empresa-input.is-empty:hover, .pc-empresa-input.is-empty:focus-within{border-color:var(--blue); background:rgba(14,165,233,0.06);}
   .pc-empresa-chip{
     display:flex; align-items:center; gap:6px; flex:1; min-width:0; cursor:pointer;
     padding:6px 10px; border-radius:7px; font-size:var(--fs-xs); font-weight:600; color:var(--text);
@@ -208,8 +211,18 @@
   }
   .pc-empresa-chip:focus-visible{outline:2px solid #38bdf8; outline-offset:-2px;}
   .pc-empresa-chip span{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-  .pc-empresa-input.is-empty .pc-empresa-chip{justify-content:center; color:var(--muted-2);}
-  .pc-empresa-input.is-empty:hover .pc-empresa-chip, .pc-empresa-input.is-empty:focus-within .pc-empresa-chip{color:var(--blue);}
+  /* Estado vacío = botón "+ Agregar", ya no una zona punteada pasiva: pill de alto
+     contraste (fondo/borde naranjo translúcido) que sube de brillo en hover/focus. */
+  .pc-empresa-input.is-empty{
+    border:1px solid rgba(249,115,22,0.4); background:rgba(249,115,22,0.12); border-radius:6px;
+    transition:background-color .15s ease, border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+  }
+  .pc-empresa-input.is-empty:hover, .pc-empresa-input.is-empty:focus-within{
+    background:rgba(249,115,22,0.25); border-color:rgba(249,115,22,0.8);
+    box-shadow:0 0 10px rgba(249,115,22,0.3); transform:translateY(-1px);
+  }
+  .pc-empresa-input.is-empty .pc-empresa-chip{justify-content:center; padding:6px 12px; font-weight:600; color:#f97316;}
+  .pc-empresa-input.is-empty:hover .pc-empresa-chip, .pc-empresa-input.is-empty:focus-within .pc-empresa-chip{color:#f8fafc;}
   .pc-empresa-remove{
     flex-shrink:0; width:18px; height:18px; border-radius:50%; display:flex; align-items:center; justify-content:center;
     background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14); color:var(--muted);
@@ -1011,6 +1024,26 @@
   .btn-cta svg{flex-shrink:0;}
 
   /* ---------- tarjetas de escenario ---------- */
+  /* Instrucción del paso 2 ("Elige el escenario...") como callout táctico propio, debajo
+     del título — antes vivía en línea junto al título en texto chico (.section-sub dentro
+     de .setup-section-head) y pasaba desapercibida. Con su propio contenedor (fondo +
+     borde + ícono) es lo primero que se lee después del título. */
+  .scn-instruction-badge{
+    display:inline-flex; align-items:center; gap:10px; max-width:100%;
+    margin:2px 0 var(--sp-4); padding:8px 14px; border-radius:8px;
+    background:rgba(249,115,22,0.1); border:1px solid rgba(249,115,22,0.3);
+    font-size:1rem; color:#F1F5F9; line-height:1.4;
+  }
+  @media (min-width:560px){.scn-instruction-badge{font-size:1.05rem;}}
+  @media (max-width:480px){.scn-instruction-badge{padding:8px 12px; font-size:0.95rem;}}
+  /* Ícono "objetivo" en su propio chip circular, con un halo iluminado — guía la mirada
+     hacia la instrucción antes de que el usuario baje directo a las tarjetas. */
+  .scn-instruction-icon{
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    width:24px; height:24px; border-radius:50%;
+    background:rgba(249,115,22,0.18); color:#FDBA74;
+    box-shadow:0 0 10px -2px rgba(249,115,22,0.65);
+  }
   /* Grid limpio de 2 columnas: el escenario ahora vive en su propio paso del wizard
      (no en la página completa), así que no necesita la cascada de 5/4/3 columnas de antes. */
   /* auto-fit en vez de 2 columnas fijas: en pantallas muy anchas se acomodan más
@@ -1042,61 +1075,40 @@
      ya no se usa aquí). */
   /* Acento neón (cian) parejo para las 10 tarjetas — mismo principio de "sin color
      por escenario" de antes, solo que ahora el acento uniforme es cian en vez de blanco. */
+  /* Tarjeta en 2 bloques apilados (antes: ilustración de fondo completa con un header
+     borroso encima) — el diseñador reportó que así la imagen quedaba recortada/oscurecida
+     y no se entendía qué escenario era. Ahora la imagen vive en su propio bloque rectangular
+     de altura fija arriba (.scn-card-media), sin overlay ni blur, y el título/descripción/
+     badges van abajo sobre un fondo sólido propio (.scn-card-body). */
   .scn-card{
-    position:relative; overflow:hidden; isolation:isolate; cursor:pointer; text-align:left;
-    border-radius:12px; padding:0 16px 14px; min-height:132px;
-    display:flex; flex-direction:column; gap:0;
-    /* Fondo propio de la tarjeta (antes solo el degradado, casi invisible contra el
-       --bg de la página) para que se lea como una superficie propia incluso sin
-       imagen de escenario. */
+    position:relative; cursor:pointer; text-align:left;
+    border-radius:12px; padding:0; min-width:0;
+    display:flex; flex-direction:column;
     background-color:rgba(255,255,255,0.04);
     border:1px solid rgba(255,255,255,0.08);
     box-shadow:0 10px 20px rgba(0,0,0,0.4);
-    transition:transform .16s ease, box-shadow .2s ease, border-color .16s ease, background-color .16s ease;
+    transition:transform .16s ease, box-shadow .2s ease, border-color .16s ease;
   }
-  /* Ilustración de fondo en su propia capa (::before), separada del degradado de
-     legibilidad (::after): así se le puede aplicar brightness/contrast solo a la foto
-     —oscurecida por defecto, un poco más clara en :hover— sin afectar el borde, la
-     sombra ni el resto de la tarjeta. --scn-bg-image (seteada por JS solo en los
-     escenarios que traen imagen, ver renderScenarioCard) se dibuja acá; con "none"
-     esta capa queda vacía y la tarjeta se ve igual que antes de tener imágenes.
-     --scn-bg-pos, también por JS, ajusta el encuadre por escenario. */
-  .scn-card::before{
-    content:''; position:absolute; inset:0; z-index:0;
-    background-image:var(--scn-bg-image, none);
-    background-size:cover; background-position:var(--scn-bg-pos, center);
-    filter:brightness(0.45) contrast(1.1);
-    transition:filter .25s ease;
-  }
-  /* Degradado de legibilidad, siempre encima de la ilustración y sin filtro propio:
-     el contraste de la píldora del pie (.scn-target) no depende del brightness/hover
-     de la foto que tenga detrás. */
-  .scn-card::after{
-    content:''; position:absolute; inset:0; z-index:0; pointer-events:none;
-    background-image:linear-gradient(158deg, rgba(15,27,54,0.35) 0%, rgba(8,15,30,0.8) 100%);
-  }
-  .scn-card:hover{
-    transform:translateY(-4px); border-color:rgba(255,107,0,0.4);
-    box-shadow:0 8px 24px rgba(0,0,0,0.4);
-  }
-  .scn-card:hover::before{filter:brightness(0.65) contrast(1.1);}
+  .scn-card:hover{transform:translateY(-4px); border-color:rgba(255,107,0,0.4); box-shadow:0 8px 24px rgba(0,0,0,0.4);}
   .scn-card:focus-visible{outline:2px solid #38bdf8; outline-offset:2px;}
-  /* Header dedicado del título: franja superior con blur + oscurecimiento propio
-     (Backdrop Filter + Gradient Overlay), para que el nombre del escenario se lea
-     siempre igual de bien sin depender de qué tan cargada esté la ilustración detrás.
-     Se extiende de borde a borde (margin negativo compensa el padding lateral de
-     .scn-card, que ahora no tiene padding-top) y hereda el radio superior de la
-     tarjeta. */
-  .scn-card-header{
-    position:relative; z-index:1;
-    margin:0 -16px 10px; padding:14px 16px 10px;
-    background:rgba(15,23,42,0.75);
-    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
-    border-radius:12px 12px 0 0;
-    border-bottom:1px solid rgba(255,255,255,0.06);
-    transition:background-color .2s ease;
+  /* Bloque de imagen: ancho completo, alto fijo, object-fit:contain para que la
+     ilustración se vea entera y con contexto (sin el recorte que dejaba cover en el
+     diseño anterior); fondo oscuro propio para que el "letterboxing" de contain no se
+     note como hueco vacío. Escenarios sin imagen (p.ej. uno personalizado importado de
+     Word) simplemente no traen este bloque — ver renderScenarioCard.
+     El overflow:hidden (para recortar las esquinas de la imagen y el zoom del hover)
+     vive acá, no en .scn-card: un grid item con overflow:hidden y alto automático hace
+     que algunos navegadores midan mal el alto de la fila (el resto de las tarjetas de
+     la grilla quedaba superponiéndose en mobile) — con el recorte solo en este bloque,
+     .scn-card vuelve a reportar su alto real a .scn-grid. */
+  .scn-card-media{
+    position:relative; width:100%; height:150px; flex-shrink:0; overflow:hidden;
+    border-radius:11px 11px 0 0;
+    background:#0B1222; border-bottom:1px solid rgba(255,255,255,0.08);
   }
-  .scn-card:hover .scn-card-header{background:rgba(15,23,42,0.85);}
+  .scn-card-img{width:100%; height:100%; object-fit:contain; display:block; transition:transform .25s ease;}
+  .scn-card:hover .scn-card-img{transform:scale(1.05);}
+  .scn-card-body{display:flex; flex-direction:column; flex:1 1 auto; min-width:0; padding:16px; border-radius:0 0 11px 11px;}
   .scn-head{display:flex; align-items:flex-start; justify-content:space-between; gap:10px;}
   .scn-title-row{display:flex; align-items:flex-start; gap:8px; min-width:0;}
   /* Ícono de cada categoría en su propio chip circular naranjo tenue — antes iba
@@ -1107,20 +1119,15 @@
     background:rgba(255,107,0,0.18); color:#FFAB70;
   }
   .scn-icon svg{width:13px; height:13px;}
-  .scn-title{
-    margin:0; min-width:0; font-family:var(--display); font-weight:700; font-size:1.1rem; line-height:1.25;
-    color:#fff; text-shadow:0 2px 4px rgba(0,0,0,0.8);
-  }
-  .scn-desc{font-size:var(--fs-2xs); color:#fff; text-shadow:0 1px 3px rgba(0,0,0,0.55); line-height:1.4; margin:8px 0 0; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
-  .scn-fields{position:relative; z-index:1; margin-top:auto;}
+  .scn-title{margin:0; min-width:0; font-family:var(--display); font-weight:700; font-size:1.1rem; line-height:1.25; color:#fff;}
+  .scn-desc{font-size:var(--fs-2xs); color:var(--muted); line-height:1.4; margin:8px 0 0; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
+  .scn-fields{margin-top:auto; padding-top:10px;}
   /* Reemplaza el antiguo label "Objetivo" + valor: el valor solo, como badge, sin
-     texto redundante repetido en cada una de las 10 tarjetas. Píldora neutra sutil
-     (blanco muy transparente) en vez de negro puro, para que no desentone sobre las
-     tarjetas con imagen de fondo ni sobre las que no la tienen. */
+     texto redundante repetido en cada una de las 10 tarjetas. */
   .scn-target{
     display:inline-flex; align-items:center; font-family:var(--mono); font-size:var(--fs-4xs);
-    letter-spacing:0.04em; color:#fff; text-shadow:0 1px 3px rgba(0,0,0,0.55); padding:4px 10px; border-radius:999px;
-    border:1px solid rgba(255,255,255,0.16); background:rgba(255,255,255,0.08); max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    letter-spacing:0.04em; color:var(--text); padding:4px 10px; border-radius:999px;
+    border:1px solid rgba(255,255,255,0.16); background:rgba(255,255,255,0.06); max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
   /* LED de estado: apagado (gris, sin brillo) hasta que la tarjeta se selecciona. */
   .scn-check{
@@ -1140,13 +1147,11 @@
   .scn-export-btn:hover{background:var(--blue-dim); border-color:var(--blue); color:var(--text);}
   /* Estado seleccionado: borde sólido naranjo + relleno tenue del mismo tono (en vez
      del cian usado en el resto de la app) para que la tarjeta activa sea inconfundible
-     de un vistazo, y el LED de estado (ya en la esquina superior, junto al botón de
-     exportar) pasa a naranjo brillante con resplandor propio como marca de selección. */
+     de un vistazo, y el LED de estado pasa a naranjo brillante con resplandor propio. */
   .scn-card.selected{
     border:2px solid #FF6B00; background-color:rgba(255,107,0,0.1);
     box-shadow:0 0 16px rgba(255,107,0,0.25);
   }
-  .scn-card.selected .scn-card-header{background:rgba(45,18,4,0.78);}
   .scn-card.selected .scn-check{
     background:#FF6B00; border-color:#FF6B00; color:#fff;
     box-shadow:0 0 8px rgba(255,107,0,0.8);

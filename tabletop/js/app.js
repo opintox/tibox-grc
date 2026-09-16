@@ -417,37 +417,21 @@ document.getElementById('facilitatorNameInput').addEventListener('input', e => {
 // ---------------- scenario cards ----------------
 const coreGridEl = document.getElementById('scenarioGridCore');
 
-// Imagen de fondo propia por escenario (opcional): si un id no está acá, la tarjeta
-// se ve exactamente igual que antes (solo el degradado oscuro de siempre).
-// Rutas relativas a tabletop/css/styles.css (no al HTML): un url() dentro del valor de
-// una variable CSS se resuelve relativo a la hoja de estilos donde vive la propiedad que
-// lo consume (background-image en .scn-card), no al archivo que setea la variable.
+// Imagen propia por escenario (opcional): si un id no está acá, la tarjeta simplemente
+// no trae bloque de imagen (por ejemplo, un escenario personalizado importado de Word).
+// Rutas relativas a index.html, ya que ahora se usan en un <img src> real (antes eran
+// background-image vía variable CSS, resuelta relativa a la hoja de estilos).
 const SCENARIO_BG_IMAGES = {
-  dispositivo: '../assets/scenario-bg/dispositivo.jpg',
-  recuperacion_fallida: '../assets/scenario-bg/recuperacion_fallida.jpg',
-  insider: '../assets/scenario-bg/insider.jpg',
-  terceros: '../assets/scenario-bg/terceros.jpg',
-  credenciales: '../assets/scenario-bg/credenciales.jpg',
-  ddos: '../assets/scenario-bg/ddos.jpg',
-  phishing_bec: '../assets/scenario-bg/phishing_bec.jpg',
-  '0day': '../assets/scenario-bg/0day.jpg',
-  exfiltracion: '../assets/scenario-bg/exfiltracion.png',
-  ransomware: '../assets/scenario-bg/ransomware.png'
-};
-// Encuadre por escenario: por defecto "center" (mitad vertical de la imagen), pero
-// dispositivo.jpg tiene el personaje y el globo de diálogo en el tercio superior — con
-// center a secas, una tarjeta baja y ancha recorta justo esa parte y deja solo el pecho
-// y el fondo naranjo (la "imagen desalineada" reportada).
-const SCENARIO_BG_POS = {
-  dispositivo: 'center 22%',
-  // El apretón de manos (lo más reconocible de "compromiso de terceros") queda casi
-  // fuera de cuadro con el center por defecto — la imagen es más alta que ancha y el
-  // encuadre corto de la tarjeta termina mostrando sobre todo el espacio vacío del medio.
-  terceros: 'center 85%',
-  // Con center a secas se alcanzaba a ver un resto suelto de los puntitos de la barra
-  // de navegador (arriba) sin mostrar completo ni el candado/gancho ni el campo de
-  // contraseña — bajar el encuadre deja ambos elementos dentro de la tarjeta.
-  credenciales: '65% 65%'
+  dispositivo: 'assets/scenario-bg/dispositivo.jpg',
+  recuperacion_fallida: 'assets/scenario-bg/recuperacion_fallida.jpg',
+  insider: 'assets/scenario-bg/insider.jpg',
+  terceros: 'assets/scenario-bg/terceros.jpg',
+  credenciales: 'assets/scenario-bg/credenciales.jpg',
+  ddos: 'assets/scenario-bg/ddos.jpg',
+  phishing_bec: 'assets/scenario-bg/phishing_bec.jpg',
+  '0day': 'assets/scenario-bg/0day.jpg',
+  exfiltracion: 'assets/scenario-bg/exfiltracion.png',
+  ransomware: 'assets/scenario-bg/ransomware.png'
 };
 function renderScenarioCard(s, container){
   const el = document.createElement('div');
@@ -456,16 +440,21 @@ function renderScenarioCard(s, container){
   el.style.setProperty('--a', accent);
   el.style.setProperty('--a2', accent2);
   el.style.setProperty('--glow', hexToRgba(accent2, 0.55));
-  if(SCENARIO_BG_IMAGES[s.id]) el.style.setProperty('--scn-bg-image', `url(${SCENARIO_BG_IMAGES[s.id]})`);
-  if(SCENARIO_BG_POS[s.id]) el.style.setProperty('--scn-bg-pos', SCENARIO_BG_POS[s.id]);
   el.setAttribute('role', 'button');
   el.setAttribute('tabindex', '0');
   el.setAttribute('aria-pressed', selectedScenarioId === s.id ? 'true' : 'false');
   el.setAttribute('aria-label', s.name);
   const icon = SCENARIO_ICONS[s.id] || '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="5.5"/></svg>';
   const blurb = SCENARIO_BLURBS[s.id] || '';
+  // Bloque de imagen: rectangular, ancho completo, object-fit:contain (ver .scn-card-img)
+  // para que la ilustración se vea entera en vez de recortada. Sin imagen para este
+  // escenario, la tarjeta arranca directo en el cuerpo.
+  const mediaHtml = SCENARIO_BG_IMAGES[s.id]
+    ? `<div class="scn-card-media"><img class="scn-card-img" src="${SCENARIO_BG_IMAGES[s.id]}" alt="" loading="lazy"></div>`
+    : '';
   el.innerHTML = `
-    <div class="scn-card-header">
+    ${mediaHtml}
+    <div class="scn-card-body">
       <div class="scn-head">
         <div class="scn-title-row">
           <span class="scn-icon">${icon}</span>
@@ -477,8 +466,8 @@ function renderScenarioCard(s, container){
         </div>
       </div>
       <p class="scn-desc">${escapeHtml(blurb)}</p>
-    </div>
-    <div class="scn-fields"><span class="scn-target">${escapeHtml(SCENARIO_TARGETS[s.id] || '—')}</span></div>`;
+      <div class="scn-fields"><span class="scn-target">${escapeHtml(SCENARIO_TARGETS[s.id] || '—')}</span></div>
+    </div>`;
   const choose = () => {
     applyScenarioSelection(s.id);
     renderParticipants();
