@@ -65,6 +65,13 @@ function roleIconChipHtml(rm, roleKey){
   const [c1] = (rm.accents && rm.accents[roleKey]) || ['#8592AE'];
   return `<span class="p-role-icon" style="background:${hexToRgba(c1, 0.18)}; color:${c1};">${icon}</span>`;
 }
+// Mismo chip que roleIconChipHtml, pero para el encabezado del popout de explicación
+// (.ex-role-icon en vez de .p-role-icon: un poco más grande ahí).
+function roleExplainIconHtml(rm, roleKey){
+  const icon = (rm.icons && rm.icons[roleKey]) || '';
+  const [c1] = (rm.accents && rm.accents[roleKey]) || ['#8592AE'];
+  return `<span class="ex-role-icon" style="background:${hexToRgba(c1, 0.18)}; color:${c1};">${icon}</span>`;
+}
 // roleList: [{key, name}] en el orden en que el documento las declaró.
 function buildCustomRoleMeta(roleList){
   const keys = roleList.map(r => r.key);
@@ -458,14 +465,19 @@ function renderScenarioCard(s, container){
   const icon = SCENARIO_ICONS[s.id] || '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="5.5"/></svg>';
   const blurb = SCENARIO_BLURBS[s.id] || '';
   el.innerHTML = `
-    <div class="scn-head">
-      <span class="scn-badge"><span class="scn-icon">${icon}</span>${escapeHtml(s.name)}</span>
-      <div class="scn-head-actions">
-        <button class="scn-export-btn" type="button" title="Exportar este escenario a Word" aria-label="Exportar este escenario a Word">⇩</button>
-        <span class="scn-check" aria-hidden="true"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.4 6.4 12 13 4.6"/></svg></span>
+    <div class="scn-card-header">
+      <div class="scn-head">
+        <div class="scn-title-row">
+          <span class="scn-icon">${icon}</span>
+          <span class="scn-title">${escapeHtml(s.name)}</span>
+        </div>
+        <div class="scn-head-actions">
+          <button class="scn-export-btn" type="button" title="Exportar este escenario a Word" aria-label="Exportar este escenario a Word">⇩</button>
+          <span class="scn-check" aria-hidden="true"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.4 6.4 12 13 4.6"/></svg></span>
+        </div>
       </div>
+      <p class="scn-desc">${escapeHtml(blurb)}</p>
     </div>
-    <div class="scn-desc">${escapeHtml(blurb)}</div>
     <div class="scn-fields"><span class="scn-target">${escapeHtml(SCENARIO_TARGETS[s.id] || '—')}</span></div>`;
   const choose = () => {
     applyScenarioSelection(s.id);
@@ -563,17 +575,29 @@ function renderParticipants(){
     // escenario con funciones propias no tiene ese concepto y deja todas editables.
     const locked = rm === DEFAULT_ROLE_META && (p.roleKey === 'ti' || p.roleKey === 'seguridad');
     const card = document.createElement('div');
-    card.className = 'p-card glow-' + (rm.color[p.roleKey] || 'blue') + (p.checked ? '' : ' row-inactive');
+    card.className = 'participant-card' + (p.checked ? '' : ' row-inactive');
     const [pBarColor] = (rm.accents && rm.accents[p.roleKey]) || ['#8592AE'];
     card.style.setProperty('--p-bar', pBarColor);
+    const hasEmpresa = !!p.empresa;
     card.innerHTML = `
-      <div class="p-card-head">
-        <input type="checkbox" ${p.checked ? 'checked' : ''} ${locked ? 'disabled title="TI y Seguridad participan siempre"' : ''} data-i="${i}">
-        <span class="empresa-badge ${p.roleKey}">${roleIconChipHtml(rm, p.roleKey)}${escapeHtml(rm.names[p.roleKey] || p.roleKey)}</span>
+      <div class="pc-head">
+        <label class="pc-switch">
+          <input type="checkbox" class="pc-switch-input" ${p.checked ? 'checked' : ''} ${locked ? 'disabled title="TI y Seguridad participan siempre"' : ''} data-i="${i}">
+          <span class="pc-switch-track"><span class="pc-switch-thumb"></span></span>
+        </label>
+        <div class="pc-role">
+          ${roleIconChipHtml(rm, p.roleKey)}
+          <span class="pc-role-name">${escapeHtml(rm.names[p.roleKey] || p.roleKey)}</span>
+        </div>
+        <span class="pc-status-pill">${p.checked ? 'ACTIVO' : 'INACTIVO'}</span>
       </div>
-      <p class="p-card-desc" title="${escapeHtml(rm.desc[p.roleKey] || '')}">${escapeHtml(rm.desc[p.roleKey] || '')}</p>
-      <div class="p-card-fields">
-        <div class="p-card-field"><span class="p-card-field-label">Empresa</span><span class="p-card-field-value pf-empresa" data-i="${i}" data-field="empresa" tabindex="0" role="button" aria-label="Editar empresa" title="Doble clic o Enter para editar">${p.empresa ? escapeHtml(p.empresa) : '<span class="undefined-chip">+ Agregar</span>'}</span></div>
+      <p class="pc-desc" title="${escapeHtml(rm.desc[p.roleKey] || '')}">${escapeHtml(rm.desc[p.roleKey] || '')}</p>
+      <div class="pc-empresa">
+        <span class="pc-empresa-label">Empresa</span>
+        <div class="pc-empresa-input${hasEmpresa ? '' : ' is-empty'}">
+          <span class="pc-empresa-chip pf-empresa" data-i="${i}" data-field="empresa" tabindex="0" role="button" aria-label="${hasEmpresa ? 'Editar empresa' : 'Agregar empresa'}" title="Doble clic o Enter para editar">${hasEmpresa ? `<span>${escapeHtml(p.empresa)}</span>` : '+ Agregar'}</span>
+          ${hasEmpresa ? `<button type="button" class="pc-empresa-remove" data-i="${i}" title="Quitar empresa" aria-label="Quitar empresa">×</button>` : ''}
+        </div>
       </div>`;
     card.querySelectorAll('.pf-empresa').forEach(elField => {
       elField.addEventListener('dblclick', openEditPopout);
@@ -581,7 +605,17 @@ function renderParticipants(){
         if(ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); openEditPopout(ev); }
       });
     });
-    card.querySelector('input').addEventListener('change', e => {
+    card.querySelectorAll('.pc-empresa-remove').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        participants[i].empresa = '';
+        renderParticipants();
+        profileSaved = false;
+        updateBottomState();
+        saveSetupState();
+      });
+    });
+    card.querySelector('.pc-switch-input').addEventListener('change', e => {
       participants[i].checked = e.target.checked;
       renderParticipants();
       profileSaved = false;
@@ -669,6 +703,8 @@ function renderWizardStepper(){
   });
 }
 
+const STEP3_ALERT_ICON_WARN = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg>';
+const STEP3_ALERT_ICON_OK = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 5-5"/></svg>';
 function updateBottomState(){
   const hasScenario = !!selectedScenarioId;
   const activeCount = participants.filter(p => p.checked).length;
@@ -697,9 +733,14 @@ function updateBottomState(){
 
   const summaryEl = document.getElementById('wizardStep3Summary');
   if(summaryEl){
-    summaryEl.textContent = canStart
-      ? `Escenario elegido: ${scenarioName} · ${activeCount} ${activeCount === 1 ? 'función activa' : 'funciones activas'}.`
-      : `Falta: ${!hasScenario ? 'elegir escenario' : ''}${!hasScenario && !hasParticipant ? ' y ' : ''}${!hasParticipant ? 'marcar al menos un participante' : ''}.`;
+    if(canStart){
+      summaryEl.className = 'step3-alert is-ready';
+      summaryEl.innerHTML = `${STEP3_ALERT_ICON_OK}<span>${escapeHtml(`Escenario elegido: ${scenarioName} · ${activeCount} ${activeCount === 1 ? 'función activa' : 'funciones activas'}.`)}</span>`;
+    } else {
+      summaryEl.className = 'step3-alert is-warning';
+      const missing = `Falta: ${!hasScenario ? 'elegir escenario' : ''}${!hasScenario && !hasParticipant ? ' y ' : ''}${!hasParticipant ? 'marcar al menos un participante' : ''}.`;
+      summaryEl.innerHTML = `${STEP3_ALERT_ICON_WARN}<span>${escapeHtml(missing)}</span>`;
+    }
   }
 }
 // La app abre siempre en la pantalla de bienvenida (reglas del ejercicio); recién al presionar
@@ -747,29 +788,54 @@ function goToStep(n){
   updateBottomState();
 }
 
-// ---------------- reglas del ejercicio: detalle en modal al hacer clic ----------------
-// Mismo texto que tenían los pasos antes de dejarlos solo con título (ver historial):
-// se mantiene disponible bajo demanda en vez de ocupar espacio siempre visible.
+// ---------------- reglas del ejercicio: detalle educativo en modal al hacer clic ----------------
+// Estructura de cada regla: badge (fase), título táctico, el porqué (por qué importa en un
+// incidente real), el cómo (qué hace el participante en esta interfaz) y un tip pro/CTA.
+// Un color de acento propio por regla (mismo mecanismo --a/--a-dim/--a-border que usan las
+// tarjetas de escenario y de función) le da variedad visual sin salirse de la paleta TIBOX.
+const RULE_ICON_WHY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 7.5h.01"/></svg>';
+const RULE_ICON_HOW = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M5 3l6.5 16 2-6.5L20 10.5z"/></svg>';
+const RULE_ICON_TIP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M12 3l2.6 5.9 6.4.6-4.8 4.3 1.4 6.3L12 16.9 6.4 20.1l1.4-6.3L3 9.5l6.4-.6z"/></svg>';
 const RULE_DETAILS = {
   1: {
-    title: 'Configuren la sesión',
-    body: 'Elijan el tipo de ataque a simular y marquen qué funciones participan hoy (TI, Legal, Comunicaciones, RRHH, Dirección — Seguridad y TI siempre están). Guarden el perfil del cliente: es lo último que falta para poder empezar.'
+    badge: 'Fase de preparación',
+    accent: '#0FC7F6',
+    title: 'Arma el terreno antes del combate',
+    why: 'En un incidente real, buena parte del caos inicial no lo causa el ataque, sino no saber quién está en la sala, qué activos están en juego y bajo qué marco se está actuando. Los equipos que improvisan su comité de crisis en el momento pierden minutos críticos — y en ciberseguridad, el minuto es el activo más caro.',
+    how: 'Elige el tipo de ataque a simular y marca qué funciones participan hoy (TI, Legal, Comunicaciones, RRHH, Dirección — Seguridad y TI siempre están activas). Guarda el perfil del cliente: sin eso, la aplicación no te deja empezar.',
+    tip: 'Un plan de respuesta a incidentes que nadie ha ensayado con los roles reales de la organización es solo un documento. Mientras más real sea esta configuración, más útil va a ser el diagnóstico al final.'
   },
   2: {
-    title: 'El incidente avanza en 5 etapas',
-    body: 'Detección → Clasificación → Contención → Recuperación → Cierre. Cada una plantea una situación nueva dentro del mismo caso, en orden.'
+    badge: 'Mecánica core',
+    accent: '#F3E006',
+    title: 'Cada etapa es un punto de no retorno',
+    why: 'Un incidente de ciberseguridad no es un evento único, es una secuencia: lo que se decide (o no se decide) en Detección condiciona qué opciones quedan disponibles en Contención. Los equipos reales fallan más seguido por saltarse una etapa que por una mala decisión dentro de ella.',
+    how: 'El ejercicio avanza en orden fijo: Detección → Clasificación → Contención → Recuperación → Cierre. Cada etapa plantea una situación nueva dentro del mismo caso — no puedes adelantarte, y solo puedes volver atrás con el botón "Pregunta anterior".',
+    tip: 'En una crisis real, resiste la tentación de "saltar a la solución". Contener antes de tener claro el alcance casi siempre significa contener lo que no correspondía.'
   },
   3: {
-    title: 'Decidan quién actúa',
-    body: 'Frente a cada situación, el equipo elige qué función debe hacerse cargo de esa acción específica. Elegir a alguien a quien no le corresponde cuenta como error.'
+    badge: 'Asignación de responsabilidad',
+    accent: '#FF8A3D',
+    title: 'La función correcta, no la persona más rápida',
+    why: 'En un incidente real, quien está más disponible no siempre es quien debe actuar — a veces por función, a veces por segregación de responsabilidades. Confundir esto genera respuestas descoordinadas y, en el peor caso, evidencia contaminada o decisiones tomadas sin la autoridad correspondiente.',
+    how: 'Frente a cada situación, elige entre las tarjetas de función quién debe hacerse cargo de esa acción específica. Elegir a alguien a quien no le corresponde cuenta como error, y la aplicación te explica por qué antes de dejarte reintentar.',
+    tip: 'Si tu equipo duda todo el tiempo sobre "a quién le toca esto", el problema no es el ejercicio — es que la matriz de responsabilidades del plan real no está bien socializada. Anótalo para el cierre.'
   },
   4: {
-    title: 'Decidan qué hacer',
-    body: 'Con la función correcta ya elegida, discutan entre varias alternativas y elijan la respuesta. Si se equivocan, se explica por qué antes de dejarlos reintentar.'
+    badge: 'Decisión táctica',
+    accent: '#FF4D6A',
+    title: 'Entre varias opciones plausibles, solo una es correcta',
+    why: 'Las alternativas incorrectas de este ejercicio no son absurdas a propósito: están escritas para parecerse a la decisión correcta, con un solo defecto real (un paso omitido, un orden equivocado, un supuesto sin verificar). Así se entrena el juicio, no la memoria.',
+    how: 'Con la función correcta ya elegida, revisen las alternativas y discutan en equipo cuál es la más adecuada. Si se equivocan, la aplicación explica exactamente por qué antes de dejarlos reintentar — no hay penalización por reintentar, solo por no analizar bien.',
+    tip: 'Discutan el razonamiento en voz alta antes de elegir. El valor real de un tabletop no es "acertar": es escuchar cómo argumenta el equipo bajo presión, ahí es donde salen a la luz los supuestos equivocados.'
   },
   5: {
-    title: 'Cierren con el informe',
-    body: 'Al terminar la última etapa se genera un puntaje, un informe ejecutivo con lo que conviene reforzar, y un acta que pueden guardar o descargar.'
+    badge: 'Evaluación',
+    accent: '#22D3A6',
+    title: 'Lo que no se documenta, se repite',
+    why: 'Un ejercicio de simulación que termina sin informe es una tarde bien invertida y nada más. El valor real de un tabletop —igual que el de un incidente real— está en el post-mortem: qué salió bien, dónde hubo fricción, y qué acción concreta evita que el mismo error vuelva a ocurrir.',
+    how: 'Al terminar la última etapa, la aplicación genera un puntaje, un informe ejecutivo con los patrones de error y recomendaciones, y un acta de la sesión. Pueden guardarlo en este navegador o descargarlo en JSON para adjuntarlo a su propio reporte.',
+    tip: 'Compartan el informe con el equipo mientras el ejercicio sigue fresco. Un hallazgo sin dueño ni plazo es un hallazgo que va a reaparecer — el propio informe lo señala cuando corresponde.'
   }
 };
 let activeRuleModal = null;
@@ -781,12 +847,25 @@ function showRuleModal(ruleN){
   overlay.className = 'modal-overlay';
   overlay.id = 'ruleModal';
   overlay.innerHTML = `
-    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="ruleModalTitle">
+    <div class="modal-box rule-modal-box" role="dialog" aria-modal="true" aria-labelledby="ruleModalTitle"
+         style="--a:${rule.accent}; --a-dim:${hexToRgba(rule.accent, 0.14)}; --a-border:${hexToRgba(rule.accent, 0.35)};">
       <div class="modal-head">
-        <div class="modal-title" id="ruleModalTitle">${escapeHtml(rule.title)}</div>
+        <span class="rule-badge">${escapeHtml(rule.badge)}</span>
         <button class="modal-close-btn" id="ruleModalClose" aria-label="Cerrar">✕</button>
       </div>
-      <div class="modal-message">${escapeHtml(rule.body)}</div>
+      <h3 class="rule-modal-title" id="ruleModalTitle">${escapeHtml(rule.title)}</h3>
+      <div class="rule-modal-section">
+        <div class="rule-modal-section-head">${RULE_ICON_WHY}<span>El porqué</span></div>
+        <p>${escapeHtml(rule.why)}</p>
+      </div>
+      <div class="rule-modal-section">
+        <div class="rule-modal-section-head">${RULE_ICON_HOW}<span>En la simulación</span></div>
+        <p>${escapeHtml(rule.how)}</p>
+      </div>
+      <div class="rule-modal-tip">
+        ${RULE_ICON_TIP}
+        <p><b>Tip pro:</b> ${escapeHtml(rule.tip)}</p>
+      </div>
     </div>`;
   document.body.appendChild(overlay);
   activeRuleModal = overlay;
@@ -1264,7 +1343,10 @@ function onCharacterPick(participant, el){
   });
   const rmPick = roleMetaFor(gameState.scenarioId);
   showExplain(
-    `<div class="explanation-item is-correct"><span class="ex-tag">✓ Personaje correcto</span><div class="ex-opt">${escapeHtml(rmPick.names[participant.roleKey])}</div><div class="ex-why">${pickRandom(CORRECT_CHARACTER_PHRASES)}</div></div>`);
+    `<div class="explanation-item is-correct">
+      <div class="ex-head">${roleExplainIconHtml(rmPick, participant.roleKey)}<div class="ex-head-text"><span class="ex-tag">✓ Personaje correcto</span><div class="ex-opt">${escapeHtml(rmPick.names[participant.roleKey])}</div></div></div>
+      <div class="ex-why">${pickRandom(CORRECT_CHARACTER_PHRASES)}</div>
+    </div>`);
 
   gameState.nextAction = () => {
     document.getElementById('charPanel').classList.add('hidden');
@@ -1291,8 +1373,7 @@ function renderWrongCharacterExplanation(participant, q){
   const mismatch = q.mismatchContext || 'Esta acción específica requiere otra función dentro del equipo de respuesta.';
 
   const html = `<div class="explanation-item is-wrong">
-      <span class="ex-tag">✕ Personaje incorrecto</span>
-      <div class="ex-opt">${escapeHtml(chosenLabel)}</div>
+      <div class="ex-head">${roleExplainIconHtml(rm, chosenKey)}<div class="ex-head-text"><span class="ex-tag">✕ Personaje incorrecto</span><div class="ex-opt">${escapeHtml(chosenLabel)}</div></div></div>
       <div class="ex-why">${escapeHtml(chosenLabel)} ${chosenDesc}. ${escapeHtml(mismatch)}</div>
     </div>`;
   showExplain(html);
@@ -1366,13 +1447,12 @@ function onAnswerPick(idx, btn, q){
 function renderExplanation(chosenIdx, correct, q){
   const p = gameState.chosenCorrectParticipant;
   const rm = roleMetaFor(gameState.scenarioId);
-  let html = `<div style="font-size:var(--fs-xs); color:var(--muted); margin-bottom:12px;">Respondió <b style="color:var(--text);">${escapeHtml(rm.names[p.roleKey])}</b> · ${escapeHtml(p.empresa || rm.org[p.roleKey])}.</div>`;
 
   const tag = correct ? pickRandom(CORRECT_ANSWER_TAGS) : '✕ Elegida · Incorrecta';
   const cls = correct ? 'is-correct' : 'is-wrong';
-  html += `<div class="explanation-item ${cls}">
-    <span class="ex-tag">${tag}</span>
-    <div class="ex-opt">${escapeHtml(q.options[chosenIdx])}</div>
+  let html = `<div class="explanation-item ${cls}">
+    <div class="ex-head">${roleExplainIconHtml(rm, p.roleKey)}<div class="ex-head-text"><span class="ex-tag">${tag}</span><div class="ex-opt">${escapeHtml(q.options[chosenIdx])}</div></div></div>
+    <div class="ex-respondio">Respondió <b>${escapeHtml(rm.names[p.roleKey])}</b> · ${escapeHtml(p.empresa || rm.org[p.roleKey])}</div>
     <div class="ex-why">${escapeHtml(q.explanations[chosenIdx])}</div>
   </div>`;
   if(!correct){
@@ -1589,7 +1669,7 @@ function showResults(){
   }
 
   document.getElementById('reportScenarioName').textContent = `Informe · ${scenarioMeta.name}${clientName ? ' · ' + clientName : ''}`;
-  document.getElementById('gradeBadge').className = `grade-badge ${gradeClass}`;
+  document.getElementById('gradeBadge').className = `kpi-card kpi-card-score ${gradeClass}`;
   document.getElementById('gradePct').textContent = accuracy + '%';
   document.getElementById('gradeLabel').textContent = gradeLabel;
   document.getElementById('gradeMeta').textContent = `Precisión ${precision}% · −${timePenalty} pts por tiempo`;
@@ -1598,6 +1678,12 @@ function showResults(){
   document.getElementById('resWrongAnswers').textContent = wrongA;
   document.getElementById('resWrongChars').textContent = wrongC;
   document.getElementById('resDonutPct').textContent = accuracy + '%';
+  // KPI superiores (mismos valores que ya se muestran más abajo en la dona/leyenda, solo
+  // repetidos arriba a simple vista en el panel ejecutivo).
+  document.getElementById('kpiPrecisionPct').textContent = precision + '%';
+  document.getElementById('kpiDuration').textContent = duration;
+  document.getElementById('kpiWrongChars').textContent = wrongC;
+  document.getElementById('kpiWrongAnswers').textContent = wrongA;
 
   // Dona de 3 colores proporcional a preguntas respondidas / errores de alternativa / errores de
   // personaje (misma base que el % de la nota final), armada con 3 círculos SVG superpuestos.
@@ -1625,12 +1711,12 @@ function showResults(){
         <div class="stage-chart-label">${escapeHtml(stageName)} <span>(${stat.questions} pregunta${stat.questions === 1 ? '' : 's'})</span></div>
         <div class="mini-bar-row">
           <span class="mini-bar-label">Alternativa</span>
-          <div class="mini-bar-track"><div class="mini-bar-fill" style="width:${Math.min(100, (stat.wrongAnswers / stageBarMax) * 100)}%; background:var(--amber);"></div></div>
+          <div class="mini-bar-track"><div class="mini-bar-fill is-response" style="width:${Math.min(100, (stat.wrongAnswers / stageBarMax) * 100)}%;"></div></div>
           <span class="mini-bar-val">${stat.wrongAnswers}</span>
         </div>
         <div class="mini-bar-row">
           <span class="mini-bar-label">Personaje</span>
-          <div class="mini-bar-track"><div class="mini-bar-fill" style="width:${Math.min(100, (stat.wrongCharacters / stageBarMax) * 100)}%; background:var(--red);"></div></div>
+          <div class="mini-bar-track"><div class="mini-bar-fill is-function" style="width:${Math.min(100, (stat.wrongCharacters / stageBarMax) * 100)}%;"></div></div>
           <span class="mini-bar-val">${stat.wrongCharacters}</span>
         </div>
       </div>`;
