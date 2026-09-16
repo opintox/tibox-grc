@@ -140,17 +140,20 @@
 
         <section class="wizard-step wizard-step1-cols" data-step="1" id="wizardStep1">
           <div class="panel section-block wizard-col">
-            <div class="setup-section-head">
+            <div class="wizard-col-head">
+              <div class="eyebrow">Datos de la sesión</div>
               <h2 class="section-title">Perfil del cliente</h2>
               <p class="section-sub">Nombre del cliente y facilitador de la sesión. Puedes adjuntar un playbook de referencia si lo tienes.</p>
             </div>
-            <div class="field-row" style="margin-bottom:0;">
-              <label>Nombre del cliente</label>
-              <input type="text" id="clientNameInput" placeholder="Ej: Quintero Energía">
-            </div>
-            <div class="field-row">
-              <label>Facilitador</label>
-              <input type="text" id="facilitatorNameInput" placeholder="Quién conduce la sesión">
+            <div class="wizard-col-body">
+              <div class="field-row">
+                <label>Nombre del cliente</label>
+                <input type="text" id="clientNameInput" placeholder="Ej: Quintero Energía">
+              </div>
+              <div class="field-row" style="margin-bottom:0;">
+                <label>Facilitador</label>
+                <input type="text" id="facilitatorNameInput" placeholder="Quién conduce la sesión">
+              </div>
             </div>
             <div class="profile-actions">
               <button class="btn btn-sm btn-primary" id="saveProfileBtn">Guardar perfil</button>
@@ -159,20 +162,24 @@
           </div>
 
           <div class="panel section-block wizard-col playbook-panel">
-            <div class="eyebrow">Material opcional</div>
-            <h2 class="section-title">Si dispone de un playbook, cargar aquí</h2>
-            <p class="section-sub">Adjunta material de referencia para la simulación, o un escenario personalizado en Word (descarga la plantilla, complétala y súbela aquí para que aparezca como tarjeta en "Tipo de ataque").</p>
-            <label class="playbook-dropzone" id="playbookDropzone">
-              <svg class="playbook-dropzone-icon" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 15V3m0 0 4 4m-4-4L8 7"/>
-                <path d="M3 15v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4"/>
-              </svg>
-              <span class="playbook-dropzone-text">Arrastra tu archivo aquí o <b>haz clic para examinar</b></span>
-              <span class="playbook-dropzone-filename" id="playbookFileName">Ningún archivo seleccionado</span>
-              <input type="file" id="playbookFile" accept=".json,.pdf,.doc,.docx,.txt,application/json,application/pdf,text/plain">
-            </label>
+            <div class="wizard-col-head">
+              <div class="eyebrow">Material opcional</div>
+              <h2 class="section-title">Si dispone de un playbook, cargar aquí</h2>
+              <p class="section-sub">Adjunta material de referencia para la simulación, o un escenario personalizado en Word (descarga la plantilla, complétala y súbela aquí para que aparezca como tarjeta en "Tipo de ataque").</p>
+            </div>
+            <div class="wizard-col-body">
+              <label class="playbook-dropzone" id="playbookDropzone">
+                <svg class="playbook-dropzone-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 15V3m0 0 4 4m-4-4L8 7"/>
+                  <path d="M3 15v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4"/>
+                </svg>
+                <span class="playbook-dropzone-text">Arrastra tu archivo aquí o <b>haz clic para examinar</b></span>
+                <span class="playbook-dropzone-filename" id="playbookFileName">Ningún archivo seleccionado</span>
+                <input type="file" id="playbookFile" accept=".json,.pdf,.doc,.docx,.txt,application/json,application/pdf,text/plain">
+              </label>
+            </div>
             <div class="playbook-actions">
-              <button class="btn btn-primary" id="loadPlaybookBtn" type="button">Cargar playbook</button>
+              <button class="btn btn-sm btn-primary" id="loadPlaybookBtn" type="button">Cargar playbook</button>
               <button class="btn btn-sm" id="downloadTemplateBtn" type="button">Descargar plantilla Word</button>
             </div>
             <p class="playbook-status" id="playbookStatus" role="status" aria-live="polite"></p>
@@ -194,7 +201,7 @@
             <p class="section-sub">Indica la empresa de cada función y marca quién participará en esta sesión.</p>
             <span class="setup-badge" id="participantsBadge">0 activas</span>
           </div>
-          <p class="wizard-step3-summary" id="wizardStep3Summary"></p>
+          <p class="step3-alert" id="wizardStep3Summary" role="status" aria-live="polite"></p>
           <div class="participants-grid" id="participantsBody"></div>
         </section>
 
@@ -231,6 +238,38 @@
 
   <div id="screen-results" class="hidden">
     <div class="panel section-block results-panel results-enter" style="animation-delay:0s;">
+
+      <!-- Panel Ejecutivo de Rendimiento: 3 KPI a simple vista antes de bajar al detalle
+           por etapa / al gráfico de dona. -->
+      <div class="kpi-row">
+        <div class="kpi-card kpi-card-score" id="gradeBadge">
+          <div class="kpi-card-label">Puntuación global</div>
+          <div class="kpi-score-row">
+            <span class="kpi-score-pct" id="gradePct">—</span>
+            <span class="kpi-score-tag" id="gradeLabel">—</span>
+          </div>
+          <div class="kpi-score-meta" id="gradeMeta">—</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-card-label">Precisión &amp; tiempo</div>
+          <div class="kpi-dual">
+            <div class="kpi-dual-item"><span class="kpi-dual-val" id="kpiPrecisionPct">0%</span><span class="kpi-dual-label">Precisión</span></div>
+            <div class="kpi-dual-sep"></div>
+            <div class="kpi-dual-item"><span class="kpi-dual-val" id="kpiDuration">00:00</span><span class="kpi-dual-label">Tiempo total</span></div>
+          </div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-card-label">Desglose de errores</div>
+          <div class="kpi-dual">
+            <div class="kpi-dual-item kpi-dual-function"><span class="kpi-dual-val" id="kpiWrongChars">0</span><span class="kpi-dual-label">De función</span></div>
+            <div class="kpi-dual-sep"></div>
+            <div class="kpi-dual-item kpi-dual-response"><span class="kpi-dual-val" id="kpiWrongAnswers">0</span><span class="kpi-dual-label">De respuesta</span></div>
+          </div>
+        </div>
+      </div>
+
       <div class="res-cols">
 
         <div class="results-main">
@@ -247,25 +286,20 @@
         </div>
 
         <aside class="results-side">
-          <div class="grade-badge" id="gradeBadge">
-            <span class="grade-pct" id="gradePct">—</span>
-            <span class="grade-label" id="gradeLabel">—</span><span class="grade-meta" id="gradeMeta">—</span>
-          </div>
-
           <div class="donut-result-wrap">
             <div class="donut-result">
               <svg width="132" height="132" viewBox="0 0 132 132">
                 <circle cx="66" cy="66" r="54" fill="none" stroke="var(--panel-3)" stroke-width="16"/>
                 <circle id="resDonutCorrect" cx="66" cy="66" r="54" fill="none" stroke="var(--green)" stroke-width="16" stroke-dasharray="0 340" transform="rotate(-90 66 66)"/>
-                <circle id="resDonutAlt" cx="66" cy="66" r="54" fill="none" stroke="var(--amber)" stroke-width="16" stroke-dasharray="0 340" transform="rotate(-90 66 66)"/>
-                <circle id="resDonutChar" cx="66" cy="66" r="54" fill="none" stroke="var(--red)" stroke-width="16" stroke-dasharray="0 340" transform="rotate(-90 66 66)"/>
+                <circle id="resDonutAlt" cx="66" cy="66" r="54" fill="none" stroke="var(--err-response)" stroke-width="16" stroke-dasharray="0 340" transform="rotate(-90 66 66)"/>
+                <circle id="resDonutChar" cx="66" cy="66" r="54" fill="none" stroke="var(--err-function)" stroke-width="16" stroke-dasharray="0 340" transform="rotate(-90 66 66)"/>
               </svg>
               <div class="donut-result-center"><b id="resDonutPct">0%</b><span>precisión</span></div>
             </div>
             <div class="donut-result-legend">
-              <div class="ring-legend-item"><span class="ring-dot" style="background:var(--green);"></span>Respondidas<b id="resTotal">0</b></div>
-              <div class="ring-legend-item"><span class="ring-dot" style="background:var(--red);"></span>Errores de función<b id="resWrongChars">0</b></div>
-              <div class="ring-legend-item"><span class="ring-dot" style="background:var(--amber);"></span>Errores de respuesta<b id="resWrongAnswers">0</b></div>
+              <div class="ring-legend-item"><span class="ring-dot" style="background:var(--green); color:var(--green);"></span>Respondidas<b id="resTotal">0</b></div>
+              <div class="ring-legend-item"><span class="ring-dot" style="background:var(--err-function); color:var(--err-function);"></span>Errores de función<b id="resWrongChars">0</b></div>
+              <div class="ring-legend-item"><span class="ring-dot" style="background:var(--err-response); color:var(--err-response);"></span>Errores de respuesta<b id="resWrongAnswers">0</b></div>
               <div class="donut-result-meta">Duración total <b id="resDuration">00:00</b></div>
             </div>
           </div>

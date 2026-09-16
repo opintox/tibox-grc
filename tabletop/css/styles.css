@@ -4,6 +4,15 @@
     --amber:#FF8A00; --amber-dim:rgba(255,138,0,0.14); --red:#FF4D6A; --red-dim:rgba(255,77,106,0.14);
     --green:#22D3A6; --green-dim:rgba(34,211,166,0.14); --blue:#0EA5E9; --blue-dim:rgba(14,165,233,0.14);
     --purple:#7C8CF0; --purple-dim:rgba(124,140,240,0.14);
+    /* Par táctico exclusivo del dashboard de Resultados (barras por etapa, dona, KPIs de
+       errores): rojo neón para errores de función/personaje, naranjo TIBOX para errores de
+       respuesta/alternativa. Deliberadamente distintos de --red/--amber (esos siguen
+       usándose para el resto de los estados de error/advertencia de la app). */
+    --err-function:#EF4444; --err-response:#F97316;
+    /* Acento magenta/púrpura neón exclusivo del HUD superior (header.game-head: timer,
+       stepper, progreso, botones de navegación) para el "ejercicio actual" — separado de
+       --purple (#7C8CF0, más indigo/azulado, ya usado en otras partes: gh-bar-fill, etc.). */
+    --gh-accent:#a855f7; --gh-accent-2:#c084fc; --gh-accent-dim:rgba(168,85,247,0.12); --gh-accent-border:rgba(168,85,247,0.35);
     --sans:'Plus Jakarta Sans', -apple-system, sans-serif; --display:var(--sans); --mono:var(--sans);
   }
   *{box-sizing:border-box;}
@@ -109,34 +118,105 @@
   .participants-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:16px; align-items:stretch;}
   @media (max-width:1000px){.participants-grid{grid-template-columns:repeat(2,1fr);}}
   @media (max-width:560px){.participants-grid{grid-template-columns:1fr;}}
-  /* Misma estructura base que .char-card (juego): columna flex con la descripción
-     creciendo para absorber el espacio sobrante, así el pie (Empresa/+Agregar) siempre
-     queda en el borde inferior y las tarjetas de una fila se ven parejas en alto — antes
-     el alto lo daba solo el contenido, sin piso mínimo ni reparto de espacio interno. */
-  .p-card{
-    padding:16px; border-radius:12px; border:1px solid rgba(255,255,255,0.1); box-sizing:border-box;
-    border-bottom:2px solid var(--p-bar, rgba(255,255,255,0.35)); background:rgba(15,23,42,0.6);
-    box-shadow:0 10px 22px -14px rgba(255,255,255,0.28); transition:opacity .15s;
-    display:flex; flex-direction:column; justify-content:space-between; min-width:0; min-height:160px; height:100%;
+  /* Ficha de rol táctica: fondo oscuro semitransparente, borde fino + acento lateral
+     (var(--p-bar), fijado por JS por función) en vez del acento inferior de antes — se lee
+     más como un "panel de estado" que como un simple separador. Columna flex con la
+     descripción absorbiendo el espacio sobrante, así el pie (Empresa) siempre queda en el
+     borde inferior y las tarjetas de una fila se ven parejas en alto. */
+  .participant-card{
+    position:relative; padding:14px 16px 14px 18px; border-radius:12px; border:1px solid rgba(255,255,255,0.1); box-sizing:border-box;
+    border-left:3px solid var(--p-bar, rgba(255,255,255,0.35)); background:rgba(15,23,42,0.68);
+    box-shadow:0 10px 22px -14px rgba(0,0,0,0.6); transition:opacity .15s ease, border-color .15s ease, background-color .15s ease, box-shadow .2s ease;
+    display:flex; flex-direction:column; min-width:0; min-height:172px; height:100%;
   }
-
-  /* Misma opacidad que .char-off (juego) para que una función inactiva se vea igual de
-     apagada en las dos pantallas. */
-  .p-card.row-inactive{opacity:0.55;}
-  .p-card-head{display:flex; align-items:flex-start; gap:10px; margin-bottom:10px; flex:0 0 auto;}
-  .p-card-head input[type="checkbox"]{width:17px; height:17px; accent-color:var(--green); cursor:pointer; margin-top:2px; flex-shrink:0;}
+  .participant-card.row-inactive{opacity:0.55;}
+  /* Glow naranjo tenue (marca TIBOX) en las tarjetas activas, además del acento lateral
+     por función (--p-bar, que identifica el rol y se mantiene sin cambios) — refuerza a
+     nivel de tarjeta el mismo estado que ya marcan el switch y el badge ACTIVO. */
+  .participant-card:not(.row-inactive){box-shadow:0 10px 22px -14px rgba(0,0,0,0.6), 0 0 16px -6px rgba(255,107,0,0.35);}
+  .pc-head{display:flex; align-items:center; gap:10px; margin-bottom:10px; flex:0 0 auto;}
+  /* Interruptor custom (reemplaza el checkbox nativo): pista + thumb deslizante. Activo,
+     toma el color distintivo del rol (--p-bar, la misma variable del ícono y el acento
+     lateral de la tarjeta) vía color-mix(), igual que el badge ACTIVO — no un naranjo fijo.
+     El <input> real queda invisible pero ocupa toda el área del control (accesible por
+     teclado/lector de pantalla); el estado visual lo maneja :checked sobre sus hermanos,
+     sin JS adicional. */
+  .pc-switch{position:relative; display:inline-flex; flex-shrink:0; width:34px; height:20px; cursor:pointer;}
+  .pc-switch-input{position:absolute; inset:0; margin:0; opacity:0; z-index:1; cursor:pointer;}
+  .pc-switch-input:disabled{cursor:not-allowed;}
+  .pc-switch-track{
+    position:absolute; inset:0; border-radius:999px; background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.2);
+    transition:background-color .18s ease, border-color .18s ease, box-shadow .18s ease;
+  }
+  .pc-switch-thumb{
+    position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:#9AA7BD;
+    transition:transform .18s ease, background-color .18s ease, box-shadow .18s ease;
+  }
+  .pc-switch-input:checked ~ .pc-switch-track{
+    background:color-mix(in srgb, var(--p-bar, #FF6B00) 22%, rgba(255,255,255,0.12));
+    border-color:color-mix(in srgb, var(--p-bar, #FF6B00) 60%, transparent);
+    box-shadow:0 0 12px color-mix(in srgb, var(--p-bar, #FF6B00) 45%, transparent);
+  }
+  .pc-switch-input:checked ~ .pc-switch-track .pc-switch-thumb{
+    transform:translateX(14px);
+    background:var(--p-bar, #FF6B00);
+    box-shadow:0 0 8px color-mix(in srgb, var(--p-bar, #FF6B00) 80%, transparent);
+  }
+  .pc-switch-input:focus-visible ~ .pc-switch-track{outline:2px solid #38bdf8; outline-offset:2px;}
+  .pc-switch-input:disabled ~ .pc-switch-track{opacity:0.5;}
+  .pc-role{display:flex; align-items:center; gap:8px; min-width:0; flex:1 1 auto;}
+  .pc-role-name{font-family:var(--sans); font-weight:700; font-size:var(--fs-sm); color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  /* Badge de estado estilo pill, con corchetes [ACTIVO]/[INACTIVO] en mono, al lado del
+     nombre del rol — neutro apagado si no participa; si participa, adopta el color
+     distintivo del rol (--p-bar, el mismo que fija JS para el ícono y el acento lateral
+     de la tarjeta) vía color-mix(), en vez de un tono fijo: fucsia en Seguridad, azul en
+     TI, naranja en Legal, etc. Fondo siempre oscuro (solo un 16% del acento mezclado
+     adentro) para que el borde de color sea lo que más destaque. */
+  .pc-status-pill{
+    flex-shrink:0; font-family:var(--mono); font-size:var(--fs-4xs); font-weight:700; letter-spacing:0.04em;
+    padding:3px 8px; border-radius:999px; color:var(--muted-2); background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14);
+    transition:color .15s ease, background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
+  }
+  .participant-card:not(.row-inactive) .pc-status-pill{
+    color:var(--p-bar, #FF6B00);
+    background:color-mix(in srgb, var(--p-bar, #FF6B00) 16%, rgba(15,23,42,0.6));
+    border-color:color-mix(in srgb, var(--p-bar, #FF6B00) 55%, transparent);
+    box-shadow:0 0 10px -4px color-mix(in srgb, var(--p-bar, #FF6B00) 70%, transparent);
+  }
   /* Sin line-clamp/overflow:hidden (cortaba a 2 líneas) ni scroll: el texto completo
      entra holgado con este tamaño/interlineado — las descripciones reales son siempre
      cortas (una frase), así que en la práctica rara vez pasan de 1-2 líneas igual. */
-  .p-card-desc{font-size:var(--fs-sm); color:var(--muted); line-height:1.35; margin:8px 0; overflow:visible; flex:1 1 auto;}
-  .p-card-fields{display:flex; flex-direction:column; gap:6px; flex:0 0 auto;}
-  .p-card-field{display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:var(--fs-xs);}
-  .p-card-field-label{font-family:var(--mono); font-size:var(--fs-4xs); letter-spacing:0.06em; color:var(--muted-2); text-transform:uppercase; flex-shrink:0; width:64px;}
-  .p-card-field-value{cursor:pointer; text-align:right; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .pc-desc{font-size:var(--fs-sm); color:var(--muted); line-height:1.35; margin:0 0 12px; overflow:visible; flex:1 1 auto;}
+  /* Barra de entrada integrada: "Empresa" + el valor (o el CTA "+ Agregar") viven dentro
+     de un único contenedor estilizado, en vez de una fila de tabla suelta como antes. Con
+     empresa cargada, el valor se ve como chip removible (botón × propio); vacío, el
+     contenedor completo se ve como una zona de carga punteada clicable. */
+  .pc-empresa{display:flex; align-items:center; gap:8px; margin-top:auto; padding-top:12px; flex:0 0 auto;}
+  .pc-empresa-label{font-family:var(--mono); font-size:var(--fs-4xs); letter-spacing:0.06em; color:var(--muted-2); text-transform:uppercase; flex-shrink:0;}
+  .pc-empresa-input{
+    display:flex; align-items:center; gap:2px; flex:1; min-width:0; padding-right:4px;
+    background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.14); border-radius:8px;
+    transition:border-color .15s ease, background-color .15s ease;
+  }
+  .pc-empresa-input:hover{border-color:rgba(255,255,255,0.26);}
+  .pc-empresa-input.is-empty{border-style:dashed; background:transparent;}
+  .pc-empresa-input.is-empty:hover, .pc-empresa-input.is-empty:focus-within{border-color:var(--blue); background:rgba(14,165,233,0.06);}
+  .pc-empresa-chip{
+    display:flex; align-items:center; gap:6px; flex:1; min-width:0; cursor:pointer;
+    padding:6px 10px; border-radius:7px; font-size:var(--fs-xs); font-weight:600; color:var(--text);
+    transition:color .15s ease;
+  }
+  .pc-empresa-chip:focus-visible{outline:2px solid #38bdf8; outline-offset:-2px;}
+  .pc-empresa-chip span{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .pc-empresa-input.is-empty .pc-empresa-chip{justify-content:center; color:var(--muted-2);}
+  .pc-empresa-input.is-empty:hover .pc-empresa-chip, .pc-empresa-input.is-empty:focus-within .pc-empresa-chip{color:var(--blue);}
+  .pc-empresa-remove{
+    flex-shrink:0; width:18px; height:18px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14); color:var(--muted);
+    font-size:13px; line-height:1; cursor:pointer; transition:background .15s ease, color .15s ease, border-color .15s ease;
+  }
+  .pc-empresa-remove:hover, .pc-empresa-remove:focus-visible{background:var(--red-dim); border-color:rgba(255,77,106,0.5); color:var(--red); outline:none;}
   .table-wrap{overflow-x:auto; -webkit-overflow-scrolling:touch;}
-  .undefined-chip{display:inline-block; color:var(--muted-2); font-size:var(--fs-2xs); padding:3px 9px; border-radius:20px; border:1px dashed rgba(255,255,255,0.16); transition:border-color .15s, color .15s;}
-  .p-card-field-value:hover .undefined-chip{border-color:var(--blue); color:var(--blue);}
-  .p-card-field-value:hover{color:var(--blue);}
   table.ptable th{text-align:left; font-family:var(--mono); font-size:var(--fs-3xs); letter-spacing:0.1em; color:var(--muted); text-transform:uppercase; padding:0 10px 10px; border-bottom:1px solid var(--border);}
   table.ptable td{padding:10px; border-bottom:1px solid var(--border-soft, var(--border)); vertical-align:middle;}
   table.ptable tr:last-child td{border-bottom:none;}
@@ -170,8 +250,6 @@
   .btn-primary:hover{box-shadow:0 0 0 1px rgba(34,211,166,0.2) inset, 0 8px 28px -8px rgba(34,211,166,0.55);}
 
 
-  .empresa-badge{display:inline-flex; align-items:center; gap:8px; font-family:var(--mono); font-size:var(--fs-2xs); letter-spacing:0.04em; padding:4px 10px 4px 4px; border-radius:20px; border:1px solid var(--border);}
-  .empresa-badge svg{flex-shrink:0; opacity:0.9;}
   /* Ícono de cada función en su propio chip circular con el acento de esa función
      (mismo lenguaje visual que .scn-icon en las tarjetas de escenario) — el fondo/color
      los pone JS inline por función (roleIconChipHtml), acá solo el tamaño y la forma. */
@@ -180,11 +258,6 @@
     width:24px; height:24px; border-radius:50%;
   }
   .p-role-icon svg{width:13px; height:13px; opacity:1;}
-  /* La píldora de texto sigue neutra: el color queda solo en el ícono. */
-  .empresa-badge, .empresa-badge.seguridad, .empresa-badge.ti, .empresa-badge.legal,
-  .empresa-badge.comunicaciones, .empresa-badge.rrhh, .empresa-badge.direccion{
-    color:var(--text); border-color:rgba(255,255,255,0.14); background:rgba(255,255,255,0.06);
-  }
 
   .edit-popout{
     position:fixed; z-index:100; background:var(--panel-3); border:1px solid var(--blue);
@@ -241,16 +314,48 @@
   }
   .modal-close-btn:hover{background:rgba(255,255,255,0.12); color:var(--text);}
 
+  /* Modal educativo de las reglas del ejercicio: badge + título + "el porqué"/"el cómo" +
+     tip pro, con un acento de color propio por regla (--a/--a-dim/--a-border, mismo
+     mecanismo que usan las tarjetas de escenario y de función) seteado inline por JS. */
+  .rule-modal-box{max-width:480px;}
+  .rule-badge{
+    display:inline-flex; align-items:center; font-family:var(--mono); font-size:var(--fs-3xs); font-weight:700;
+    letter-spacing:0.1em; text-transform:uppercase; padding:5px 12px; border-radius:999px;
+    color:var(--a, var(--blue)); background:var(--a-dim, var(--blue-dim)); border:1px solid var(--a-border, transparent);
+  }
+  .rule-modal-title{font-family:var(--display); font-weight:800; font-size:var(--fs-lg); color:#fff; margin:12px 0 18px; letter-spacing:-0.01em;}
+  .rule-modal-section{margin-bottom:16px;}
+  .rule-modal-section-head{
+    display:flex; align-items:center; gap:7px; font-family:var(--mono); font-size:var(--fs-2xs); font-weight:700;
+    letter-spacing:0.06em; text-transform:uppercase; color:var(--muted); margin-bottom:6px;
+  }
+  .rule-modal-section-head svg{flex-shrink:0; color:var(--a, var(--blue));}
+  .rule-modal-section p{font-size:var(--fs-sm); line-height:1.6; color:rgba(241,245,249,0.85); margin:0;}
+  .rule-modal-tip{
+    margin-top:18px; padding:12px 14px; border-radius:10px; display:flex; gap:10px; align-items:flex-start;
+    background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-left:3px solid var(--a, var(--blue));
+  }
+  .rule-modal-tip svg{flex-shrink:0; margin-top:2px; color:var(--a, var(--blue));}
+  .rule-modal-tip p{font-size:var(--fs-xs); line-height:1.55; color:var(--text); margin:0;}
+  .rule-modal-tip b{color:var(--a, var(--blue));}
+
   .hidden{display:none !important;}
 
   /* ---------- game screen ---------- */
   /* Tarjeta moderna para leer el caso: fondo con un degradado muy suave (ya no la línea
      dura inset a la izquierda, que se sentía más técnica que elegante) y borde delicado. */
   .story-panel{
-    background:linear-gradient(160deg, var(--panel) 55%, var(--panel-3));
+    background:
+      linear-gradient(160deg, var(--panel) 55%, var(--panel-3)),
+      repeating-linear-gradient(180deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 3px);
     border-color:rgba(255,255,255,0.12);
     padding:clamp(18px, 2vw, 26px);
   }
+  /* Encabezado tipo consola SOC: el eyebrow "ESCENARIO · ETAPA" toma el acento del
+     escenario (--a, ya seteado por JS) en vez del gris genérico, como un indicador de
+     estado "en vivo" al inicio del feed. */
+  #storyScenarioLabel{color:var(--a, var(--blue)); font-weight:700;}
+  #storyScenarioLabel::before{background:var(--a, var(--blue)); box-shadow:0 0 8px var(--a, transparent);}
   /* Preguntas: tipografía más compacta y fluida para aprovechar mejor el panel. Interlineado
      algo más generoso (1.5→1.6, 1.66→1.72) para que la lectura larga se sienta más cómoda. */
   .story-text{font-family:var(--sans); font-size:var(--fs-lg); line-height:1.6; margin:0; font-weight:400; overflow-wrap:anywhere;}
@@ -260,12 +365,18 @@
   /* ---------- situación del ejercicio ---------- */
   .sit-meta{display:flex; flex-wrap:wrap; gap:var(--sp-2); margin-bottom:var(--sp-4);}
   .sit-body p{break-inside:avoid;}
+  /* Badges de datos del relato (hora, día, sistema, canal): fondo semi-transparente algo
+     más marcado que antes + borde sutil, para que destaquen con alta legibilidad sobre el
+     panel-consola. El punto adopta el acento del escenario (--a) en vez de blanco fijo. */
   .sit-chip{
     display:inline-flex; align-items:center; gap:7px; padding:5px 11px; border-radius:999px;
-    font-family:var(--mono); font-size:var(--fs-3xs); letter-spacing:0.06em; color:#CFE2F5;
-    background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.10); white-space:nowrap;
+    font-family:var(--mono); font-size:var(--fs-3xs); letter-spacing:0.06em; color:#E7EEF9;
+    background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.16); white-space:nowrap;
   }
-  .sit-chip::before{content:''; width:5px; height:5px; border-radius:50%; background:rgba(255,255,255,0.55); flex-shrink:0;}
+  .sit-chip::before{
+    content:''; width:5px; height:5px; border-radius:50%; flex-shrink:0;
+    background:var(--a, rgba(255,255,255,0.55)); box-shadow:0 0 6px var(--a, transparent);
+  }
   .sit-body{font-size:var(--fs-md); line-height:1.72; color:#D9E3F2; margin:0; max-width:none;}
   .sit-body p{margin:0 0 15px;}
   .sit-body p:last-child{margin-bottom:0;}
@@ -286,20 +397,38 @@
   }
   .sit-ask{display:flex; flex-wrap:wrap; align-items:center; gap:var(--sp-3); width:100%;}
   .sit-ask-q{font-family:var(--display); font-weight:800; font-size:var(--fs-xl); color:#fff; letter-spacing:-0.012em; margin-right:auto;}
+  /* Pestañas/píldoras del sub-paso (1 · Función / 2 · Decisión): gris tenue mientras no es
+     el paso vigente, naranjo transparente TIBOX (glassmorphism) cuando sí lo es — mismo
+     lenguaje de "elemento activo" que el resto de la interfaz. */
   .sit-ask-step{
-    font-family:var(--mono); font-size:var(--fs-3xs); letter-spacing:0.1em; text-transform:uppercase;
-    color:var(--muted); padding:4px 10px; border-radius:999px; border:1px dashed var(--border);
+    font-family:var(--mono); font-size:var(--fs-3xs); font-weight:700; letter-spacing:0.1em; text-transform:uppercase;
+    color:var(--muted-2); padding:5px 12px; border-radius:999px; border:1px solid rgba(255,255,255,0.1);
+    background:rgba(255,255,255,0.03); opacity:0.7;
+    transition:color .18s ease, background-color .18s ease, border-color .18s ease, box-shadow .18s ease, opacity .18s ease;
   }
-  .sit-ask-step.on{color:#fff; border-style:solid; border-color:rgba(255,255,255,0.55); background:rgba(255,255,255,0.08);}
+  .sit-ask-step.on{
+    color:#FFC28A; opacity:1; border-color:rgba(249,115,22,0.4); background:rgba(249,115,22,0.15);
+    box-shadow:0 0 12px rgba(249,115,22,0.25);
+  }
   .ops-context{font-size:var(--fs-2xs); font-style:italic; color:var(--muted); line-height:1.5; margin:0 0 12px; padding-bottom:10px; border-bottom:1px dashed var(--border);}
   .ops-context b{color:var(--muted); font-style:normal;}
-  .ring-legend-item{display:flex; align-items:center; gap:7px;}
-  .ring-dot{width:8px; height:8px; border-radius:50%; flex-shrink:0;}
+  /* Leyenda de la dona como fila de píldoras (antes texto suelto): fondo/borde sutiles
+     para que cada indicador se lea como un chip propio, con el punto de color al frente. */
+  .ring-legend-item{
+    display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px;
+    background:rgba(255,255,255,0.035); border:1px solid rgba(255,255,255,0.09);
+  }
+  .ring-dot{width:9px; height:9px; border-radius:50%; flex-shrink:0; box-shadow:0 0 6px -1px currentColor;}
   .ring-legend-item b{font-family:var(--mono); margin-left:auto; padding-left:12px;}
 
   /* ---------- gráficos de resultados finales ---------- */
   .donut-result-wrap{display:flex; align-items:center; gap:28px; flex-wrap:wrap;}
   .donut-result{position:relative; width:132px; height:132px; flex-shrink:0;}
+  /* Borde iluminado por segmento: cada arco brilla con su propio color en vez de quedar
+     plano — mismo lenguaje "glow" que el resto del panel ejecutivo. */
+  #resDonutCorrect{filter:drop-shadow(0 0 5px rgba(34,211,166,0.6));}
+  #resDonutAlt{filter:drop-shadow(0 0 5px rgba(249,115,22,0.6));}
+  #resDonutChar{filter:drop-shadow(0 0 5px rgba(239,68,68,0.6));}
   .donut-result-center{position:absolute; top:0; right:0; bottom:0; left:0; display:flex; flex-direction:column; align-items:center; justify-content:center;}
   .donut-result-center b{font-family:var(--mono); font-size:var(--fs-2xl); font-weight:700;}
   .donut-result-center span{font-family:var(--mono); font-size:var(--fs-4xs); color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;}
@@ -315,8 +444,13 @@
   .stage-chart-label span{font-family:var(--mono); font-size:var(--fs-3xs); color:var(--muted-2); font-weight:400;}
   .mini-bar-row{display:flex; align-items:center; gap:8px; font-size:var(--fs-3xs);}
   .mini-bar-label{width:76px; flex-shrink:0; font-family:var(--mono); color:var(--muted); text-transform:uppercase; font-size:var(--fs-4xs);}
-  .mini-bar-track{flex:1; height:6px; background:var(--panel-3); border-radius:3px; overflow:hidden;}
-  .mini-bar-fill{height:100%; border-radius:3px; transition:width .25s ease;}
+  .mini-bar-track{flex:1; height:7px; background:var(--panel-3); border-radius:4px; overflow:visible;}
+  .mini-bar-fill{height:100%; border-radius:4px; transition:width .25s ease;}
+  /* Segmentos tácticos del desglose por etapa: rojo neón (función/personaje) y naranjo
+     TIBOX (respuesta/alternativa) semitransparentes (0.8), con un glow propio del mismo
+     tono — misma pareja que la dona y las KPI de arriba. */
+  .mini-bar-fill.is-function{background:rgba(239,68,68,0.8); box-shadow:0 0 8px -1px rgba(239,68,68,0.7);}
+  .mini-bar-fill.is-response{background:rgba(249,115,22,0.8); box-shadow:0 0 8px -1px rgba(249,115,22,0.7);}
   .mini-bar-val{font-family:var(--mono); font-size:var(--fs-3xs); width:16px; text-align:right; flex-shrink:0;}
 
   /* Selección de funciones: el grid se adapta a la cantidad real de opciones (2 a 6 según
@@ -336,12 +470,11 @@
   @media (max-width:440px){
     .char-grid,.char-grid.count-2,.char-grid.count-3,.char-grid.count-4,.char-grid.count-5,.char-grid.count-6{grid-template-columns:1fr;}
   }
-  /* Misma barra de acento que .p-card (Participantes): abajo, 2px, color plano — antes
-     era una franja de 3px arriba con degradado de dos tonos; ahora es el mismo mecanismo
-     (border-bottom) y el mismo grosor/efecto en ambas pantallas. --card-bar la fija JS con
-     el acento de la función (mismo valor que --p-bar en renderParticipants). */
-  /* Mismo fondo/borde que .p-card (Participantes) — antes .char-card tenía un
-     degradado translúcido-blanco propio que, aunque sutil, se veía como un material
+  /* Barra de acento inferior de 2px, color plano — --card-bar la fija JS con el acento
+     de la función (mismo valor que --p-bar en renderParticipants; .participant-card usa
+     un acento lateral en vez de inferior, pero es el mismo color de origen). */
+  /* Mismo fondo/borde base que .participant-card (Participantes) — antes .char-card tenía
+     un degradado translúcido-blanco propio que, aunque sutil, se veía como un material
      distinto al panel sólido de Participantes. Ahora ambas usan el mismo relleno. */
   .char-card{
     position:relative; overflow:hidden; cursor:pointer; text-align:left; min-width:0;
@@ -370,11 +503,11 @@
   }
   .char-card .c-icon svg{width:18px; height:18px;}
   .char-card .c-name{font-family:var(--display); font-weight:800; font-size:var(--fs-md); color:#fff; line-height:1.15;}
-  /* Sin line-clamp/overflow:hidden ni scroll (mismo criterio que .p-card-desc): el texto
+  /* Sin line-clamp/overflow:hidden ni scroll (mismo criterio que .pc-desc): el texto
      completo siempre visible, con tamaño/interlineado pensado para que quepa holgado. */
   .char-card .c-desc{
     font-size:var(--fs-sm); line-height:1.35; color:#9DACC6; margin:8px 0; overflow:visible;
-    /* flex-grow:1 (mismo mecanismo que .p-card-desc): absorbe el espacio sobrante de la
+    /* flex-grow:1 (mismo mecanismo que .pc-desc): absorbe el espacio sobrante de la
        tarjeta para que el pie quede siempre pegado abajo, en vez de solo el margin-top:auto
        del pie — así todas las tarjetas de una fila (con min-height parejo por el grid en
        stretch) quedan con la descripción y el pie alineados igual, sin importar cuánto
@@ -383,37 +516,66 @@
   }
   /* "Ejecuta"/"No participa" + el responsable, como una insignia compacta y discreta en
      vez de una fila de ancho completo con línea divisoria — el label queda como un chip
-     propio adentro del badge, y el valor lo acompaña como texto simple. */
+     propio adentro del badge, y el valor lo acompaña como texto simple. Tinte con el color
+     del rol (--card-bar, la misma variable del ícono y la barra inferior de la tarjeta) vía
+     color-mix(), en vez de un gris neutro fijo. */
   .char-card .c-foot{
     display:inline-flex; align-items:center; gap:6px; align-self:flex-start; margin-top:auto;
     padding:3px 10px 3px 3px; border-radius:999px; font-family:var(--mono);
-    background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.10);
+    background:color-mix(in srgb, var(--card-bar, rgba(255,255,255,0.35)) 12%, rgba(255,255,255,0.05));
+    border:1px solid color-mix(in srgb, var(--card-bar, rgba(255,255,255,0.35)) 40%, rgba(255,255,255,0.10));
   }
   .char-card .c-foot-label{
-    font-size:var(--fs-4xs); letter-spacing:0.1em; text-transform:uppercase; color:var(--muted-2);
-    background:rgba(255,255,255,0.08); padding:3px 8px; border-radius:999px; line-height:1.4;
+    font-size:var(--fs-4xs); letter-spacing:0.1em; text-transform:uppercase;
+    color:color-mix(in srgb, var(--card-bar, var(--muted-2)) 70%, white 30%);
+    background:color-mix(in srgb, var(--card-bar, rgba(255,255,255,0.35)) 22%, rgba(255,255,255,0.08));
+    padding:3px 8px; border-radius:999px; line-height:1.4;
   }
   .char-card .c-foot-value{font-size:var(--fs-3xs); color:var(--text); font-weight:600;}
-  /* Apagada con solo opacidad (antes sumaba grayscale+brightness, que le quitaba
-     demasiado contraste al título y la descripción) para que no compita con las opciones
-     activas de la ronda pero el texto se siga leyendo bien — misma estructura/dimensiones
-     (min-height, padding, grid), nada colapsa ni desaparece de golpe. Misma opacidad que
-     .p-card.row-inactive en Participantes. */
+  /* Apagada con opacidad reducida (0.35) + una trama diagonal tenue, para diferenciar de
+     inmediato qué tarjetas se pueden elegir sin necesitar leer "No participa" — el texto
+     se sigue leyendo bien, misma estructura/dimensiones (min-height, padding, grid), nada
+     colapsa ni desaparece de golpe. */
   .char-card.char-off{
-    opacity:0.55; cursor:not-allowed;
+    opacity:0.35; cursor:not-allowed;
     box-shadow:none; pointer-events:none; border-color:rgba(255,255,255,0.06);
     border-bottom-color:var(--border);
+    background-image:repeating-linear-gradient(135deg, rgba(255,255,255,0.035) 0px, rgba(255,255,255,0.035) 1px, transparent 1px, transparent 7px);
   }
   .char-card.correct-flash{border-color:var(--green);}
   .char-card.correct-flash::after{content:''; position:absolute; inset:0; border-radius:var(--radius-lg); box-shadow:0 0 0 2px var(--green) inset; pointer-events:none;}
   .char-card.wrong-flash{border-color:var(--red); animation:shake .3s;}
   @keyframes shake{0%,100%{transform:translateX(0);} 25%{transform:translateX(-4px);} 75%{transform:translateX(4px);}}
 
-  .answer-options{display:flex; flex-direction:column; gap:8px;}
-  .answer-btn{text-align:left; padding:9px 12px; border-radius:7px; border:1px solid var(--border); background:var(--panel-2); color:var(--text); cursor:pointer; font-size:var(--fs-sm); line-height:1.38; font-family:var(--sans); transition:border-color .12s, background .12s;}
-  .answer-btn:hover{border-color:var(--muted-2);}
+  /* Tarjetas tácticas de decisión: número de opción destacado en su propio chip (contador
+     CSS, no requiere tocar el HTML/JS que arma cada <button>) + alto contraste. Hover en
+     naranjo transparente TIBOX (mismo lenguaje que el resto de "elementos de selección"
+     de la interfaz); correcta/incorrecta se quedan en verde/rojo, el mismo código semántico
+     universal que usa el resto de la app. */
+  .answer-options{display:flex; flex-direction:column; gap:10px; counter-reset:opt;}
+  .answer-btn{
+    position:relative; display:flex; align-items:center; gap:12px; text-align:left;
+    padding:11px 14px 11px 11px; border-radius:10px; border:1px solid rgba(255,255,255,0.12);
+    background:rgba(15,23,42,0.55); color:var(--text); cursor:pointer; font-size:var(--fs-sm);
+    font-weight:500; line-height:1.4; font-family:var(--sans); min-height:46px;
+    transition:border-color .15s ease, background-color .15s ease, transform .12s ease, box-shadow .15s ease;
+  }
+  .answer-btn::before{
+    counter-increment:opt; content:counter(opt);
+    flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    width:24px; height:24px; border-radius:7px; font-family:var(--mono); font-weight:700; font-size:var(--fs-xs);
+    background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.16); color:var(--muted-2);
+    transition:color .15s ease, background-color .15s ease, border-color .15s ease;
+  }
+  .answer-btn:hover:not(:disabled){
+    border-color:rgba(249,115,22,0.4); background:rgba(249,115,22,0.08);
+    box-shadow:0 0 12px rgba(249,115,22,0.18); transform:translateX(2px);
+  }
+  .answer-btn:hover:not(:disabled)::before{border-color:rgba(249,115,22,0.5); color:#FFC28A; background:rgba(249,115,22,0.15);}
   .answer-btn.chosen-correct{border-color:var(--green); background:var(--green-dim);}
+  .answer-btn.chosen-correct::before{background:var(--green-dim); border-color:var(--green); color:var(--green);}
   .answer-btn.chosen-wrong{border-color:var(--red); background:var(--red-dim);}
+  .answer-btn.chosen-wrong::before{background:var(--red-dim); border-color:var(--red); color:var(--red);}
   .answer-btn:disabled{cursor:default;}
 
 
@@ -526,8 +688,8 @@
      sea clickeable sin necesitar for/id. El dragover real (arrastrar y soltar el
      archivo) lo maneja app.js agregando/quitando la clase .dragover. */
   .playbook-dropzone{
-    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:9px; text-align:center;
-    padding:28px 20px; margin-bottom:14px; border:2px dashed rgba(255,255,255,0.2); border-radius:14px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; text-align:center;
+    padding:16px 20px; margin-bottom:14px; border:2px dashed rgba(255,255,255,0.2); border-radius:14px;
     background:rgba(255,255,255,0.025); cursor:pointer;
     transition:border-color .15s ease, background-color .15s ease;
   }
@@ -541,7 +703,7 @@
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
   .playbook-dropzone input{position:absolute; width:1px; height:1px; opacity:0; pointer-events:none;}
-  .playbook-actions{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+  .playbook-actions{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:auto; padding-top:var(--sp-3);}
   .playbook-status{min-height:1.4em; color:var(--green); font-size:var(--fs-xs); line-height:1.4; margin:10px 0 0;}
   @media (max-width:640px){
     .intro-welcome{padding:20px 20px 4px;}
@@ -589,6 +751,7 @@
   .acta-field{display:flex; flex-direction:column; gap:4px; padding:12px 14px; border-radius:10px; background:var(--panel-2); border:1px solid var(--border);}
   .acta-label{font-family:var(--mono); font-size:var(--fs-3xs); letter-spacing:0.08em; text-transform:uppercase; color:var(--muted);}
   .acta-value{font-size:var(--fs-sm); font-weight:600; color:var(--text);}
+  .field-row{margin-bottom:16px;}
   .field-row label{display:block; font-family:var(--sans); font-weight:700; font-size:var(--fs-xs); letter-spacing:0.04em; text-transform:uppercase; color:#C7D2E3; margin-bottom:7px;}
 
   /* ---------- two-column game layout ---------- */
@@ -658,25 +821,31 @@
   }
   .grid4-scroll{overflow-y:auto;}
   .explanation-placeholder{color:var(--muted-2); font-family:var(--mono); font-size:var(--fs-xs); font-style:italic; line-height:1.6;}
-  /* La explicación dejó de ser un panel fijo: aparece como popout al responder. */
+  /* La explicación dejó de ser un panel fijo: aparece como popout al responder. Contenedor
+     glassmorphism (antes un degradado sólido opaco): deja intuir el juego borroso detrás,
+     reforzando que es una capa flotante y no una pantalla nueva. */
   .explain-pop{
     position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); z-index:150;
     width:min(860px, calc(100vw - 64px)); max-height:min(78vh, 760px);
     overflow-y:auto; padding:26px 30px 30px;
-    border-radius:var(--radius-lg); border:1px solid var(--border);
-    background:linear-gradient(180deg,#101A31,#0B1222);
-    box-shadow:0 26px 60px -22px rgba(0,0,0,0.85), 0 0 0 1px rgba(255,255,255,0.04) inset;
+    border-radius:var(--radius-lg); border:1px solid rgba(255,255,255,0.1);
+    background:rgba(15,23,42,0.85);
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    box-shadow:0 25px 50px -12px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04) inset;
     animation:popIn .18s cubic-bezier(.2,.7,.3,1) both;
   }
   @keyframes popIn{from{opacity:0; transform:translate(-50%,-46%) scale(.97);} to{opacity:1; transform:translate(-50%,-50%) scale(1);}}
   .explain-pop-head{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px;}
   .explain-foot{display:flex; justify-content:flex-end; margin-top:18px;}
-  .explain-foot .btn-cta{padding:11px 20px;}
+  /* CTA "Continuar →": hereda el naranjo/gradiente + micro-animación de hover de .btn-cta
+     (ya usados en el resto de la interfaz); acá solo se suma un glow propio, más notorio
+     al ser un botón flotante sobre un fondo oscuro esmerilado. */
+  .explain-foot .btn-cta{padding:11px 20px; box-shadow:0 16px 32px -14px rgba(240,64,29,0.85), 0 0 16px rgba(249,115,22,0.3), 0 0 0 1px rgba(255,255,255,0.10) inset;}
+  .explain-foot .btn-cta:hover{box-shadow:0 20px 38px -14px rgba(240,64,29,0.95), 0 0 22px rgba(249,115,22,0.45), 0 0 0 1px rgba(255,255,255,0.14) inset;}
   .explain-backdrop{position:fixed; inset:0; z-index:140; pointer-events:none; background:rgba(4,8,18,0.58); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px);}
   .explain-pop .explanation-item{padding:18px 20px; margin-bottom:14px;}
   .explain-pop .explanation-item .ex-tag{font-size:var(--fs-2xs); margin-bottom:8px;}
-  .explain-pop .explanation-item .ex-opt{font-size:var(--fs-lg); margin-bottom:8px; line-height:1.3;}
-  .explain-pop .explanation-item .ex-why{font-size:var(--fs-md); line-height:1.6;}
+  .explain-pop .explanation-item .ex-opt{font-size:var(--fs-lg); line-height:1.3;}
   .explain-pop .explanation-placeholder{font-size:var(--fs-sm); padding:14px 16px;}
   .explain-pop-close{
     background:none; border:1px solid var(--border); color:var(--muted); cursor:pointer;
@@ -685,15 +854,48 @@
   .explain-pop-close:hover{color:var(--text); border-color:var(--muted-2);}
   #explanationContent{min-height:0;}
   @media (max-width:920px){.explain-pop{width:calc(100vw - 28px); max-height:76vh; padding:20px;}}
-  .explanation-item{border-radius:8px; border:1px solid var(--border); background:var(--panel-2); padding:12px 14px; margin-bottom:10px;}
-  .explanation-item.is-correct{border-color:var(--green); background:var(--green-dim);}
-  .explanation-item.is-wrong{border-color:var(--red); background:var(--red-dim);}
+  /* Caja de retroalimentación reactiva: 3 variantes de color (acierto/error/mejora), con
+     los mismos --green/--red/--amber que ya usan el botón de respuesta y la tarjeta de
+     personaje al marcar correcto/incorrecto — así el popout nunca "desentona" con el
+     elemento que lo disparó. Se aceptan tanto los nombres históricos (is-correct/is-wrong,
+     los que arma app.js) como los nombres semánticos explain-success/error/warning. */
+  .explanation-item{border-radius:10px; border:1px solid var(--border); background:var(--panel-2); padding:12px 14px; margin-bottom:10px;}
+  .explanation-item.is-correct, .explanation-item.explain-success{border-color:rgba(34,211,166,0.4); background:var(--green-dim);}
+  .explanation-item.is-correct .ex-tag, .explanation-item.explain-success .ex-tag{color:var(--green);}
+  .explanation-item.is-wrong, .explanation-item.explain-error{border-color:rgba(255,77,106,0.4); background:var(--red-dim);}
+  .explanation-item.is-wrong .ex-tag, .explanation-item.explain-error .ex-tag{color:var(--red);}
+  .explanation-item.explain-warning{border-color:rgba(255,138,0,0.4); background:var(--amber-dim);}
+  .explanation-item.explain-warning .ex-tag{color:var(--amber);}
   .explanation-item .ex-tag{font-family:var(--mono); font-size:var(--fs-3xs); letter-spacing:0.08em; text-transform:uppercase; margin-bottom:5px; display:block;}
-  .explanation-item.is-correct .ex-tag{color:var(--green);}
-  .explanation-item.is-wrong .ex-tag{color:var(--red);}
-  .explanation-item .ex-opt{font-size:var(--fs-sm); font-weight:600; margin-bottom:5px;}
-  .explanation-item .ex-why{font-size:var(--fs-xs); color:var(--muted); line-height:1.5;}
-  .game-timer{font-family:var(--mono); font-size:var(--fs-md); font-weight:700; color:var(--green); letter-spacing:0.04em;}
+  .explanation-item .ex-opt{font-size:var(--fs-sm); font-weight:600; margin:0;}
+  /* Ícono del rol/función junto al título principal (mismo lenguaje que .c-icon/.p-role-icon:
+     chip circular con el acento de esa función, color puesto inline por app.js). */
+  .explanation-item .ex-head{display:flex; align-items:center; gap:12px; margin-bottom:4px;}
+  .ex-role-icon{display:flex; align-items:center; justify-content:center; flex-shrink:0; width:34px; height:34px; border-radius:10px;}
+  .ex-role-icon svg{width:17px; height:17px;}
+  .ex-head-text{min-width:0;}
+  .explanation-item .ex-respondio{font-size:var(--fs-2xs); color:var(--muted); margin:8px 0 0; font-style:italic;}
+  .explanation-item .ex-respondio b{color:var(--text); font-style:normal;}
+  /* El porqué, en formato de micro-píldora educativa: un pequeño callout redondeado con
+     ícono propio, separado del veredicto (acierto/error) de arriba — y con soporte para
+     que el texto destaque acciones clave en negrita si el contenido las trae. */
+  .explanation-item .ex-why{
+    display:flex; align-items:flex-start; gap:8px; font-size:var(--fs-xs); color:var(--muted); line-height:1.55;
+    margin-top:10px; padding:10px 12px; border-radius:10px;
+    background:rgba(255,255,255,0.035); border:1px solid rgba(255,255,255,0.08);
+  }
+  .explanation-item .ex-why::before{content:'💡'; flex-shrink:0; font-size:13px; line-height:1.5;}
+  .explanation-item .ex-why b, .explanation-item .ex-why strong{color:#fff; font-weight:700;}
+  .explain-pop .explanation-item .ex-why{font-size:var(--fs-md); line-height:1.6;}
+  /* Acento del HUD (timer, stepper, progreso, nav): magenta/púrpura neón (--gh-accent),
+     antes verde menta — ver definición de --gh-accent en :root. Consolidado en un único
+     #gameTimer (antes repartido en dos declaraciones .game-timer separadas). */
+  #gameTimer{
+    font-family:var(--mono); font-size:var(--fs-md); font-weight:700; letter-spacing:0.04em;
+    padding:7px 11px; border-radius:8px;
+    background:var(--gh-accent-dim); border:1px solid var(--gh-accent-border); color:var(--gh-accent-2);
+    box-shadow:0 0 12px rgba(168,85,247,0.25);
+  }
 
 
   /* ---------- results screen ---------- */
@@ -708,7 +910,6 @@
     display:flex; flex-direction:column; gap:var(--sp-4); position:sticky; top:var(--sp-4);
     padding-left:var(--sp-6); border-left:1px solid var(--border);
   }
-  .results-side .grade-badge{width:100%; min-width:0; padding:18px 20px;}
   .results-side .donut-result-wrap{flex-direction:column; align-items:center; gap:var(--sp-4);}
   .results-side .donut-result-legend{width:100%; font-size:var(--fs-sm);}
   .results-side .donut-result-meta{margin-top:2px;}
@@ -717,24 +918,50 @@
     .results-side{position:static; padding-left:0; border-left:none; padding-top:var(--sp-5); border-top:1px solid var(--border);}
     .results-side .donut-result-wrap{flex-direction:row; justify-content:center;}
   }
-  .grade-badge{display:flex; flex-direction:column; align-items:center; padding:14px 26px; border-radius:12px; border:1px solid var(--border); background:var(--panel-2); min-width:140px;}
-  .grade-badge.grade-excelente{border-color:var(--green); background:var(--green-dim);}
-  .grade-badge.grade-bueno{border-color:var(--blue); background:var(--blue-dim);}
-  .grade-badge.grade-regular{border-color:var(--amber); background:var(--amber-dim);}
-  .grade-badge.grade-refuerzo{border-color:var(--red); background:var(--red-dim);}
-  .grade-pct{font-family:var(--display); font-size:var(--fs-3xl); font-weight:800;}
-  @media (max-width:480px){.grade-badge{min-width:0; width:100%; padding:12px 18px;}}
-  .grade-label{font-family:var(--mono); font-size:var(--fs-2xs); letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); margin-top:4px;}
+  /* ---------- Panel Ejecutivo de Rendimiento: fila de 3 KPI ---------- */
+  .kpi-row{display:grid; grid-template-columns:repeat(3,1fr); gap:var(--sp-4); margin-bottom:var(--sp-5);}
+  @media (max-width:860px){.kpi-row{grid-template-columns:1fr;}}
+  .kpi-card{
+    position:relative; padding:18px 20px; border-radius:14px; min-width:0;
+    background:rgba(255,255,255,0.035); border:1px solid rgba(255,255,255,0.1);
+    backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+    box-shadow:0 10px 30px -18px rgba(0,0,0,0.6);
+  }
+  .kpi-card-label{font-family:var(--mono); font-size:var(--fs-3xs); letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:10px;}
+  /* Tarjeta de puntuación: reemplaza la antigua .grade-badge (vivía en la barra lateral) —
+     mismo glassmorphism que las otras 2 KPI, con acento dinámico según la nota (verde/azul/
+     ámbar/rojo, mismo criterio de antes) en vez de vivir aislada junto a la dona. */
+  .kpi-score-row{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;}
+  .kpi-score-pct{font-family:var(--display); font-size:var(--fs-3xl); font-weight:800; color:#fff; line-height:1;}
+  .kpi-score-tag{
+    font-family:var(--mono); font-size:var(--fs-3xs); font-weight:700; letter-spacing:0.08em; text-transform:uppercase;
+    padding:4px 10px; border-radius:999px; border:1px solid rgba(255,255,255,0.16); background:rgba(255,255,255,0.06); color:var(--muted);
+  }
+  .kpi-score-meta{font-family:var(--mono); font-size:var(--fs-3xs); color:var(--muted); margin-top:8px;}
+  .kpi-card-score.grade-excelente{border-color:rgba(34,211,166,0.4); box-shadow:0 10px 30px -18px rgba(0,0,0,0.6), 0 0 22px -8px rgba(34,211,166,0.4);}
+  .kpi-card-score.grade-excelente .kpi-score-tag{color:var(--green); border-color:rgba(34,211,166,0.4); background:var(--green-dim);}
+  .kpi-card-score.grade-bueno{border-color:rgba(14,165,233,0.4); box-shadow:0 10px 30px -18px rgba(0,0,0,0.6), 0 0 22px -8px rgba(14,165,233,0.4);}
+  .kpi-card-score.grade-bueno .kpi-score-tag{color:var(--blue); border-color:rgba(14,165,233,0.4); background:var(--blue-dim);}
+  .kpi-card-score.grade-regular{border-color:rgba(255,138,0,0.4); box-shadow:0 10px 30px -18px rgba(0,0,0,0.6), 0 0 22px -8px rgba(255,138,0,0.4);}
+  .kpi-card-score.grade-regular .kpi-score-tag{color:var(--amber); border-color:rgba(255,138,0,0.4); background:var(--amber-dim);}
+  .kpi-card-score.grade-refuerzo{border-color:rgba(255,77,106,0.4); box-shadow:0 10px 30px -18px rgba(0,0,0,0.6), 0 0 22px -8px rgba(255,77,106,0.4);}
+  .kpi-card-score.grade-refuerzo .kpi-score-tag{color:var(--red); border-color:rgba(255,77,106,0.4); background:var(--red-dim);}
+  /* Tarjetas 2 y 3 (precisión/tiempo, desglose de errores): dos valores lado a lado con un
+     separador vertical delgado, mismo patrón para ambas. */
+  .kpi-dual{display:flex; align-items:center; gap:18px;}
+  .kpi-dual-item{display:flex; flex-direction:column; gap:4px; min-width:0;}
+  .kpi-dual-val{font-family:var(--display); font-size:var(--fs-2xl); font-weight:800; color:#fff; line-height:1;}
+  .kpi-dual-label{font-family:var(--mono); font-size:var(--fs-4xs); letter-spacing:0.08em; text-transform:uppercase; color:var(--muted-2);}
+  .kpi-dual-sep{width:1px; align-self:stretch; background:rgba(255,255,255,0.1); flex-shrink:0;}
+  .kpi-dual-function .kpi-dual-val{color:var(--err-function);}
+  .kpi-dual-response .kpi-dual-val{color:var(--err-response);}
 
   /* ---------- refinamientos visuales y de accesibilidad ---------- */
   :root{--focus-ring:rgba(14,165,233,0.28);--surface-hover:rgba(255,255,255,0.055);}
   ::selection{background:rgba(14,165,233,0.28);color:#fff;}
   .panel{box-shadow:0 1px 0 rgba(255,255,255,.045) inset,0 18px 45px -30px rgba(0,0,0,.75);}
   .section-block{scroll-margin-top:calc(var(--topbar-h) + 28px);}
-  .answer-btn{line-height:1.4;min-height:46px;}
-  .answer-btn:hover:not(:disabled){background:var(--surface-hover);transform:translateX(2px);}
   .answer-btn:focus-visible,.char-card:focus-visible{outline:2px solid var(--blue);outline-offset:2px;}
-  .game-timer{padding:7px 11px;border:1px solid var(--green-dim);background:var(--green-dim);border-radius:8px;}
   /* Antes era un borde sólido de 2px, bastante marcado; un degradado tenue como acento
      superior (vía pseudo-elemento, no border-image, para no alterar los otros 3 bordes
      que ya trae .panel) se siente más elegante y menos "técnico" en una tarjeta de lectura. */
@@ -747,8 +974,22 @@
 
   .explanation-placeholder{padding:10px 12px;border:1px dashed var(--border);border-radius:8px;}
   .results-actions .btn{min-height:42px;}
+  /* CTA primario de resultados: mismo gradiente naranjo de marca que el resto de los CTA
+     de la app (.btn-cta), con un glow propio — .btn-primary por defecto es verde/celeste y
+     se usa en otras pantallas, así que este acento va scoped por ID, no tocando la clase. */
+  #goToReportBtn{
+    background:linear-gradient(135deg,#FF8A3D,#F0401D); border-color:transparent; color:#fff;
+    box-shadow:0 14px 30px -14px rgba(240,64,29,0.8), 0 0 16px rgba(249,115,22,0.3), 0 0 0 1px rgba(255,255,255,0.10) inset;
+    transition:border-color .15s, transform .1s, box-shadow .2s, background .15s;
+  }
+  #goToReportBtn:hover{
+    box-shadow:0 18px 36px -14px rgba(240,64,29,0.9), 0 0 22px rgba(249,115,22,0.45), 0 0 0 1px rgba(255,255,255,0.14) inset;
+  }
+  /* Secundarios en estilo ghost/outline: transparentes hasta el hover, para que el único
+     botón "sólido" de la barra sea el CTA de arriba. */
+  #downloadResultsBtn, #copyResultsBtn{background:transparent; border-color:rgba(255,255,255,0.2); color:#D7E2F2;}
+  #downloadResultsBtn:hover, #copyResultsBtn:hover{background:rgba(255,255,255,0.05); border-color:rgba(255,255,255,0.34);}
   .game-session-badge{font-family:var(--mono);font-size:var(--fs-4xs);letter-spacing:.1em;color:var(--blue);padding:6px 9px;border:1px solid var(--blue-dim);background:var(--blue-dim);border-radius:7px;margin-right:auto;}
-  .grade-meta{font-family:var(--mono);font-size:var(--fs-3xs);color:var(--muted);margin-top:6px;text-align:center;}
   @media(max-width:700px){.game-layout.grid4{gap:12px}.grid4-cell{padding:18px;}}
 
   .btn-cta{
@@ -789,42 +1030,69 @@
     #wizardStep2 .scn-grid::-webkit-scrollbar{width:6px;}
     #wizardStep2 .scn-grid::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16); border-radius:3px;}
   }
-  /* Mismo lenguaje visual que las tarjetas de "Participantes" (.p-card): insignia con
-     ícono+nombre en una pastilla, brillo en el borde inferior en vez de una franja arriba,
-     y el pie como fila etiqueta/valor. Sin color por escenario: todas brillan igual, en
-     blanco (el color por escenario, --a/--a2, sigue fijado por JS pero ya no se usa aquí). */
+  /* Ícono+nombre en un chip circular, mismo lenguaje visual que las tarjetas de
+     "Participantes" (.participant-card / .pc-role). Sin color por escenario: todas
+     brillan igual, en blanco (el color por escenario, --a/--a2, sigue fijado por JS pero
+     ya no se usa aquí). */
   /* Acento neón (cian) parejo para las 10 tarjetas — mismo principio de "sin color
      por escenario" de antes, solo que ahora el acento uniforme es cian en vez de blanco. */
   .scn-card{
     position:relative; overflow:hidden; isolation:isolate; cursor:pointer; text-align:left;
-    border-radius:12px; padding:14px 16px; min-height:132px;
+    border-radius:12px; padding:0 16px 14px; min-height:132px;
     display:flex; flex-direction:column; gap:0;
     /* Fondo propio de la tarjeta (antes solo el degradado, casi invisible contra el
        --bg de la página) para que se lea como una superficie propia incluso sin
-       imagen de escenario. --scn-bg-image (seteada por JS solo en las tarjetas que
-       traen imagen, ver renderScenarioCard) se dibuja encima; sin esa variable
-       "none" no hace nada y solo queda el fondo + degradado. --scn-bg-pos, también
-       por JS, ajusta el encuadre por escenario (por defecto centrado). */
+       imagen de escenario. */
     background-color:rgba(255,255,255,0.04);
-    background-image:linear-gradient(158deg, rgba(15,27,54,0.4) 0%, rgba(8,15,30,0.82) 100%), var(--scn-bg-image, none);
-    background-size:cover; background-position:var(--scn-bg-pos, center);
     border:1px solid rgba(255,255,255,0.08);
     box-shadow:0 10px 20px rgba(0,0,0,0.4);
     transition:transform .16s ease, box-shadow .2s ease, border-color .16s ease, background-color .16s ease;
+  }
+  /* Ilustración de fondo en su propia capa (::before), separada del degradado de
+     legibilidad (::after): así se le puede aplicar brightness/contrast solo a la foto
+     —oscurecida por defecto, un poco más clara en :hover— sin afectar el borde, la
+     sombra ni el resto de la tarjeta. --scn-bg-image (seteada por JS solo en los
+     escenarios que traen imagen, ver renderScenarioCard) se dibuja acá; con "none"
+     esta capa queda vacía y la tarjeta se ve igual que antes de tener imágenes.
+     --scn-bg-pos, también por JS, ajusta el encuadre por escenario. */
+  .scn-card::before{
+    content:''; position:absolute; inset:0; z-index:0;
+    background-image:var(--scn-bg-image, none);
+    background-size:cover; background-position:var(--scn-bg-pos, center);
+    filter:brightness(0.45) contrast(1.1);
+    transition:filter .25s ease;
+  }
+  /* Degradado de legibilidad, siempre encima de la ilustración y sin filtro propio:
+     el contraste de la píldora del pie (.scn-target) no depende del brightness/hover
+     de la foto que tenga detrás. */
+  .scn-card::after{
+    content:''; position:absolute; inset:0; z-index:0; pointer-events:none;
+    background-image:linear-gradient(158deg, rgba(15,27,54,0.35) 0%, rgba(8,15,30,0.8) 100%);
   }
   .scn-card:hover{
     transform:translateY(-4px); border-color:rgba(255,107,0,0.4);
     box-shadow:0 8px 24px rgba(0,0,0,0.4);
   }
+  .scn-card:hover::before{filter:brightness(0.65) contrast(1.1);}
   .scn-card:focus-visible{outline:2px solid #38bdf8; outline-offset:2px;}
-  .scn-head{display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:10px;}
-  /* Letra blanca en las tres piezas de texto de la tarjeta, con una sombra suave para que
-     siga siendo legible incluso sobre las tarjetas con imagen de fondo (--scn-bg-image). */
-  .scn-badge{
-    display:inline-flex; align-items:center; gap:8px;
-    font-family:var(--mono); font-size:var(--fs-2xs); letter-spacing:0.04em;
-    color:#fff; text-shadow:0 1px 3px rgba(0,0,0,0.55);
+  /* Header dedicado del título: franja superior con blur + oscurecimiento propio
+     (Backdrop Filter + Gradient Overlay), para que el nombre del escenario se lea
+     siempre igual de bien sin depender de qué tan cargada esté la ilustración detrás.
+     Se extiende de borde a borde (margin negativo compensa el padding lateral de
+     .scn-card, que ahora no tiene padding-top) y hereda el radio superior de la
+     tarjeta. */
+  .scn-card-header{
+    position:relative; z-index:1;
+    margin:0 -16px 10px; padding:14px 16px 10px;
+    background:rgba(15,23,42,0.75);
+    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+    border-radius:12px 12px 0 0;
+    border-bottom:1px solid rgba(255,255,255,0.06);
+    transition:background-color .2s ease;
   }
+  .scn-card:hover .scn-card-header{background:rgba(15,23,42,0.85);}
+  .scn-head{display:flex; align-items:flex-start; justify-content:space-between; gap:10px;}
+  .scn-title-row{display:flex; align-items:flex-start; gap:8px; min-width:0;}
   /* Ícono de cada categoría en su propio chip circular naranjo tenue — antes iba
      suelto dentro de la píldora del badge, sin distinguirse como "ícono" aparte. */
   .scn-icon{
@@ -833,8 +1101,12 @@
     background:rgba(255,107,0,0.18); color:#FFAB70;
   }
   .scn-icon svg{width:13px; height:13px;}
-  .scn-desc{font-size:var(--fs-2xs); color:#fff; text-shadow:0 1px 3px rgba(0,0,0,0.55); line-height:1.4; margin:0 0 12px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
-  .scn-fields{margin-top:auto;}
+  .scn-title{
+    margin:0; min-width:0; font-family:var(--display); font-weight:700; font-size:1.1rem; line-height:1.25;
+    color:#fff; text-shadow:0 2px 4px rgba(0,0,0,0.8);
+  }
+  .scn-desc{font-size:var(--fs-2xs); color:#fff; text-shadow:0 1px 3px rgba(0,0,0,0.55); line-height:1.4; margin:8px 0 0; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
+  .scn-fields{position:relative; z-index:1; margin-top:auto;}
   /* Reemplaza el antiguo label "Objetivo" + valor: el valor solo, como badge, sin
      texto redundante repetido en cada una de las 10 tarjetas. Píldora neutra sutil
      (blanco muy transparente) en vez de negro puro, para que no desentone sobre las
@@ -868,6 +1140,7 @@
     border:2px solid #FF6B00; background-color:rgba(255,107,0,0.1);
     box-shadow:0 0 16px rgba(255,107,0,0.25);
   }
+  .scn-card.selected .scn-card-header{background:rgba(45,18,4,0.78);}
   .scn-card.selected .scn-check{
     background:#FF6B00; border-color:#FF6B00; color:#fff;
     box-shadow:0 0 8px rgba(255,107,0,0.8);
@@ -944,24 +1217,31 @@
     background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); white-space:nowrap;
   }
   .gh-steps{display:flex; align-items:center; gap:5px; flex:1; min-width:0; justify-content:center;}
+  /* Etapas futuras/pendientes (ni activa ni completada): fondo oscuro atenuado + borde
+     gris neutro, sin acento — el color queda reservado para "activa"/"completada". */
   .gh-step{
     display:flex; align-items:center; gap:6px; padding:3px 8px; border-radius:999px;
-    border:1px solid var(--border); background:var(--panel-2); min-width:0;
+    border:1px solid rgba(255,255,255,0.14); background:rgba(255,255,255,0.05); min-width:0;
     font-family:var(--mono); font-size:var(--fs-4xs); letter-spacing:0.06em; text-transform:uppercase; color:var(--muted-2);
-    transition:color .2s, border-color .2s, background .2s;
+    transition:color .2s, border-color .2s, background .2s, box-shadow .2s;
   }
   .gh-step .gh-step-n{
     width:14px; height:14px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
     background:var(--panel-3); font-size:var(--fs-4xs); color:inherit;
   }
-  .gh-step.active{color:#CFF7FA; border-color:rgba(14,165,233,0.55); background:var(--blue-dim);}
-  .gh-step.active .gh-step-n{background:var(--blue); color:#04121F;}
-  .gh-step.completed{color:var(--green); border-color:rgba(34,211,166,0.35);}
-  .gh-step.completed .gh-step-n{background:var(--green-dim); color:var(--green);}
+  /* Etapa activa: violeta semi-transparente con número en blanco y borde con brillo —
+     antes cian/azul. Completada: mismo púrpura pero tenue, con un resplandor leve. */
+  .gh-step.active{color:#fff; border-color:var(--gh-accent); background:rgba(168,85,247,0.25); box-shadow:0 0 10px rgba(168,85,247,0.4);}
+  .gh-step.active .gh-step-n{background:var(--gh-accent); color:#fff;}
+  .gh-step.completed{color:var(--gh-accent-2); border-color:var(--gh-accent-border); box-shadow:0 0 6px rgba(168,85,247,0.2);}
+  .gh-step.completed .gh-step-n{background:var(--gh-accent-dim); color:var(--gh-accent-2);}
   @media (max-width:1560px){.gh-step .gh-step-label{display:none;} .gh-step{padding:3px 7px;}}
   .gh-right{display:flex; align-items:center; gap:var(--sp-1); flex-shrink:0;}
-  .gh-count{display:flex; align-items:baseline; gap:5px; font-family:var(--mono); font-size:var(--fs-4xs); color:var(--muted);}
-  .gh-count b{color:var(--text); font-size:var(--fs-3xs);}
+  .gh-count{display:flex; align-items:baseline; gap:5px; font-family:var(--mono); font-size:var(--fs-4xs); color:var(--gh-accent-2);}
+  .gh-count b{color:var(--gh-accent-2); font-size:var(--fs-3xs);}
+  /* Botones de navegación del HUD (anterior/siguiente pregunta): mismo acento del header
+     en el borde, sin tocar su fondo/color (el "Siguiente" sigue siendo btn-primary). */
+  #prevQuestionBtn, #restartGameBtn{border-color:var(--gh-accent-border);}
   .gh-exit{
     width:24px; height:24px; border-radius:7px; flex-shrink:0; cursor:pointer;
     background:none; border:1px solid var(--border); color:var(--muted); font-size:var(--fs-3xs); line-height:1;
@@ -979,6 +1259,13 @@
     font-family:var(--mono); font-size:var(--fs-3xs); letter-spacing:0.12em; text-transform:uppercase;
     background:var(--panel-3); border:1px solid var(--border); color:var(--muted); white-space:nowrap;
   }
+  /* Contador "X ACTIVAS" del paso Participantes: naranjo transparente (marca TIBOX), igual
+     que el resto de los indicadores de activo de esta pantalla — el resto de los
+     .setup-badge (escenario elegido, etc. en otros pasos) se queda neutro. */
+  #participantsBadge{
+    color:#FF6B00; background:rgba(255,107,0,0.15); border-color:rgba(255,107,0,0.4);
+    box-shadow:0 0 12px rgba(255,107,0,0.25);
+  }
 
   /* ============================================================
      PANTALLA DE CONFIGURACIÓN — wizard de 3 pasos
@@ -992,9 +1279,11 @@
   /* Paso 1: "Perfil del cliente" y "Material opcional" son dos tarjetas propias, en dos
      columnas que entre ambas ocupan el ancho completo del paso (no una tarjeta con las dos
      secciones apiladas adentro, como antes). */
-  .wizard-step1-cols{display:grid; grid-template-columns:1fr 1fr; gap:var(--sp-5); align-items:start;}
-  .wizard-step1-cols .wizard-col{margin-bottom:0; height:100%;}
+  .wizard-step1-cols{display:grid; grid-template-columns:1fr 1fr; gap:var(--sp-5); align-items:stretch;}
+  .wizard-step1-cols .wizard-col{margin-bottom:0; height:100%; display:flex; flex-direction:column;}
   .wizard-step1-cols .playbook-panel{margin-top:0;}
+  .wizard-col-head{flex:0 0 auto;}
+  .wizard-col-body{flex:1 1 auto;}
   /* Mismo tamaño de letra agrandado (1.2x) que "Las reglas del ejercicio" en el texto de
      ambas columnas del paso 1. */
   .wizard-step1-cols .section-sub, .wizard-step1-cols label, .wizard-step1-cols input,
@@ -1035,8 +1324,21 @@
   .wizard-step-item.done{color:var(--green);}
   .wizard-step-item.done .wizard-step-n{background:var(--green-dim); color:var(--green);}
 
-  .wizard-step3-summary{font-size:var(--fs-sm); color:var(--muted); margin:0 0 var(--sp-4);}
-  .profile-actions{display:flex; gap:var(--sp-2); flex-wrap:wrap; margin-top:var(--sp-3);}
+  /* Banner de estado del paso 3: antes un <p> de texto plano, ahora un alert táctico
+     bajo la cabecera — ambarino mientras falte escenario/participantes, naranjo TIBOX
+     (glassmorphism) una vez que el ejercicio puede arrancar. El ícono y el color los
+     decide JS (updateBottomState) alternando entre .is-warning/.is-ready según corresponda. */
+  .step3-alert{
+    display:flex; align-items:flex-start; gap:10px; margin:0 0 var(--sp-4);
+    padding:11px 14px; border-radius:10px; font-size:var(--fs-sm); line-height:1.4;
+    border:1px solid transparent; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+    transition:background-color .15s ease, border-color .15s ease, color .15s ease;
+  }
+  .step3-alert:empty{display:none;}
+  .step3-alert svg{flex-shrink:0; margin-top:1px;}
+  .step3-alert.is-warning{background:var(--amber-dim); border-color:rgba(255,138,0,0.4); color:#FFCE94;}
+  .step3-alert.is-ready{background:rgba(249,115,22,0.12); border-color:rgba(249,115,22,0.35); color:#FFC28A;}
+  .profile-actions{display:flex; gap:var(--sp-2); flex-wrap:wrap; margin-top:auto; padding-top:var(--sp-3);}
   /* Botones del Paso 1 del wizard: primarios en naranjo corporativo (mismo gradiente
      que #continueBtn, para no sumar un tercer tono de naranjo distinto en la misma
      pantalla) y los secundarios en estilo ghost/outline explícito. Va por ID —
