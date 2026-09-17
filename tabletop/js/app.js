@@ -433,6 +433,10 @@ const SCENARIO_BG_IMAGES = {
   exfiltracion: 'assets/scenario-bg/exfiltracion.png',
   ransomware: 'assets/scenario-bg/ransomware.png'
 };
+// Encuadre por escenario para object-fit:cover (por defecto "center"): la mayoría de las
+// ilustraciones son cuadradas con el ícono ya centrado, así que centrado alcanza. Solo
+// se agregan overrides puntuales acá para los casos donde center corta contenido relevante.
+const SCENARIO_IMG_POS = {};
 function renderScenarioCard(s, container){
   const el = document.createElement('div');
   el.className = 'scn-card' + (selectedScenarioId === s.id ? ' selected' : '');
@@ -440,15 +444,17 @@ function renderScenarioCard(s, container){
   el.style.setProperty('--a', accent);
   el.style.setProperty('--a2', accent2);
   el.style.setProperty('--glow', hexToRgba(accent2, 0.55));
+  if(SCENARIO_IMG_POS[s.id]) el.style.setProperty('--scn-img-pos', SCENARIO_IMG_POS[s.id]);
   el.setAttribute('role', 'button');
   el.setAttribute('tabindex', '0');
   el.setAttribute('aria-pressed', selectedScenarioId === s.id ? 'true' : 'false');
   el.setAttribute('aria-label', s.name);
   const icon = SCENARIO_ICONS[s.id] || '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="5.5"/></svg>';
   const blurb = SCENARIO_BLURBS[s.id] || '';
-  // Bloque de imagen: rectangular, ancho completo, object-fit:contain (ver .scn-card-img)
-  // para que la ilustración se vea entera en vez de recortada. Sin imagen para este
-  // escenario, la tarjeta arranca directo en el cuerpo.
+  // Bloque de imagen: rectangular, ancho completo, object-fit:cover (ver .scn-card-img)
+  // para que la ilustración llene el marco de borde a borde, sin franjas de fondo blanco/
+  // color plano alrededor. Sin imagen para este escenario, la tarjeta arranca directo en
+  // el cuerpo.
   const mediaHtml = SCENARIO_BG_IMAGES[s.id]
     ? `<div class="scn-card-media"><img class="scn-card-img" src="${SCENARIO_BG_IMAGES[s.id]}" alt="" loading="lazy"></div>`
     : '';
@@ -582,28 +588,9 @@ function renderParticipants(){
       </div>
       <p class="pc-desc" title="${escapeHtml(rm.desc[p.roleKey] || '')}">${escapeHtml(rm.desc[p.roleKey] || '')}</p>
       <div class="pc-empresa">
-        <span class="pc-empresa-label">Empresa</span>
-        <div class="pc-empresa-input${hasEmpresa ? '' : ' is-empty'}">
-          <span class="pc-empresa-chip pf-empresa" data-i="${i}" data-field="empresa" tabindex="0" role="button" aria-label="${hasEmpresa ? 'Editar empresa' : 'Agregar empresa'}" title="Doble clic o Enter para editar">${hasEmpresa ? `<span>${escapeHtml(p.empresa)}</span>` : '+ Agregar'}</span>
-          ${hasEmpresa ? `<button type="button" class="pc-empresa-remove" data-i="${i}" title="Quitar empresa" aria-label="Quitar empresa">×</button>` : ''}
-        </div>
+        <button type="button" class="pc-empresa-btn" data-i="${i}" aria-label="${hasEmpresa ? `Empresa asignada: ${p.empresa}. Editar.` : 'Asignar empresa'}">${hasEmpresa ? `EMPRESA: ${escapeHtml(p.empresa)}` : 'EMPRESA'}</button>
       </div>`;
-    card.querySelectorAll('.pf-empresa').forEach(elField => {
-      elField.addEventListener('dblclick', openEditPopout);
-      elField.addEventListener('keydown', ev => {
-        if(ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); openEditPopout(ev); }
-      });
-    });
-    card.querySelectorAll('.pc-empresa-remove').forEach(btn => {
-      btn.addEventListener('click', e => {
-        e.stopPropagation();
-        participants[i].empresa = '';
-        renderParticipants();
-        profileSaved = false;
-        updateBottomState();
-        saveSetupState();
-      });
-    });
+    card.querySelector('.pc-empresa-btn').addEventListener('click', () => openCompanyModal(i));
     card.querySelector('.pc-switch-input').addEventListener('change', e => {
       participants[i].checked = e.target.checked;
       renderParticipants();
@@ -618,58 +605,65 @@ function escapeHtml(s){ const d = document.createElement('div'); d.textContent =
 function participantName(p){ return ROLE_NAMES[p.roleKey]; }
 renderParticipants();
 
-// ---------------- edit popout (double-click) ----------------
-let activePopout = null;
-function closePopout(){
-  if(activePopout){ activePopout.remove(); activePopout = null; document.removeEventListener('mousedown', outsideClickHandler, true); }
+// ---------------- modal de asignación de empresa ----------------
+// Reemplaza el popout de doble clic de antes: un modal centrado (mismo patrón que
+// showConfirmModal/showRuleModal — overlay + caja creados al vuelo) que se abre con un
+// solo clic en el botón "EMPRESA" de la tarjeta del rol.
+let closeCompanyModalFn = null;
+function closeCompanyModal(){
+  if(closeCompanyModalFn) closeCompanyModalFn();
 }
-function outsideClickHandler(e){
-  if(activePopout && !activePopout.contains(e.target)){ closePopout(); }
-}
-function openEditPopout(e){
-  closePopout();
-  const cell = e.currentTarget;
-  const i = parseInt(cell.dataset.i, 10);
-  const field = cell.dataset.field; // 'persona', 'rol' o 'empresa'
-  const rect = cell.getBoundingClientRect();
+function openCompanyModal(i){
+  closeCompanyModal();
+  const p = participants[i];
+  const rm = roleMetaFor(selectedScenarioId);
+  const roleName = rm.names[p.roleKey] || p.roleKey;
 
-  const fieldLabels = {empresa:'Empresa'};
-
-  const pop = document.createElement('div');
-  pop.className = 'edit-popout';
-  pop.style.left = Math.min(rect.left, window.innerWidth - 280) + 'px';
-  pop.style.top = (rect.bottom + 8) + 'px';
-  pop.innerHTML = `
-    <label>${fieldLabels[field] || field}</label>
-    <input type="text" id="popoutInput" value="${escapeHtml(participants[i][field] || '')}">
-    <div class="edit-actions">
-      <button class="btn btn-sm" id="popoutCancel">Cancelar</button>
-      <button class="btn btn-primary btn-sm" id="popoutSave">Guardar</button>
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="companyModalTitle">
+      <div class="modal-head">
+        <div class="modal-title" id="companyModalTitle">Asignar empresa para ${escapeHtml(roleName)}</div>
+        <button class="modal-close-btn" id="companyModalClose" aria-label="Cerrar">✕</button>
+      </div>
+      <label for="companyModalInput">Empresa</label>
+      <input type="text" id="companyModalInput" value="${escapeHtml(p.empresa || '')}" placeholder="Ej: TIBOX SPA">
+      <div class="modal-actions" style="margin-top:18px;">
+        <button class="btn" id="companyModalCancel">Cancelar</button>
+        <button class="btn-cta" id="companyModalSave">Guardar</button>
+      </div>
     </div>`;
-  document.body.appendChild(pop);
-  activePopout = pop;
+  document.body.appendChild(overlay);
 
-  const input = pop.querySelector('#popoutInput');
+  const input = overlay.querySelector('#companyModalInput');
   input.focus();
   input.select();
 
   function save(){
-    const val = input.value.trim();
-    participants[i][field] = val; // permite guardar vacío para poder borrar un valor ya escrito
+    // permite guardar vacío, para poder borrar una empresa ya asignada
+    participants[i].empresa = input.value.trim();
     renderParticipants();
     profileSaved = false;
     updateBottomState();
     saveSetupState();
-    closePopout();
+    closeCompanyModal();
   }
-  pop.querySelector('#popoutSave').addEventListener('click', save);
-  pop.querySelector('#popoutCancel').addEventListener('click', closePopout);
-  input.addEventListener('keydown', ev => {
-    if(ev.key === 'Enter') save();
-    if(ev.key === 'Escape') closePopout();
-  });
+  function onKey(ev){
+    if(ev.key === 'Escape') closeCompanyModal();
+    if(ev.key === 'Enter'){ ev.preventDefault(); save(); }
+  }
+  overlay.querySelector('#companyModalSave').addEventListener('click', save);
+  overlay.querySelector('#companyModalCancel').addEventListener('click', closeCompanyModal);
+  overlay.querySelector('#companyModalClose').addEventListener('click', closeCompanyModal);
+  overlay.addEventListener('mousedown', e => { if(e.target === overlay) closeCompanyModal(); });
+  document.addEventListener('keydown', onKey);
 
-  setTimeout(() => document.addEventListener('mousedown', outsideClickHandler, true), 0);
+  closeCompanyModalFn = () => {
+    overlay.remove();
+    document.removeEventListener('keydown', onKey);
+    closeCompanyModalFn = null;
+  };
 }
 
 // ---------------- wizard de configuración: stepper + CTA ----------------
