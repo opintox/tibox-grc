@@ -187,48 +187,24 @@
      entra holgado con este tamaño/interlineado — las descripciones reales son siempre
      cortas (una frase), así que en la práctica rara vez pasan de 1-2 líneas igual. */
   .pc-desc{font-size:var(--fs-sm); color:var(--muted); line-height:1.35; margin:0 0 12px; overflow:visible; flex:1 1 auto;}
-  /* Barra de entrada integrada: "Empresa" + el valor (o el botón "+ Agregar") viven dentro
-     de un único contenedor estilizado, en vez de una fila de tabla suelta como antes. Con
-     empresa cargada, el valor se ve como chip removible (botón × propio); vacío, el
-     contenedor completo se ve como un action badge naranjo de alto contraste — antes era
-     texto punteado gris que pasaba desapercibido, sin leerse como un botón. Borde superior
-     separa esta franja del resto de la tarjeta (info del rol arriba, datos de empresa abajo). */
-  .pc-empresa{
-    display:flex; align-items:center; gap:8px; margin-top:auto; padding-top:12px; flex:0 0 auto;
-    border-top:1px solid rgba(255,255,255,0.08);
+  /* Botón único "EMPRESA" (antes: etiqueta + chip/"+ Agregar" separados, con un botón ×
+     aparte para quitar): un solo control, centrado y de alto contraste, que abre
+     #companyModal tanto para asignar como para editar o vaciar la empresa. El texto del
+     botón hace de estado — "EMPRESA" vacío, "EMPRESA: <nombre>" una vez asignada — así no
+     hace falta un ícono ni un badge de estado aparte. Borde superior separa esta franja
+     del resto de la tarjeta (info del rol arriba, dato de empresa abajo). */
+  .pc-empresa{margin-top:auto; padding-top:12px; flex:0 0 auto; border-top:1px solid rgba(255,255,255,0.08);}
+  .pc-empresa-btn{
+    display:block; width:100%; text-align:center; font-family:var(--sans);
+    font-size:1.05rem; font-weight:700; letter-spacing:0.01em; color:var(--text); cursor:pointer;
+    padding:9px 14px; border-radius:8px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    transition:background-color .15s ease, border-color .15s ease, box-shadow .15s ease, transform .15s ease, color .15s ease;
   }
-  .pc-empresa-label{font-family:var(--mono); font-size:var(--fs-4xs); letter-spacing:0.06em; color:var(--muted-2); text-transform:uppercase; flex-shrink:0;}
-  .pc-empresa-input{
-    display:flex; align-items:center; gap:2px; flex:1; min-width:0; padding-right:4px;
-    background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.14); border-radius:8px;
-    transition:border-color .15s ease, background-color .15s ease;
+  .pc-empresa-btn:hover, .pc-empresa-btn:focus-visible{
+    background:rgba(249,115,22,0.14); border-color:rgba(249,115,22,0.55);
+    box-shadow:0 0 12px rgba(249,115,22,0.3); transform:translateY(-1px); color:#fff; outline:none;
   }
-  .pc-empresa-input:hover{border-color:rgba(255,255,255,0.26);}
-  .pc-empresa-chip{
-    display:flex; align-items:center; gap:6px; flex:1; min-width:0; cursor:pointer;
-    padding:6px 10px; border-radius:7px; font-size:var(--fs-xs); font-weight:600; color:var(--text);
-    transition:color .15s ease;
-  }
-  .pc-empresa-chip:focus-visible{outline:2px solid #38bdf8; outline-offset:-2px;}
-  .pc-empresa-chip span{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-  /* Estado vacío = botón "+ Agregar", ya no una zona punteada pasiva: pill de alto
-     contraste (fondo/borde naranjo translúcido) que sube de brillo en hover/focus. */
-  .pc-empresa-input.is-empty{
-    border:1px solid rgba(249,115,22,0.4); background:rgba(249,115,22,0.12); border-radius:6px;
-    transition:background-color .15s ease, border-color .15s ease, box-shadow .15s ease, transform .15s ease;
-  }
-  .pc-empresa-input.is-empty:hover, .pc-empresa-input.is-empty:focus-within{
-    background:rgba(249,115,22,0.25); border-color:rgba(249,115,22,0.8);
-    box-shadow:0 0 10px rgba(249,115,22,0.3); transform:translateY(-1px);
-  }
-  .pc-empresa-input.is-empty .pc-empresa-chip{justify-content:center; padding:6px 12px; font-weight:600; color:#f97316;}
-  .pc-empresa-input.is-empty:hover .pc-empresa-chip, .pc-empresa-input.is-empty:focus-within .pc-empresa-chip{color:#f8fafc;}
-  .pc-empresa-remove{
-    flex-shrink:0; width:18px; height:18px; border-radius:50%; display:flex; align-items:center; justify-content:center;
-    background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14); color:var(--muted);
-    font-size:13px; line-height:1; cursor:pointer; transition:background .15s ease, color .15s ease, border-color .15s ease;
-  }
-  .pc-empresa-remove:hover, .pc-empresa-remove:focus-visible{background:var(--red-dim); border-color:rgba(255,77,106,0.5); color:var(--red); outline:none;}
   .table-wrap{overflow-x:auto; -webkit-overflow-scrolling:touch;}
   table.ptable th{text-align:left; font-family:var(--mono); font-size:var(--fs-3xs); letter-spacing:0.1em; color:var(--muted); text-transform:uppercase; padding:0 10px 10px; border-bottom:1px solid var(--border);}
   table.ptable td{padding:10px; border-bottom:1px solid var(--border-soft, var(--border)); vertical-align:middle;}
@@ -272,17 +248,11 @@
   }
   .p-role-icon svg{width:13px; height:13px; opacity:1;}
 
-  .edit-popout{
-    position:fixed; z-index:100; background:var(--panel-3); border:1px solid var(--blue);
-    border-radius:8px; padding:12px; box-shadow:0 12px 32px rgba(0,0,0,0.5);
-    min-width:240px; animation:pop .12s ease;
-  }
   @keyframes pop{from{opacity:0; transform:scale(0.96);} to{opacity:1; transform:scale(1);}}
-  .edit-popout label{display:block; font-family:var(--mono); font-size:var(--fs-3xs); letter-spacing:0.08em; color:var(--muted); text-transform:uppercase; margin-bottom:6px;}
-  .edit-popout input{width:100%; background:var(--panel-2); border:1px solid var(--border); color:var(--text); padding:8px 10px; border-radius:6px; font-family:var(--sans); font-size:var(--fs-sm); margin-bottom:10px;}
-  .edit-popout input:focus{outline:none; border-color:var(--blue);}
-  .edit-popout .edit-actions{display:flex; justify-content:flex-end; gap:8px;}
-  .edit-popout .btn-sm{padding:6px 12px; font-size:var(--fs-xs);}
+  /* Etiqueta de campo dentro de un modal (p.ej. "Empresa" en #companyModal) — mismo
+     tratamiento que traía .edit-popout label, ahora reutilizable en cualquier modal. */
+  .modal-box label{display:block; font-family:var(--mono); font-size:var(--fs-3xs); letter-spacing:0.08em; color:var(--muted); text-transform:uppercase; margin-bottom:6px;}
+  .modal-box input[type="text"]{margin-bottom:0;}
 
   .profiles-dropdown{
     position:fixed; z-index:100; background:var(--panel-3); border:1px solid var(--border);
@@ -1049,7 +1019,9 @@
   /* auto-fit en vez de 2 columnas fijas: en pantallas muy anchas se acomodan más
      columnas (280px como ancho mínimo cómodo por tarjeta) en vez de estirar
      siempre las mismas 2 de borde a borde. */
-  .scn-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(280px,1fr)); gap:var(--sp-3); align-items:flex-start;}
+  /* align-items:stretch (antes flex-start): todas las tarjetas de una misma fila quedan a
+     la misma altura sin importar cuánto texto tenga la descripción de cada escenario. */
+  .scn-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(280px,1fr)); gap:var(--sp-3); align-items:stretch;}
   /* En móvil: lista vertical de ancho completo (no carrusel horizontal) dentro de
      un panel que ocupa el alto disponible bajo el stepper y hasta la barra fija de
      navegación. El título de la sección queda fijo arriba; solo el listado de
@@ -1083,7 +1055,7 @@
   .scn-card{
     position:relative; cursor:pointer; text-align:left;
     border-radius:12px; padding:0; min-width:0;
-    display:flex; flex-direction:column;
+    display:flex; flex-direction:column; height:100%;
     background-color:rgba(255,255,255,0.04);
     border:1px solid rgba(255,255,255,0.08);
     box-shadow:0 10px 20px rgba(0,0,0,0.4);
@@ -1091,24 +1063,31 @@
   }
   .scn-card:hover{transform:translateY(-4px); border-color:rgba(255,107,0,0.4); box-shadow:0 8px 24px rgba(0,0,0,0.4);}
   .scn-card:focus-visible{outline:2px solid #38bdf8; outline-offset:2px;}
-  /* Bloque de imagen: ancho completo, alto fijo, object-fit:contain para que la
-     ilustración se vea entera y con contexto (sin el recorte que dejaba cover en el
-     diseño anterior); fondo oscuro propio para que el "letterboxing" de contain no se
-     note como hueco vacío. Escenarios sin imagen (p.ej. uno personalizado importado de
-     Word) simplemente no traen este bloque — ver renderScenarioCard.
-     El overflow:hidden (para recortar las esquinas de la imagen y el zoom del hover)
-     vive acá, no en .scn-card: un grid item con overflow:hidden y alto automático hace
-     que algunos navegadores midan mal el alto de la fila (el resto de las tarjetas de
-     la grilla quedaba superponiéndose en mobile) — con el recorte solo en este bloque,
-     .scn-card vuelve a reportar su alto real a .scn-grid. */
+  /* Bloque de imagen: ancho completo, alto fijo, object-fit:cover para que la ilustración
+     llene el marco de borde a borde. Varias ilustraciones son cuadradas con fondo blanco o
+     de color plano alrededor del ícono central (p.ej. Phishing/BEC, DDoS) — con contain
+     (probado antes) ese fondo dejaba franjas/parches vacíos a los lados dentro de un marco
+     apaisado; con cover se recorta ese sobrante de fondo y el ícono queda centrado y a
+     pantalla completa. object-position es ajustable por escenario vía --scn-img-pos (ver
+     renderScenarioCard) para los casos puntuales donde el contenido no está centrado.
+     Escenarios sin imagen (p.ej. uno personalizado importado de Word) simplemente no traen
+     este bloque — ver renderScenarioCard.
+     El overflow:hidden (para recortar las esquinas de la imagen y el zoom del hover) vive
+     acá, no en .scn-card: un grid item con overflow:hidden y alto automático hace que
+     algunos navegadores midan mal el alto de la fila (las tarjetas de la grilla quedaban
+     superponiéndose en mobile) — con el recorte solo en este bloque, .scn-card vuelve a
+     reportar su alto real a .scn-grid. */
   .scn-card-media{
-    position:relative; width:100%; height:150px; flex-shrink:0; overflow:hidden;
-    border-radius:11px 11px 0 0;
-    background:#0B1222; border-bottom:1px solid rgba(255,255,255,0.08);
+    position:relative; width:100%; height:160px; flex-shrink:0; overflow:hidden;
+    border-top-left-radius:inherit; border-top-right-radius:inherit;
+    background:#1e293b; border-bottom:1px solid rgba(255,255,255,0.08);
   }
-  .scn-card-img{width:100%; height:100%; object-fit:contain; display:block; transition:transform .25s ease;}
+  .scn-card-img{
+    width:100%; height:100%; object-fit:cover; object-position:var(--scn-img-pos, center);
+    display:block; transition:transform .25s ease;
+  }
   .scn-card:hover .scn-card-img{transform:scale(1.05);}
-  .scn-card-body{display:flex; flex-direction:column; flex:1 1 auto; min-width:0; padding:16px; border-radius:0 0 11px 11px;}
+  .scn-card-body{display:flex; flex-direction:column; flex:1 1 auto; min-width:0; padding:16px; border-bottom-left-radius:inherit; border-bottom-right-radius:inherit;}
   .scn-head{display:flex; align-items:flex-start; justify-content:space-between; gap:10px;}
   .scn-title-row{display:flex; align-items:flex-start; gap:8px; min-width:0;}
   /* Ícono de cada categoría en su propio chip circular naranjo tenue — antes iba
