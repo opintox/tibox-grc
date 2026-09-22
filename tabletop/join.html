@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>TIBOX · Unirse al ejercicio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/multiplayer.css">
+</head>
+<body class="join-body">
+
+<div class="join-topbar">
+  <img class="tibox-logo" src="assets/logo-tibox-ok.png" alt="TIBOX" style="height:20px;">
+</div>
+
+<div class="join-shell">
+
+  <div class="panel section-block join-panel" id="joinFormPanel">
+    <div class="eyebrow">Tabletop de ciberseguridad</div>
+    <h1 class="section-title">Unirse al ejercicio</h1>
+    <p class="section-sub">Ingresa el código de la sala que te compartió el facilitador, escribe tu nombre y elige tu función.</p>
+
+    <div class="field-row">
+      <label>Código de sala</label>
+      <input type="text" id="joinCodeInput" maxlength="6" placeholder="ABC123" autocomplete="off" autocapitalize="characters" spellcheck="false">
+    </div>
+    <div class="field-row">
+      <label>Tu nombre</label>
+      <input type="text" id="joinNameInput" placeholder="Nombre y apellido" autocomplete="name">
+    </div>
+
+    <div id="joinRoleSection" class="hidden">
+      <label class="join-role-label">Elige tu función</label>
+      <div class="join-role-grid" id="joinRoleGrid"></div>
+    </div>
+
+    <p class="join-status" id="joinStatus" role="status" aria-live="polite"></p>
+
+    <button class="btn-cta join-submit-btn" id="joinSubmitBtn" type="button" disabled>Unirse →</button>
+  </div>
+
+  <div class="panel section-block join-panel hidden" id="joinWaitingPanel">
+    <div class="eyebrow">Listo</div>
+    <h1 class="section-title">Te uniste como <span id="joinedRoleName"></span></h1>
+    <p class="section-sub" id="joinWaitingText">Esperando a que el facilitador inicie el ejercicio…</p>
+  </div>
+
+  <div class="panel section-block join-panel hidden" id="joinVotePanel">
+    <div class="eyebrow" id="joinVoteStage">Etapa</div>
+    <h1 class="section-title" id="joinVoteTitle">¿Quién debe actuar?</h1>
+    <p class="join-vote-status" id="joinVoteStatus">Elige la función que crees que debe hacerse cargo.</p>
+    <div class="join-vote-grid" id="joinVoteGrid"></div>
+  </div>
+
+  <div class="panel section-block join-panel hidden" id="joinAnswerPanel">
+    <div class="eyebrow">Te toca a ti</div>
+    <h1 class="section-title">¿Qué decisión debe tomar?</h1>
+    <p class="join-vote-status" id="joinAnswerStatus">Elige la alternativa correcta.</p>
+    <div class="answer-options" id="joinAnswerGrid"></div>
+  </div>
+
+</div>
+
+<script src="js/multiplayer/firebase-config.js"></script>
+<script type="module" src="js/multiplayer/firebase-init.js"></script>
+<script type="module" src="js/multiplayer/participant-app.js"></script>
+
+</body>
+</html>

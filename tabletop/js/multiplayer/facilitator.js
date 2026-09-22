@@ -1,0 +1,263 @@
+// Lado facilitador del modo "Con celulares": Fase 1 (crear la sala, mostrar código/QR, ver
+// el lobby en vivo, iniciar el ejercicio existente sin tocarlo) + Fase 2 (votación: publicar
+// el acto vigente, tally en vivo sobre las mismas .char-card, resolver por timeout/empate).
+// Expone window.MP para que app.js (script clásico, no módulo) lo llame sin imports.
+import { createRoom, listenParticipants, startRoom, publishAct, setActPhase } from './room.js';
+
+let unsubscribeParticipants = null;
+
+function joinUrlFor(code){
+  return new URL('join.html?room=' + encodeURIComponent(code), location.href).href;
+}
+
+// Copia local de escapeHtml: app.js tiene la suya, pero vive dentro de un IIFE que no la
+// expone — este módulo no depende del orden de carga respecto a app.js.
+function escapeHtmlLocal(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function renderQr(url){
+  const el = document.getElementById('lobbyQr');
+  el.innerHTML = '';
+  try{
+    const qr = window.qrcode(0, 'M'); // typeNumber 0 = auto (el tamaño mínimo que alcance)
+    qr.addData(url);
+    qr.make();
+    el.innerHTML = qr.createSvgTag({cellSize: 5, margin: 3, scalable: true});
+  }catch(err){
+    console.error('[multiplayer] No se pudo generar el QR:', err);
+    el.textContent = 'No se pudo generar el QR — usa el link de abajo.';
+  }
+}
+
+function renderRoster(participantList, roleRoster){
+  const list = document.getElementById('lobbyRosterList');
+  if(participantList.length === 0){
+    list.innerHTML = '<p class="lobby-roster-empty">Nadie se ha unido todavía. Comparte el código o el QR.</p>';
+    return;
+  }
+  list.innerHTML = participantList.map(p => {
+    const role = roleRoster.find(r => r.roleKey === p.claimedRoleKey);
+    const [a] = (role && role.accent) || ['#8592AE'];
+    return `<div class="lobby-roster-item" style="--a:${a};">
+      <span class="lobby-roster-dot"></span>
+      <span class="lobby-roster-name">${escapeHtmlLocal(p.displayName || 'Sin nombre')}</span>
+      <span class="lobby-roster-role">${escapeHtmlLocal(role ? role.name : (p.claimedRoleKey || '—'))}</span>
+    </div>`;
+  }).join('');
+}
+
+// scenarioId/roleRoster: ver room.js (createRoom). onStart: la función a llamar (sin
+// argumentos) una vez que el facilitador toca "Iniciar ejercicio" — hoy siempre es la
+// startGame() existente de app.js, sin modificarla. onCancel: opcional, si el facilitador
+// vuelve atrás sin iniciar.
+async function openLobby({scenarioId, roleRoster, onStart, onCancel}){
+  const screenSetup = document.getElementById('screen-setup');
+  const screenLobby = document.getElementById('screen-lobby');
+  const codeEl = document.getElementById('lobbyRoomCode');
+  const urlInput = document.getElementById('lobbyJoinUrl');
+  const startBtn = document.getElementById('lobbyStartBtn');
+  const cancelBtn = document.getElementById('lobbyCancelBtn');
+  const copyBtn = document.getElementById('lobbyCopyBtn');
+  const statusLabel = document.getElementById('statusLabel');
+
+  screenSetup.classList.add('hidden');
+  screenLobby.classList.remove('hidden');
+  document.body.classList.add('lobby-mode');
+  if(statusLabel) statusLabel.textContent = 'SALA DE ESPERA';
+  codeEl.textContent = 'Creando sala…';
+  document.getElementById('lobbyRosterList').innerHTML = '';
+  startBtn.disabled = true;
+
+  const exitLobby = () => {
+    if(unsubscribeParticipants){ unsubscribeParticipants(); unsubscribeParticipants = null; }
+    document.body.classList.remove('lobby-mode');
+    screenLobby.classList.add('hidden');
+    startBtn.onclick = null;
+    cancelBtn.onclick = null;
+    copyBtn.onclick = null;
+  };
+
+  let code;
+  try{
+    code = await createRoom({scenarioId, roleRoster});
+  }catch(err){
+    codeEl.textContent = 'Error';
+    document.getElementById('lobbyRosterList').innerHTML =
+      `<p class="lobby-roster-empty">No se pudo crear la sala: ${escapeHtmlLocal(err.message || err)}</p>`;
+    cancelBtn.onclick = () => { exitLobby(); screenSetup.classList.remove('hidden'); if(statusLabel) statusLabel.textContent = 'CONFIGURACIÓN'; if(onCancel) onCancel(); };
+    return;
+  }
+
+  codeEl.textContent = code;
+  const url = joinUrlFor(code);
+  urlInput.value = url;
+  renderQr(url);
+  startBtn.disabled = false;
+
+  if(unsubscribeParticipants) unsubscribeParticipants();
+  unsubscribeParticipants = listenParticipants(code, list => renderRoster(list, roleRoster));
+
+  copyBtn.onclick = async () => {
+    try{
+      await navigator.clipboard.writeText(url);
+      copyBtn.textContent = 'Copiado ✓';
+      setTimeout(() => { copyBtn.textContent = 'Copiar link'; }, 1800);
+    }catch(err){
+      urlInput.select();
+    }
+  };
+
+  startBtn.onclick = async () => {
+    startBtn.disabled = true;
+    try{ await startRoom(code); }
+    catch(err){ console.error('[multiplayer] No se pudo marcar la sala como iniciada:', err); }
+    exitLobby();
+    onStart(code);
+  };
+
+  cancelBtn.onclick = () => {
+    exitLobby();
+    screenSetup.classList.remove('hidden');
+    if(statusLabel) statusLabel.textContent = 'CONFIGURACIÓN';
+    if(onCancel) onCancel();
+  };
+}
+
+// ---------------- Fase 2: votación ----------------
+// app.js llama a estas 3 desde renderStage()/renderCharGrid()/onCharacterPick() (hooks
+// mínimos, ver plan de multijugador) — todo el estado de la votación en sí (quién votó qué,
+// el timeout, el desempate) vive acá adentro, no en app.js.
+const MP_VOTE_SECONDS = 45;
+let voteUnsub = null;
+let voteTimeoutHandle = null;
+
+function clearVotingWatch(){
+  if(voteUnsub){ voteUnsub(); voteUnsub = null; }
+  if(voteTimeoutHandle){ clearTimeout(voteTimeoutHandle); voteTimeoutHandle = null; }
+}
+
+// Dibuja/actualiza un badge de conteo sobre cada .char-card activa (data-role-key, ver
+// renderCharGrid en app.js) — no toca nada más de la tarjeta.
+function renderVoteBadges(tally){
+  document.querySelectorAll('#charGrid .char-card[data-role-key]').forEach(el => {
+    const key = el.dataset.roleKey;
+    const count = tally[key] || 0;
+    let badge = el.querySelector('.mp-vote-badge');
+    if(!badge){
+      badge = document.createElement('span');
+      badge.className = 'mp-vote-badge';
+      el.appendChild(badge);
+    }
+    badge.textContent = count > 0 ? `${count} voto${count === 1 ? '' : 's'}` : '';
+    badge.classList.toggle('is-empty', count === 0);
+  });
+}
+
+// Empate: gana la función que aparece primero en roleKeys — ese arreglo ya viene en el orden
+// fijo del organigrama del escenario (roleMetaFor(...).keys en app.js), no por quién votó
+// primero ni por latencia (ver plan, criterio de desempate explícito y reproducible).
+function pickWinner(tally, roleKeys){
+  let best = null, bestCount = 0;
+  roleKeys.forEach(key => {
+    const count = tally[key] || 0;
+    if(count > bestCount){ best = key; bestCount = count; }
+  });
+  return best;
+}
+
+// Publica el acto vigente en Firestore (fase 'voting') — se llama una vez por acto, desde
+// renderStage(). No hace nada más: la UI de la votación la arma attachVotingPhase.
+function mpPublishAct(roomCode, act){
+  publishAct(roomCode, {...act, phase: 'voting'}).catch(err => {
+    console.error('[multiplayer] No se pudo publicar el acto vigente:', err);
+  });
+}
+
+// Suscribe la tarjeta en vivo del acto actual: pinta los votos que van llegando sobre las
+// .char-card y, a los MP_VOTE_SECONDS, resuelve automáticamente por mayoría (si hubo al
+// menos un voto) llamando a onResolve(roleKeyGanador) — que en app.js dispara el mismo
+// onCharacterPick de siempre. El clic manual del facilitador en una tarjeta sigue funcionando
+// en paralelo en todo momento (no se deshabilita nada acá): es el "desatasco" si la votación
+// queda empatada sin ganador o si nadie votó.
+function attachVotingPhase(roomCode, actKey, roleKeys, onResolve){
+  clearVotingWatch();
+  let resolved = false;
+  let lastTally = {};
+
+  const resolveOnce = winnerKey => {
+    if(resolved || !winnerKey) return;
+    resolved = true;
+    clearVotingWatch();
+    onResolve(winnerKey);
+  };
+
+  voteUnsub = listenParticipants(roomCode, list => {
+    const tally = {};
+    list.forEach(p => {
+      if(p.vote && p.vote.actKey === actKey && roleKeys.includes(p.vote.roleKey)){
+        tally[p.vote.roleKey] = (tally[p.vote.roleKey] || 0) + 1;
+      }
+    });
+    lastTally = tally;
+    renderVoteBadges(tally);
+  });
+
+  voteTimeoutHandle = setTimeout(() => resolveOnce(pickWinner(lastTally, roleKeys)), MP_VOTE_SECONDS * 1000);
+}
+
+// Se llama desde onCharacterPick() apenas se resuelve el acto (por clic manual o por
+// votación) — corta cualquier listener/timeout de votación pendiente y marca en Firestore
+// que la fase pasó a 'answering', para que los celulares dejen de mostrar la votación.
+function closeVoting(roomCode, nextPhase){
+  clearVotingWatch();
+  setActPhase(roomCode, nextPhase || 'answering').catch(err => {
+    console.error('[multiplayer] No se pudo cerrar la fase de votación:', err);
+  });
+}
+
+// ---------------- Fase 3: respuesta individual ----------------
+// Simplificación a propósito: el celular envía UNA alternativa y queda en "enviado, esperando"
+// sin importar si acertó — el feedback de correcto/incorrecto (con reintento) sigue viéndose
+// solo en la pantalla del facilitador, igual que la narrativa del acto. Si la respuesta llegó
+// incorrecta, el facilitador puede resolverlo con el mismo panel compartido (clic manual, ya
+// activo en paralelo) tal como en la votación — no hay timeout automático acá: a diferencia de
+// una votación, una sola respuesta no tiene "mayoría" que resolver sola con el paso del tiempo.
+let answerUnsub = null;
+
+function clearAnsweringWatch(){
+  if(answerUnsub){ answerUnsub(); answerUnsub = null; }
+}
+
+// targetRoleKey: la función que ganó la Fase 2 para este acto (gameState.chosenCorrectParticipant.roleKey
+// en app.js). onResolve(origIdx) se llama por cada envío nuevo y distinto de esa persona —
+// incluye reintentos si la app marca la primera alternativa como incorrecta y la persona no
+// tiene forma de reintentar desde su celular en esta fase (ver arriba); en la práctica alcanza
+// con un solo envío, pero no se asume.
+function attachAnsweringPhase(roomCode, actKey, targetRoleKey, onResolve){
+  clearAnsweringWatch();
+  let seenKey = null;
+  answerUnsub = listenParticipants(roomCode, list => {
+    const p = list.find(x => x.claimedRoleKey === targetRoleKey);
+    if(!p || !p.answer || p.answer.actKey !== actKey) return;
+    const ts = p.answer.submittedAt;
+    const key = p.answer.optionIndex + '@' + (ts && ts.seconds != null ? `${ts.seconds}.${ts.nanoseconds}` : 'pending');
+    if(key === seenKey) return;
+    seenKey = key;
+    onResolve(p.answer.optionIndex);
+  });
+}
+
+// Se llama desde onAnswerPick() apenas la respuesta queda resuelta como correcta (por
+// clic manual o por el envío del celular) — corta el listener y marca la fase como 'resolved'.
+function closeAnswering(roomCode){
+  clearAnsweringWatch();
+  setActPhase(roomCode, 'resolved').catch(err => {
+    console.error('[multiplayer] No se pudo cerrar la fase de respuesta:', err);
+  });
+}
+
+window.MP = {
+  openLobby, publishAct: mpPublishAct, attachVotingPhase, closeVoting,
+  attachAnsweringPhase, closeAnswering
+};
