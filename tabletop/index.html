@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/multiplayer.css">
 </head>
 <body>
 
@@ -165,7 +166,7 @@
             <div class="wizard-col-head">
               <div class="eyebrow">Material opcional</div>
               <h2 class="section-title">Si dispone de un playbook, cargar aquí</h2>
-              <p class="section-sub">Adjunta material de referencia para la simulación, o un escenario personalizado en Word (descarga la plantilla, complétala y súbela aquí para que aparezca como tarjeta en "Tipo de ataque").</p>
+              <p class="section-sub">Adjunta material de referencia para la simulación, o un escenario personalizado en Word (arma el escenario con el cuestionario guiado, o completa la plantilla a mano) y súbelo aquí para que aparezca como tarjeta en "Tipo de ataque".</p>
             </div>
             <div class="wizard-col-body">
               <label class="playbook-dropzone" id="playbookDropzone">
@@ -180,7 +181,7 @@
             </div>
             <div class="playbook-actions">
               <button class="btn btn-sm btn-primary" id="loadPlaybookBtn" type="button">Cargar playbook</button>
-              <button class="btn btn-sm" id="downloadTemplateBtn" type="button">Descargar plantilla Word</button>
+              <button class="btn btn-sm" id="openBuilderBtn" type="button">Arma el escenario</button>
             </div>
             <p class="playbook-status" id="playbookStatus" role="status" aria-live="polite"></p>
           </div>
@@ -207,11 +208,47 @@
             <span class="setup-badge" id="participantsBadge">0 activas</span>
           </div>
           <p class="step3-alert" id="wizardStep3Summary" role="status" aria-live="polite"></p>
+
+          <label class="mp-toggle-row" for="mpEnabledInput">
+            <input type="checkbox" id="mpEnabledInput">
+            <span class="mp-toggle-text">
+              <span class="mp-toggle-title">Con celulares</span>
+              <span class="mp-toggle-desc">Antes de empezar, cada participante se une desde su celular con un código/QR y elige su función en una sala de espera.</span>
+            </span>
+          </label>
+
           <div class="participants-grid" id="participantsBody"></div>
         </section>
 
       </div>
 
+    </div>
+  </div>
+
+  <div id="screen-lobby" class="hidden">
+    <div class="panel section-block lobby-panel">
+      <div class="setup-section-head">
+        <h2 class="section-title">Sala de espera</h2>
+        <p class="section-sub">Los participantes escanean el código o entran al link desde su celular, escriben su nombre y eligen su función. Cuando estén listos, inicia el ejercicio — se juega igual que siempre en esta pantalla.</p>
+      </div>
+      <div class="lobby-grid">
+        <div class="lobby-join">
+          <div class="lobby-code" id="lobbyRoomCode">——————</div>
+          <div class="lobby-qr" id="lobbyQr"></div>
+          <div class="lobby-link-row">
+            <input type="text" id="lobbyJoinUrl" readonly aria-label="Link para unirse">
+            <button class="btn btn-sm" id="lobbyCopyBtn" type="button">Copiar link</button>
+          </div>
+        </div>
+        <div class="lobby-roster">
+          <div class="eyebrow">Participantes conectados</div>
+          <div class="lobby-roster-list" id="lobbyRosterList"></div>
+        </div>
+      </div>
+      <div class="lobby-actions">
+        <button class="btn" id="lobbyCancelBtn" type="button">← Volver</button>
+        <button class="btn-cta" id="lobbyStartBtn" type="button" disabled>Iniciar ejercicio →</button>
+      </div>
     </div>
   </div>
 
@@ -344,6 +381,27 @@
     </div>
   </div>
 
+  <!-- Alimentador: cuestionario guiado que arma un escenario paso a paso y lo convierte en un
+       .docx con el mismo formato que ya lee TibDocx.parseScenarioDocxFile (ver js/app.js,
+       sección "constructor de escenarios") — no es una pantalla nueva de import, es una forma
+       más amigable de producir el mismo Word que hoy se edita a mano. -->
+  <div id="screen-builder" class="hidden">
+    <div class="panel section-block builder-panel">
+      <div class="setup-section-head">
+        <h2 class="section-title">Crear escenario</h2>
+        <p class="section-sub">Responde el cuestionario y al final se genera un Word con el mismo formato que ya puede cargar la app como playbook.</p>
+        <button class="btn btn-sm" id="builderBackBtn" type="button">← Volver a configuración</button>
+      </div>
+      <div class="wizard-stepper" id="builderStepper"></div>
+      <div id="builderStepBody"></div>
+      <div class="builder-nav">
+        <button class="btn" id="builderPrevBtn" type="button">← Atrás</button>
+        <span class="builder-nav-spacer"></span>
+        <button class="btn btn-primary" id="builderNextBtn" type="button">Siguiente →</button>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script src="js/data/catalogo.js"></script>
@@ -351,6 +409,16 @@
 <script src="js/lib/jszip.min.js"></script>
 <script src="js/docx.js"></script>
 <script src="js/app.js"></script>
+
+<!-- Modo "Con celulares" (opcional, ver plan de multijugador): módulos aparte, cargados al
+     final. app.js solo los toca dentro de manejadores de clic (nunca al cargar la página),
+     así que el orden respecto a app.js no importa — sí importa el orden ENTRE estos: config
+     (clásico) antes que firebase-init.js (módulo), y ese antes que facilitator.js (módulo,
+     importa room.js internamente). -->
+<script src="js/lib/qrcode.js"></script>
+<script src="js/multiplayer/firebase-config.js"></script>
+<script type="module" src="js/multiplayer/firebase-init.js"></script>
+<script type="module" src="js/multiplayer/facilitator.js"></script>
 
 </body>
 </html>

@@ -432,7 +432,11 @@ const TibDocx = (function(){
       extraRoleKeys,
       customRoles: customRoleList.length ? customRoleList : null,
       customStages: stages.map(s => s.stage),
-      stages
+      stages,
+      // Texto completo del documento (sin depender de qué etiqueta lo trae), para que la app
+      // pueda detectar menciones de un cliente específico y aplicar detalles propios de su
+      // tarjeta (ver SCENARIO_BG_IMAGES / registerCustomScenario en app.js).
+      rawText: paragraphs.join('\n')
     };
   }
 
