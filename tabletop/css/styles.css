@@ -654,12 +654,13 @@
      también son clicables (abren el detalle de esa regla en un modal), de ahí el cursor y
      el estado de foco por teclado. */
   .rule-step{
-    display:flex; gap:16px; align-items:center; position:relative; z-index:1;
+    display:flex; gap:16px; align-items:flex-start; position:relative; z-index:1;
     padding:14px 18px; border-radius:14px; background:rgba(255,255,255,0.03);
     border:1px solid rgba(255,255,255,0.08); cursor:pointer;
     transition:transform .15s ease, border-color .15s ease, background-color .15s ease;
   }
   .rule-step:hover{transform:translateX(6px); border-color:rgba(255,138,61,0.45); background:rgba(255,255,255,0.055);}
+  .rule-step:hover .rule-step-cta{color:#FFB07A;}
   .rule-step:focus-visible{outline:2px solid #FF8A3D; outline-offset:2px;}
   .rule-step-num{
     flex-shrink:0; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center;
@@ -667,6 +668,59 @@
     background:linear-gradient(135deg,#FF8A3D,#F0401D); box-shadow:0 6px 16px -8px rgba(240,64,29,0.6);
   }
   .rule-step-title{font-family:var(--display); font-weight:700; font-size:var(--fs-lg); color:var(--text); margin:0;}
+  /* Resumen corto de "por qué importa" (1 frase) + llamado a la acción hacia el modal, que
+     sigue teniendo el detalle completo (por qué / cómo / tip) — ver RULE_DETAILS/showRuleModal.
+     Toda la tarjeta ya es clicable, esto es solo la señal visual de que hay más. */
+  .rule-step-summary{font-size:var(--fs-sm); color:var(--muted); line-height:1.45; margin:6px 0 0;}
+  .rule-step-cta{
+    display:inline-flex; align-items:center; gap:4px; margin-top:10px;
+    font-family:var(--mono); font-size:var(--fs-3xs); font-weight:700; letter-spacing:0.05em; text-transform:uppercase;
+    color:#FF8A3D; transition:color .15s ease;
+  }
+  .rule-step-cta svg{flex-shrink:0;}
+
+  /* ---------- carrusel de "Cómo funciona" (reemplaza la lista vertical de .rule-steps) ----------
+     .carousel-slide se combina con .rule-step en el HTML (misma tarjeta, mismo look) — acá solo
+     se agrega el layout de carrusel (pista horizontal, una diapositiva visible a la vez) y los
+     controles nuevos. El naranjo TIBOX (#FF8A3D → #F0401D) ya usado en .rule-step-num y
+     .btn-cta se reutiliza para la barra de progreso y el dot activo, para que se sienta parte
+     del mismo lenguaje visual. */
+  .rules-carousel{margin-top:26px; position:relative;}
+  .carousel-progress{
+    width:100%; height:4px; border-radius:999px; overflow:hidden; margin-bottom:16px;
+    background:rgba(255,255,255,0.08);
+  }
+  .carousel-progress-bar{
+    height:100%; width:0%; border-radius:999px;
+    background:linear-gradient(90deg,#FF8A3D,#F0401D);
+  }
+  .carousel-viewport{overflow:hidden; border-radius:14px;}
+  .carousel-track{display:flex; transition:transform .45s cubic-bezier(.4,0,.2,1);}
+  /* .rule-step ya trae padding/borde/fondo/hover — acá solo se fuerza el ancho completo de la
+     diapositiva y que no se achique dentro del flex del track. */
+  .carousel-slide{flex:0 0 100%; min-width:0; box-sizing:border-box;}
+  .carousel-controls{display:flex; align-items:center; justify-content:center; gap:16px; margin-top:18px;}
+  .carousel-arrow{
+    flex-shrink:0; width:34px; height:34px; border-radius:50%; padding:0;
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.14); color:var(--text);
+    cursor:pointer; transition:background-color .15s ease, border-color .15s ease, transform .15s ease;
+  }
+  .carousel-arrow:hover{background:rgba(255,138,61,0.14); border-color:rgba(255,138,61,0.5); transform:scale(1.06);}
+  .carousel-arrow:active{transform:scale(0.95);}
+  .carousel-arrow:focus-visible{outline:2px solid #FF8A3D; outline-offset:2px;}
+  .carousel-dots{display:flex; align-items:center; gap:9px;}
+  .carousel-dot{
+    width:8px; height:8px; border-radius:50%; padding:0; border:none; cursor:pointer;
+    background:rgba(255,255,255,0.18); transition:background-color .15s ease, transform .15s ease;
+  }
+  .carousel-dot:hover{background:rgba(255,255,255,0.38);}
+  .carousel-dot.is-active{background:linear-gradient(135deg,#FF8A3D,#F0401D); transform:scale(1.3);}
+  .carousel-dot:focus-visible{outline:2px solid #FF8A3D; outline-offset:2px;}
+  @media (min-width:861px){
+    .rules-carousel{margin-top:18px;}
+  }
+
   .playbook-panel{margin-top:var(--sp-5); margin-bottom:0;}
   @media (max-width:480px){
     .profile-actions{flex-direction:column; align-items:stretch;}
@@ -991,6 +1045,11 @@
   .btn-cta:hover{transform:translateY(-1px); filter:brightness(1.06); box-shadow:0 20px 38px -14px rgba(240,64,29,0.95), 0 0 0 1px rgba(255,255,255,0.14) inset;}
   .btn-cta:active{transform:scale(0.98);}
   .btn-cta:focus-visible{outline:2px solid #FFB07A; outline-offset:3px;}
+  /* Sin esto, un <button disabled> con el gradiente propio de .btn-cta no se ve distinto de
+     uno habilitado — el navegador bloquea el clic igual, pero nada avisa por qué. Con los
+     nuevos requisitos por paso (nombre de cliente, escenario, empresas) esto pasa seguido. */
+  .btn-cta:disabled{opacity:0.4; cursor:not-allowed; filter:grayscale(0.4);}
+  .btn-cta:disabled:hover{transform:none; box-shadow:0 16px 32px -14px rgba(240,64,29,0.85), 0 0 0 1px rgba(255,255,255,0.10) inset;}
   .btn-cta svg{flex-shrink:0;}
 
   /* ---------- tarjetas de escenario ---------- */

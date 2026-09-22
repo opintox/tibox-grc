@@ -1050,6 +1050,12 @@ function openCompanyModal(i){
   const p = participants[i];
   const rm = roleMetaFor(selectedScenarioId);
   const roleName = rm.names[p.roleKey] || p.roleKey;
+  // Solo 2 empresas posibles para cualquier función: TIBOX (equipo propio) o el cliente cuyo
+  // nombre se registró en el paso 1 del wizard — nunca texto libre. Si por algo p.empresa
+  // quedó con otro valor (ej. de una sesión vieja o un cliente que cambió de nombre), no
+  // coincide con ninguna opción y el select arranca sin selección, forzando a elegir de nuevo.
+  const clientOption = clientName.trim() || 'Cliente';
+  const options = ['TIBOX', clientOption];
 
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
@@ -1060,7 +1066,10 @@ function openCompanyModal(i){
         <button class="modal-close-btn" id="companyModalClose" aria-label="Cerrar">✕</button>
       </div>
       <label for="companyModalInput">Empresa</label>
-      <input type="text" id="companyModalInput" value="${escapeHtml(p.empresa || '')}" placeholder="Ej: TIBOX SPA">
+      <select id="companyModalInput">
+        <option value="" disabled ${!options.includes(p.empresa) ? 'selected' : ''}>Selecciona una empresa</option>
+        ${options.map(opt => `<option value="${escapeHtml(opt)}" ${p.empresa === opt ? 'selected' : ''}>${escapeHtml(opt)}</option>`).join('')}
+      </select>
       <div class="modal-actions" style="margin-top:18px;">
         <button class="btn" id="companyModalCancel">Cancelar</button>
         <button class="btn-cta" id="companyModalSave">Guardar</button>
@@ -1070,11 +1079,10 @@ function openCompanyModal(i){
 
   const input = overlay.querySelector('#companyModalInput');
   input.focus();
-  input.select();
 
   function save(){
-    // permite guardar vacío, para poder borrar una empresa ya asignada
-    participants[i].empresa = input.value.trim();
+    if(!input.value) return; // sigue en el placeholder ("Selecciona una empresa"): no hay nada que guardar
+    participants[i].empresa = input.value;
     renderParticipants();
     profileSaved = false;
     updateBottomState();
@@ -1121,23 +1129,33 @@ function renderWizardStepper(){
 const STEP3_ALERT_ICON_WARN = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg>';
 const STEP3_ALERT_ICON_OK = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 5-5"/></svg>';
 function updateBottomState(){
+  const hasClientName = !!clientName.trim();
   const hasScenario = !!selectedScenarioId;
-  const activeCount = participants.filter(p => p.checked).length;
+  const activeParticipants = participants.filter(p => p.checked);
+  const activeCount = activeParticipants.length;
   const hasParticipant = activeCount > 0;
+  const rm = hasScenario ? roleMetaFor(selectedScenarioId) : null;
+  // Cada función activa (incluidas TI/Seguridad, que siempre están activas) necesita su
+  // empresa asignada antes de poder empezar — sin esto, el informe final no puede atribuir
+  // correctamente quién ejecutó cada acción.
+  const missingEmpresa = hasScenario ? activeParticipants.filter(p => !p.empresa || !p.empresa.trim()) : [];
   const scenarioName = hasScenario ? SCENARIOS.find(s => s.id === selectedScenarioId).name : null;
-  const canStart = hasScenario && hasParticipant;
+  const canStart = hasScenario && hasParticipant && missingEmpresa.length === 0;
 
   renderWizardStepper();
 
   const setupNextBtn = document.getElementById('setupNextBtn');
   if(setupNextBtn){
     const label=document.getElementById('setupNextBtnLabel');
-    if(currentSetupStep === 3){
+    if(currentSetupStep === 1){
+      setupNextBtn.disabled = !hasClientName;
+      if(label) label.textContent = 'Siguiente';
+    } else if(currentSetupStep === 2){
+      setupNextBtn.disabled = !hasScenario;
+      if(label) label.textContent = 'Siguiente';
+    } else {
       setupNextBtn.disabled = !canStart;
       if(label) label.textContent = 'Comenzar ejercicio';
-    } else {
-      setupNextBtn.disabled = false;
-      if(label) label.textContent = 'Siguiente';
     }
   }
 
@@ -1146,6 +1164,32 @@ function updateBottomState(){
   const pBadge = document.getElementById('participantsBadge');
   if(pBadge) pBadge.textContent = `${activeCount} activa${activeCount === 1 ? '' : 's'}`;
 
+  // Paso 1: sin nombre de cliente no se puede seguir a "Escenario".
+  const step1Summary = document.getElementById('wizardStep1Summary');
+  if(step1Summary){
+    if(hasClientName){
+      step1Summary.className = 'step3-alert is-ready';
+      step1Summary.innerHTML = `${STEP3_ALERT_ICON_OK}<span>Perfil listo — puedes continuar.</span>`;
+    } else {
+      step1Summary.className = 'step3-alert is-warning';
+      step1Summary.innerHTML = `${STEP3_ALERT_ICON_WARN}<span>Escribe el nombre del cliente para continuar.</span>`;
+    }
+  }
+
+  // Paso 2: sin escenario elegido no se puede seguir a "Participantes".
+  const step2Summary = document.getElementById('wizardStep2Summary');
+  if(step2Summary){
+    if(hasScenario){
+      step2Summary.className = 'step3-alert is-ready';
+      step2Summary.innerHTML = `${STEP3_ALERT_ICON_OK}<span>${escapeHtml(`Escenario elegido: ${scenarioName}.`)}</span>`;
+    } else {
+      step2Summary.className = 'step3-alert is-warning';
+      step2Summary.innerHTML = `${STEP3_ALERT_ICON_WARN}<span>Elige un escenario para continuar.</span>`;
+    }
+  }
+
+  // Paso 3: sin escenario, sin participantes activos, o con alguna función activa sin
+  // empresa asignada, no se puede comenzar el ejercicio.
   const summaryEl = document.getElementById('wizardStep3Summary');
   if(summaryEl){
     if(canStart){
@@ -1153,8 +1197,14 @@ function updateBottomState(){
       summaryEl.innerHTML = `${STEP3_ALERT_ICON_OK}<span>${escapeHtml(`Escenario elegido: ${scenarioName} · ${activeCount} ${activeCount === 1 ? 'función activa' : 'funciones activas'}.`)}</span>`;
     } else {
       summaryEl.className = 'step3-alert is-warning';
-      const missing = `Falta: ${!hasScenario ? 'elegir escenario' : ''}${!hasScenario && !hasParticipant ? ' y ' : ''}${!hasParticipant ? 'marcar al menos un participante' : ''}.`;
-      summaryEl.innerHTML = `${STEP3_ALERT_ICON_WARN}<span>${escapeHtml(missing)}</span>`;
+      const missingParts = [];
+      if(!hasScenario) missingParts.push('elegir escenario');
+      if(!hasParticipant) missingParts.push('marcar al menos un participante');
+      if(hasScenario && missingEmpresa.length > 0){
+        const names = missingEmpresa.map(p => (rm && rm.names[p.roleKey]) || p.roleKey).join(', ');
+        missingParts.push(`asignar la empresa de: ${names}`);
+      }
+      summaryEl.innerHTML = `${STEP3_ALERT_ICON_WARN}<span>${escapeHtml(`Falta: ${missingParts.join('; ')}.`)}</span>`;
     }
   }
 }
@@ -1303,6 +1353,84 @@ document.querySelectorAll('.rule-step[data-rule]').forEach(el => {
   el.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); open(); } });
 });
 
+// ---------------- carrusel "Cómo funciona" ----------------
+// Autoavance cada 2s con barra de progreso, flechas/puntos para navegar a mano y pausa al
+// pasar el cursor por encima. El progreso se anima a mano con requestAnimationFrame (en vez
+// de una transición CSS) porque así se puede pausar/reanudar exactamente donde iba, sin
+// saltos — algo que una transición CSS no deja hacer de forma limpia.
+(function initRulesCarousel(){
+  const root = document.getElementById('rulesCarousel');
+  if(!root) return;
+  const track = document.getElementById('carouselTrack');
+  const progressBar = document.getElementById('carouselProgressBar');
+  const dots = Array.from(document.querySelectorAll('#carouselDots .carousel-dot'));
+  const prevBtn = document.getElementById('carouselPrevBtn');
+  const nextBtn = document.getElementById('carouselNextBtn');
+  const slideCount = track.children.length;
+  const SLIDE_MS = 8000; // tiempo para leer título + resumen de cada regla sin sentirse apurado
+
+  let current = 0;
+  let rafId = null;
+  let advanceTimer = null;
+  let slideStartTime = 0;
+  let pausedElapsed = 0;
+  let paused = false;
+
+  function goTo(index){
+    current = (index + slideCount) % slideCount;
+    track.style.transform = `translateX(-${current * 100}%)`;
+    dots.forEach((d, i) => {
+      d.classList.toggle('is-active', i === current);
+      d.setAttribute('aria-selected', i === current ? 'true' : 'false');
+    });
+    restartTimer();
+  }
+
+  function tickProgress(){
+    const elapsed = performance.now() - slideStartTime;
+    progressBar.style.width = Math.min(100, (elapsed / SLIDE_MS) * 100) + '%';
+    rafId = requestAnimationFrame(tickProgress);
+  }
+
+  // Reinicia el ciclo de esta diapositiva desde cero (0% de progreso, SLIDE_MS completos) —
+  // se usa tanto al llegar a una diapositiva nueva como al navegar a mano.
+  function restartTimer(){
+    clearTimeout(advanceTimer);
+    cancelAnimationFrame(rafId);
+    pausedElapsed = 0;
+    progressBar.style.width = '0%';
+    if(paused) return; // se retoma con el tiempo completo cuando el cursor salga (ver resume)
+    slideStartTime = performance.now();
+    rafId = requestAnimationFrame(tickProgress);
+    advanceTimer = setTimeout(() => goTo(current + 1), SLIDE_MS);
+  }
+
+  function pause(){
+    if(paused) return;
+    paused = true;
+    pausedElapsed = performance.now() - slideStartTime;
+    clearTimeout(advanceTimer);
+    cancelAnimationFrame(rafId);
+  }
+
+  function resume(){
+    if(!paused) return;
+    paused = false;
+    slideStartTime = performance.now() - pausedElapsed;
+    const remaining = Math.max(0, SLIDE_MS - pausedElapsed);
+    rafId = requestAnimationFrame(tickProgress);
+    advanceTimer = setTimeout(() => goTo(current + 1), remaining);
+  }
+
+  prevBtn.addEventListener('click', () => goTo(current - 1));
+  nextBtn.addEventListener('click', () => goTo(current + 1));
+  dots.forEach((dot, i) => dot.addEventListener('click', () => goTo(i)));
+  root.addEventListener('mouseenter', pause);
+  root.addEventListener('mouseleave', resume);
+
+  goTo(0);
+})();
+
 document.getElementById('continueBtn').addEventListener('click', enterSetup);
 document.getElementById('setupBackBtn').addEventListener('click', () => {
   if(currentSetupStep === 1) goHome();
@@ -1318,6 +1446,15 @@ let multiplayerEnabled = false;
 // publicar el acto y la votación) — solo tiene valor mientras dura un ejercicio que arrancó
 // desde el lobby; se vuelve a fijar en cada "Comenzar ejercicio" con celulares.
 let mpRoomCode = null;
+// Cuántas veces se reabrió la votación para el acto vigente (0 = primera vez). Sube cada vez
+// que una respuesta incorrecta manda de vuelta a "quién debe actuar" (ver onAnswerPick) y
+// vuelve a 0 apenas se avanza a un acto distinto (ver renderStage). Forma parte del actKey
+// que se publica en Firestore para que los celulares sepan que hay una ronda de voto NUEVA
+// (si no, un participante que ya votó en la ronda anterior quedaría con su pantalla congelada).
+let mpActRevote = 0;
+function currentActKey(){
+  return `${gameState.stepIndex}-${gameState.subIndex}-${mpActRevote}`;
+}
 document.getElementById('mpEnabledInput').addEventListener('change', e => { multiplayerEnabled = e.target.checked; });
 
 function startGameOrLobby(){
@@ -1624,6 +1761,10 @@ function renderStage(opts){
   gameState.chosenCorrectParticipant = null;
   gameState.nextAction = null;
   gameState.currentAnswerAttempts = 0;
+  // opts.mpRevote: true solo cuando onAnswerPick reabre la votación de este mismo acto tras
+  // una respuesta incorrecta (modo "Con celulares") — sube el contador en vez de reiniciarlo,
+  // para que currentActKey() cambie y los celulares sepan que empezó una ronda de voto nueva.
+  mpActRevote = opts.mpRevote ? mpActRevote + 1 : 0;
 
   // Guarda un snapshot del estado ANTES de que esta pregunta pueda generar errores, para poder
   // deshacerla con "← Pregunta anterior". No se guarda al re-renderizar por un "volver" (skipHistory),
@@ -1685,7 +1826,7 @@ function renderStage(opts){
   // lobby (ver startGameOrLobby) — en el modo de siempre esto no hace nada.
   if(multiplayerEnabled && mpRoomCode && window.MP){
     window.MP.publishAct(mpRoomCode, {
-      actKey: `${gameState.stepIndex}-${gameState.subIndex}`,
+      actKey: currentActKey(),
       stage: stageLabel, title: q.title || '', situation: q.situation || q.text || '',
       meta: q.meta || [], target: q.target, options: q.options, explanations: q.explanations,
       correctIndex: q.correctIndex ?? 0, mismatchContext: q.mismatchContext || ''
@@ -1772,8 +1913,7 @@ function renderCharGrid(){
   // vota. Al resolver, dispara el mismo onCharacterPick de siempre, con el participant/el
   // reales, resueltos acá (MP solo conoce roleKeys, no la lista de participantes de la app).
   if(multiplayerEnabled && mpRoomCode && window.MP){
-    const actKey = `${gameState.stepIndex}-${gameState.subIndex}`;
-    window.MP.attachVotingPhase(mpRoomCode, actKey, available.map(p => p.roleKey), winnerRoleKey => {
+    window.MP.attachVotingPhase(mpRoomCode, currentActKey(), available.map(p => p.roleKey), winnerRoleKey => {
       const winnerParticipant = available.find(p => p.roleKey === winnerRoleKey);
       const winnerEl = grid.querySelector(`.char-card[data-role-key="${winnerRoleKey}"]`);
       if(winnerParticipant && winnerEl) onCharacterPick(winnerParticipant, winnerEl);
@@ -1878,8 +2018,7 @@ function renderAnswerOptions(q){
   // propio celular. El clic de arriba sigue funcionando en paralelo (respaldo manual, igual
   // que en la votación) — al llegar la respuesta del celular, dispara el mismo onAnswerPick.
   if(multiplayerEnabled && mpRoomCode && window.MP && gameState.chosenCorrectParticipant){
-    const actKey = `${gameState.stepIndex}-${gameState.subIndex}`;
-    window.MP.attachAnsweringPhase(mpRoomCode, actKey, gameState.chosenCorrectParticipant.roleKey, origIdx => {
+    window.MP.attachAnsweringPhase(mpRoomCode, currentActKey(), gameState.chosenCorrectParticipant.roleKey, origIdx => {
       const btn = el.querySelector(`.answer-btn[data-orig-idx="${origIdx}"]`);
       if(btn) onAnswerPick(origIdx, btn, q);
     });
@@ -1900,8 +2039,18 @@ function onAnswerPick(idx, btn, q){
     document.querySelectorAll('#answerOptions .answer-btn').forEach(b => b.classList.remove('chosen-wrong'));
     btn.classList.add('chosen-wrong');
     renderExplanation(idx, false, q);
-    setActionButton(false);
-    gameState.nextAction = null;
+    // Modo "Con celulares": una respuesta incorrecta reabre la votación de "quién debe actuar"
+    // para este mismo acto (currentActKey() cambia — ver mpActRevote — así los celulares ven
+    // una ronda de voto nueva) en vez de solo permitir reintentar con la misma persona. La
+    // función que ya respondió mal puede volver a salir elegida, a propósito. El modo de una
+    // sola pantalla no cambia: sigue siendo un reintento normal de la alternativa.
+    if(multiplayerEnabled && mpRoomCode && window.MP){
+      gameState.nextAction = () => renderStage({skipHistory: true, mpRevote: true});
+      setActionButton(true, 'Volver a votar →');
+    } else {
+      setActionButton(false);
+      gameState.nextAction = null;
+    }
     return;
   }
 
