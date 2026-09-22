@@ -1563,10 +1563,12 @@ function stageQuestions(stageEntry){
 
 function buildStepper(stageLabels){
   const el = document.getElementById('gameStepper');
+  // Solo el número — el nombre completo de la etapa queda como tooltip (title) y ya se ve
+  // grande en el panel de la situación mientras esa etapa está activa. Así el stepper se ve
+  // igual de prolijo con 5 etapas que con las que traiga un escenario importado de Word.
   el.innerHTML = stageLabels.map((label, i) => `
-    <div class="gh-step" data-step="${i}">
+    <div class="gh-step" data-step="${i}" title="${escapeHtml(label)}">
       <span class="gh-step-n">${i + 1}</span>
-      <span class="gh-step-label">${escapeHtml(label)}</span>
     </div>`).join('');
 }
 

@@ -221,6 +221,11 @@
     outline:none; border-color:#FF8A3D; background:rgba(255,255,255,0.07);
     box-shadow:inset 0 1px 3px rgba(0,0,0,0.35), 0 0 0 3px rgba(255,138,61,0.22);
   }
+  /* El <select> cerrado hereda el fondo oscuro de arriba, pero el navegador renderiza el
+     desplegable de opciones aparte (fuera del control), sin heredar un fondo semitransparente
+     — sin esto queda blanco con texto gris clarito, casi ilegible. */
+  select option{background:var(--panel-3); color:var(--text);}
+  select option:disabled{color:var(--muted-2);}
 
   .btn{
     font-family:var(--sans); font-weight:600; font-size:var(--fs-sm); padding:9px 16px; border-radius:10px;
@@ -1268,10 +1273,16 @@
   .gh-steps{display:flex; align-items:center; gap:5px; flex:1; min-width:0; justify-content:center;}
   /* Etapas futuras/pendientes (ni activa ni completada): fondo oscuro atenuado + borde
      gris neutro, sin acento — el color queda reservado para "activa"/"completada". */
+  /* Solo el número (el nombre de la etapa activa ya se ve grande en el panel de la
+     situación — repetirlo acá como texto no aportaba y con escenarios de más de 5 etapas
+     (ej. uno importado de Word) las etiquetas largas partían la píldora en 2 líneas y
+     quedaban disparejas frente a las demás). Círculo fijo, así que da lo mismo si el
+     escenario tiene 5 etapas o 12: todas se ven iguales y caben cómodas. */
   .gh-step{
-    display:flex; align-items:center; gap:6px; padding:3px 8px; border-radius:999px;
-    border:1px solid rgba(255,255,255,0.14); background:rgba(255,255,255,0.05); min-width:0;
-    font-family:var(--mono); font-size:var(--fs-4xs); letter-spacing:0.06em; text-transform:uppercase; color:var(--muted-2);
+    display:flex; align-items:center; justify-content:center; padding:0; border-radius:50%;
+    border:1px solid rgba(255,255,255,0.14); background:rgba(255,255,255,0.05); flex-shrink:0;
+    width:22px; height:22px;
+    font-family:var(--mono); font-size:var(--fs-4xs); color:var(--muted-2);
     transition:color .2s, border-color .2s, background .2s, box-shadow .2s;
   }
   .gh-step .gh-step-n{
@@ -1284,7 +1295,6 @@
   .gh-step.active .gh-step-n{background:var(--gh-accent); color:#fff;}
   .gh-step.completed{color:var(--gh-accent-2); border-color:var(--gh-accent-border); box-shadow:0 0 6px rgba(168,85,247,0.2);}
   .gh-step.completed .gh-step-n{background:var(--gh-accent-dim); color:var(--gh-accent-2);}
-  @media (max-width:1560px){.gh-step .gh-step-label{display:none;} .gh-step{padding:3px 7px;}}
   .gh-right{display:flex; align-items:center; gap:var(--sp-1); flex-shrink:0;}
   .gh-count{display:flex; align-items:baseline; gap:5px; font-family:var(--mono); font-size:var(--fs-4xs); color:var(--gh-accent-2);}
   .gh-count b{color:var(--gh-accent-2); font-size:var(--fs-3xs);}
