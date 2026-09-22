@@ -374,6 +374,9 @@ function showConfirmModal({title, message, confirmText = 'Aceptar', cancelText =
   });
 }
 
+// Antes preguntaba con un modal ("¿Quieres restaurarla?") cada vez que había un borrador
+// guardado; se sacó esa interrupción — ahora restaura directo y en silencio, que es lo que
+// el usuario elegía casi siempre igual (el modal solo se veía como un cartel molesto).
 function loadSetupState(){
   let data;
   try{
@@ -381,34 +384,25 @@ function loadSetupState(){
     if(!raw) return;
     data = JSON.parse(raw);
   }catch(e){ localStorage.removeItem(SETUP_STORAGE_KEY); return; } // datos corruptos: se borran y se ignora
-  const label = data.clientName ? `de <b>${escapeHtml(data.clientName)}</b>` : 'sin cliente asociado';
-  const when = data.savedAt ? new Date(data.savedAt).toLocaleString('es-CL') : '';
-  showConfirmModal({
-    title: 'Configuración guardada encontrada',
-    message: `Se encontró una configuración guardada ${label}${when ? ' (' + escapeHtml(when) + ')' : ''}. ¿Quieres restaurarla?`,
-    confirmText: 'Restaurar', cancelText: 'Empezar de nuevo'
-  }).then(ok => {
-    if(!ok){ localStorage.removeItem(SETUP_STORAGE_KEY); return; }
-    clientName = data.clientName || '';
-    facilitatorName = data.facilitatorName || '';
-    const expectedKeys = roleMetaFor(data.selectedScenarioId || null).keys;
-    if(Array.isArray(data.participants) && data.participants.length === expectedKeys.length) participants = data.participants;
-    else participants = defaultParticipantsFor(data.selectedScenarioId || null);
-    enforceMandatoryRoles();
-    selectedScenarioId = data.selectedScenarioId || null;
-    // Un escenario cargado desde Word solo vive en esta sesión (ver registerCustomScenario):
-    // si la configuración guardada apuntaba a uno, ya no existe tras recargar la página.
-    if(selectedScenarioId && !SCENARIOS.some(s => s.id === selectedScenarioId)) selectedScenarioId = null;
-    sessionMatrices = data.sessionMatrices || {};
-    document.getElementById('clientNameInput').value = clientName;
-    document.getElementById('facilitatorNameInput').value = facilitatorName;
-    renderParticipants();
-    renderScenarioCards();
-    // El borrador autoguardado no es un perfil guardado a propósito: hay que confirmar con
-    // «Guardar perfil» antes de poder comenzar el ejercicio.
-    profileSaved = false;
-    updateBottomState();
-  });
+  clientName = data.clientName || '';
+  facilitatorName = data.facilitatorName || '';
+  const expectedKeys = roleMetaFor(data.selectedScenarioId || null).keys;
+  if(Array.isArray(data.participants) && data.participants.length === expectedKeys.length) participants = data.participants;
+  else participants = defaultParticipantsFor(data.selectedScenarioId || null);
+  enforceMandatoryRoles();
+  selectedScenarioId = data.selectedScenarioId || null;
+  // Un escenario cargado desde Word solo vive en esta sesión (ver registerCustomScenario):
+  // si la configuración guardada apuntaba a uno, ya no existe tras recargar la página.
+  if(selectedScenarioId && !SCENARIOS.some(s => s.id === selectedScenarioId)) selectedScenarioId = null;
+  sessionMatrices = data.sessionMatrices || {};
+  document.getElementById('clientNameInput').value = clientName;
+  document.getElementById('facilitatorNameInput').value = facilitatorName;
+  renderParticipants();
+  renderScenarioCards();
+  // El borrador autoguardado no es un perfil guardado a propósito: hay que confirmar con
+  // «Guardar perfil» antes de poder comenzar el ejercicio.
+  profileSaved = false;
+  updateBottomState();
 }
 
 document.getElementById('clientNameInput').addEventListener('input', e => { clientName = e.target.value; profileSaved = false; updateBottomState(); saveSetupState(); });
