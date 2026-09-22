@@ -6,7 +6,9 @@
 // sesión). No hay contraseñas ni cuentas reales — cualquiera con el código de sala puede
 // unirse, a propósito (es un ejercicio cooperativo supervisado en vivo por el facilitador).
 // Lo que estas reglas evitan es: enumerar salas ajenas, escribir el documento de otro
-// participante, o que el facilitador de una sala edite la de otro.
+// participante, que el facilitador de una sala edite la de otro, que alguien se cambie de
+// función a mitad de partida (ver roleClaims más abajo), y que un cliente que se salta la UI
+// se una a una sala ya iniciada o precargue un voto/respuesta antes de que corresponda.
 rules_version = '2';
 
 service cloud.firestore {
@@ -28,6 +30,26 @@ service cloud.firestore {
 
       allow delete: if false; // se limpian solas por TTL (ver expiresAt), no hace falta borrado manual
 
+      // Un documento por función (roleKey = id), creado la primera vez que alguien la
+      // reclama. Es lo que hace atómica la unicidad "una función, un participante": Firestore
+      // evalúa la existencia del documento y el permiso de la escritura como una sola
+      // operación server-side, así que dos reclamos simultáneos de la misma función no pueden
+      // ganar los dos — el segundo choca con "allow update" (ver abajo) porque para ese
+      // momento el documento ya existe con otro uid. room.js confirma esto intentando crear
+      // este documento ANTES de crear el de participants/{uid}; si falla, la función ya está
+      // tomada. No se valida acá que roleKey pertenezca al roleRoster real del escenario
+      // (las reglas no pueden recorrer fácilmente un arreglo de mapas) — esa parte sigue
+      // siendo un chequeo del lado del cliente en joinRoom().
+      match /roleClaims/{roleKeyId} {
+        allow get, list: if request.auth != null;
+        allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
+        // Solo quien ya tenía este reclamo puede "actualizarlo" (en la práctica, solo pasa si
+        // vuelve a intentar tras una falla de red a mitad del join) — cualquier otro uid que
+        // llegue después de que el documento ya existe queda bloqueado acá.
+        allow update: if request.auth != null && request.auth.uid == resource.data.uid;
+        allow delete: if false; // se limpia sola por TTL, igual que participants
+      }
+
       match /participants/{uid} {
         // list: el lobby del facilitador y el celular de cada participante necesitan ver
         // el roster completo (quién se unió, qué función tomó) para evitar duplicados.
@@ -35,21 +57,28 @@ service cloud.firestore {
 
         allow create: if request.auth != null
           && request.auth.uid == uid
-          && request.resource.data.uid == uid;
+          && request.resource.data.uid == uid
+          && request.resource.data.vote == null
+          && request.resource.data.answer == null
+          && get(/databases/$(database)/documents/rooms/$(roomCode)).data.status == 'lobby';
 
-        // Cada participante solo puede tocar su propio documento. Los campos `vote`/`answer`
-        // (Fases 2/3) quedan ya acotados acá: solo se pueden escribir en la fase que
-        // corresponde y solo si el uid reclamó la función a la que le toca actuar/responder.
-        allow update: if request.auth != null && request.auth.uid == uid && (
-          !('vote' in request.resource.data.diff(resource.data).affectedKeys())
-          || get(/databases/$(database)/documents/rooms/$(roomCode)).data.get('currentAct', {}).get('phase', null) == 'voting'
-        ) && (
-          !('answer' in request.resource.data.diff(resource.data).affectedKeys())
-          || (
-            get(/databases/$(database)/documents/rooms/$(roomCode)).data.get('currentAct', {}).get('phase', null) == 'answering'
-            && resource.data.claimedRoleKey == get(/databases/$(database)/documents/rooms/$(roomCode)).data.get('currentAct', {}).get('target', null)
-          )
-        );
+        // Cada participante solo puede tocar su propio documento, y nunca puede cambiar la
+        // función que reclamó al unirse (si pudiera, cualquiera podría "convertirse" en quien
+        // ganó la votación justo antes de responder). Los campos `vote`/`answer` (Fases 2/3)
+        // quedan acotados: solo se pueden escribir en la fase que corresponde y solo si el
+        // uid reclamó la función a la que le toca actuar/responder.
+        allow update: if request.auth != null && request.auth.uid == uid
+          && request.resource.data.claimedRoleKey == resource.data.claimedRoleKey
+          && (
+            !('vote' in request.resource.data.diff(resource.data).affectedKeys())
+            || get(/databases/$(database)/documents/rooms/$(roomCode)).data.get('currentAct', {}).get('phase', null) == 'voting'
+          ) && (
+            !('answer' in request.resource.data.diff(resource.data).affectedKeys())
+            || (
+              get(/databases/$(database)/documents/rooms/$(roomCode)).data.get('currentAct', {}).get('phase', null) == 'answering'
+              && resource.data.claimedRoleKey == get(/databases/$(database)/documents/rooms/$(roomCode)).data.get('currentAct', {}).get('target', null)
+            )
+          );
 
         allow delete: if false;
       }

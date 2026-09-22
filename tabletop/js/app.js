@@ -1014,7 +1014,7 @@ function renderParticipants(){
       </div>
       <p class="pc-desc" title="${escapeHtml(rm.desc[p.roleKey] || '')}">${escapeHtml(rm.desc[p.roleKey] || '')}</p>
       <div class="pc-empresa">
-        <button type="button" class="pc-empresa-btn" data-i="${i}" aria-label="${hasEmpresa ? `Empresa asignada: ${p.empresa}. Editar.` : 'Asignar empresa'}">${hasEmpresa ? `EMPRESA: ${escapeHtml(p.empresa)}` : 'EMPRESA'}</button>
+        <button type="button" class="pc-empresa-btn" data-i="${i}" aria-label="${hasEmpresa ? `Empresa asignada: ${escapeHtml(p.empresa)}. Editar.` : 'Asignar empresa'}">${hasEmpresa ? `EMPRESA: ${escapeHtml(p.empresa)}` : 'EMPRESA'}</button>
       </div>`;
     card.querySelector('.pc-empresa-btn').addEventListener('click', () => openCompanyModal(i));
     card.querySelector('.pc-switch-input').addEventListener('change', e => {
@@ -1027,7 +1027,17 @@ function renderParticipants(){
     bodyEl.appendChild(card);
   });
 }
-function escapeHtml(s){ const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+// El truco textContent->innerHTML solo escapa &/</> (posición de texto entre etiquetas) — no
+// comillas. La mayoría de los usos en este archivo interpolan dentro de texto y están bien,
+// pero varios sitios (ej. buildStepper, este mismo botón de empresa) lo usan DENTRO de un
+// atributo `"..."`, donde una comilla sin escapar rompe el atributo e inyecta HTML/atributos
+// nuevos — con nombre de cliente o nombres de etapa de un Word cargado, ambos texto libre sin
+// validar, esto era explotable. Se agrega el escape de comillas para que escapeHtml() sea
+// seguro también en posición de atributo, sin tener que acordarse caso por caso.
+function escapeHtml(s){
+  const d = document.createElement('div'); d.textContent = s;
+  return d.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
 function participantName(p){ return ROLE_NAMES[p.roleKey]; }
 renderParticipants();
 

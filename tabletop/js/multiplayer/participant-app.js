@@ -193,7 +193,7 @@ function renderVoteGrid(act, roleRoster){
   voteStatusEl.textContent = 'Elige la función que crees que debe hacerse cargo de esta situación.';
   voteGrid.innerHTML = roleRoster.map(r => {
     const [a] = r.accent || ['#8592AE'];
-    return `<button type="button" class="join-vote-btn" data-role="${r.roleKey}" style="--a:${a};">${escapeHtmlLocal(r.name)}</button>`;
+    return `<button type="button" class="join-vote-btn" data-role="${escapeHtmlLocal(r.roleKey)}" style="--a:${a};">${escapeHtmlLocal(r.name)}</button>`;
   }).join('');
   voteGrid.querySelectorAll('.join-vote-btn').forEach(btn => {
     btn.addEventListener('click', async () => {

@@ -4,7 +4,7 @@
 // No lee window.TIBOX_MP_FIREBASE al cargar el módulo (evita depender del orden exacto de
 // <script type="module">): lo hace recién dentro de cada función, cuando ya se necesita.
 import {
-  doc, setDoc, updateDoc, getDoc, getDocs, collection, onSnapshot, serverTimestamp, Timestamp
+  doc, setDoc, updateDoc, getDoc, collection, onSnapshot, serverTimestamp, Timestamp
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 const ROOM_CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // sin 0/O ni 1/I/L: se confunden al leerlos en voz alta o a distancia
@@ -73,11 +73,15 @@ export function listenParticipants(code, cb){
 }
 
 // Une al participante actual (uid de su propia sesión anónima) a la sala, reclamando una
-// función libre. Chequeo de "función ya tomada" es del lado del cliente (se lee la lista
-// actual antes de escribir) — no es una garantía atómica a prueba de dos toques en el mismo
-// milisegundo, pero alcanza para un lobby chico supervisado en vivo por el facilitador (ver
-// plan, Fase 2/3 endurece esto si hace falta). Lanza Error con mensaje legible si:
-// la sala no existe, ya empezó el ejercicio, o la función ya está tomada por otro uid.
+// función libre. La unicidad de la función ya NO depende de este chequeo (antes era
+// lectura-antes-de-escribir, no atómico: dos toques en el mismo milisegundo podían ganar
+// los dos) — ahora se reclama primero un documento rooms/{code}/roleClaims/{roleKey}, cuya
+// creación es atómica en Firestore: si dos participantes intentan la misma función a la vez,
+// el segundo choca con la regla de seguridad (ver firestore.rules) porque para su escritura
+// el documento ya existe con otro uid. Este chequeo local (roleRoster.some) sigue sirviendo
+// para dar un mensaje temprano sin round-trip cuando la función ni siquiera existe.
+// Lanza Error con mensaje legible si: la sala no existe, ya empezó el ejercicio, la función
+// no existe en este escenario, o ya la tomó otro participante.
 export async function joinRoom(code, {displayName, roleKey}){
   const {db, uid} = await firebaseReady();
   const roomRef = doc(db, 'rooms', code);
@@ -87,15 +91,21 @@ export async function joinRoom(code, {displayName, roleKey}){
   if(room.status !== 'lobby') throw new Error('Esta sala ya inició el ejercicio; no se pueden sumar nuevos participantes.');
   if(!room.roleRoster.some(r => r.roleKey === roleKey)) throw new Error('Esa función no existe en este escenario.');
 
-  const participantsSnap = await getDocs(collection(db, 'rooms', code, 'participants'));
-  const takenBy = participantsSnap.docs.find(d => d.id !== uid && d.data().claimedRoleKey === roleKey);
-  if(takenBy) throw new Error('Esa función ya la tomó otro participante. Elige otra.');
-
   const now = Date.now();
+  const expiresAt = Timestamp.fromMillis(now + ROOM_TTL_MS);
+
+  try{
+    await setDoc(doc(db, 'rooms', code, 'roleClaims', roleKey), {uid, claimedAt: serverTimestamp(), expiresAt});
+  }catch(err){
+    // La regla de seguridad rechaza la escritura si el documento ya existe con otro uid —
+    // esto es lo que hace atómica la unicidad, no una condición que revisemos nosotros.
+    throw new Error('Esa función ya la tomó otro participante. Elige otra.');
+  }
+
   await setDoc(doc(db, 'rooms', code, 'participants', uid), {
     uid, displayName: displayName.trim(), claimedRoleKey: roleKey,
     joinedAt: serverTimestamp(), lastSeen: serverTimestamp(),
-    expiresAt: Timestamp.fromMillis(now + ROOM_TTL_MS),
+    expiresAt,
     vote: null, answer: null
   });
   return uid;
