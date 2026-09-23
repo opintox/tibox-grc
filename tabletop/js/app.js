@@ -95,8 +95,18 @@ function stagesFor(scenarioId){
   const s = SCENARIOS.find(x => x.id === scenarioId);
   return (s && s.customStages && s.customStages.length) ? s.customStages : STAGE_LABELS;
 }
+// Funciones que corresponde listar como participantes de un escenario: en el organigrama
+// estándar, solo las que la matriz de participación (PARTICIPATION_MATRIX/getMatrix) marca
+// como activas para ese escenario en particular — no las 6 fijas. Un escenario con funciones
+// propias no tiene ese concepto y las trae todas.
+function activeRoleKeysFor(scenarioId){
+  const rm = roleMetaFor(scenarioId);
+  if(rm !== DEFAULT_ROLE_META || !scenarioId) return rm.keys;
+  const matrix = getMatrix(scenarioId);
+  return rm.keys.filter(k => matrix[k]);
+}
 function defaultParticipantsFor(scenarioId){
-  return roleMetaFor(scenarioId).keys.map(k => ({roleKey:k, empresa:'', checked:true}));
+  return activeRoleKeysFor(scenarioId).map(k => ({roleKey:k, empresa:'', checked:true}));
 }
 // Frases variadas para el acierto (personaje y alternativa correcta): una sesión completa
 // acierta ~20 veces entre las dos pantallas, y repetir siempre la misma línea se siente
@@ -114,7 +124,7 @@ function pickRandom(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
 // `participants` (ej. se pasa de un escenario estándar a uno con funciones propias, o viceversa),
 // reconstruye la lista de participantes desde cero para el nuevo set de funciones.
 function applyScenarioSelection(id){
-  const newKeys = roleMetaFor(id).keys;
+  const newKeys = activeRoleKeysFor(id);
   const sameKeys = participants.length === newKeys.length && participants.every((p,i) => p.roleKey === newKeys[i]);
   if(!sameKeys) participants = defaultParticipantsFor(id);
   selectedScenarioId = id;
@@ -237,7 +247,7 @@ function deleteProfile(id){
 function loadProfileIntoForm(profile){
   clientName = profile.clientName || '';
   facilitatorName = profile.facilitatorName || '';
-  const expectedKeys = roleMetaFor(profile.selectedScenarioId || null).keys;
+  const expectedKeys = activeRoleKeysFor(profile.selectedScenarioId || null);
   participants = Array.isArray(profile.participants) && profile.participants.length === expectedKeys.length
     ? profile.participants.map(p => ({...p})) : defaultParticipantsFor(profile.selectedScenarioId || null);
   enforceMandatoryRoles();
@@ -386,7 +396,7 @@ function loadSetupState(){
   }catch(e){ localStorage.removeItem(SETUP_STORAGE_KEY); return; } // datos corruptos: se borran y se ignora
   clientName = data.clientName || '';
   facilitatorName = data.facilitatorName || '';
-  const expectedKeys = roleMetaFor(data.selectedScenarioId || null).keys;
+  const expectedKeys = activeRoleKeysFor(data.selectedScenarioId || null);
   if(Array.isArray(data.participants) && data.participants.length === expectedKeys.length) participants = data.participants;
   else participants = defaultParticipantsFor(data.selectedScenarioId || null);
   enforceMandatoryRoles();
