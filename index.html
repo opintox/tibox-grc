@@ -63,10 +63,9 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;justify-conten
 .hub-head p{color:var(--muted);font-size:var(--fs-lg);line-height:1.5;margin:0;max-width:34rem;margin-inline:auto}
 
 .card-grid{
-  display:grid;grid-template-columns:repeat(2,minmax(0,300px));gap:var(--sp-5);
-  width:100%;max-width:660px;
+  display:grid;grid-template-columns:minmax(0,300px);gap:var(--sp-5);
+  width:100%;max-width:300px;justify-content:center;
 }
-@media (max-width:640px){.card-grid{grid-template-columns:1fr;max-width:340px}}
 
 .hub-card{
   --glow:var(--blue);
@@ -128,21 +127,6 @@ footer{padding:var(--sp-5);text-align:center;color:var(--muted-2);font-size:var(
       </div>
       <h2>Tabletop</h2>
       <p class="desc">Ejercicio de simulación de respuesta a incidentes de ciberseguridad.</p>
-      <span class="hub-card-cta">Entrar
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-      </span>
-    </a>
-
-    <a class="hub-card acc-blue" href="sgc/index.html">
-      <div class="hub-card-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="6" y="4" width="12" height="17" rx="2"/>
-          <path d="M9 4V3a1 1 0 011-1h4a1 1 0 011 1v1"/>
-          <path d="M9 12l2 2 4-4"/>
-        </svg>
-      </div>
-      <h2>SGC</h2>
-      <p class="desc">Cumplimiento CIP · Quintero Energía — seguimiento de requerimientos y evidencias.</p>
       <span class="hub-card-cta">Entrar
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </span>
