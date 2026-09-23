@@ -64,6 +64,12 @@ body.lobby-mode .topbar-right{display:none;}
 .lobby-roster-role{font-family:var(--mono); font-size:var(--fs-2xs); color:var(--muted); text-transform:uppercase; letter-spacing:0.04em; flex-shrink:0;}
 .lobby-actions{display:flex; justify-content:space-between; gap:12px; margin-top:26px;}
 
+/* ---------- popout "Sala" durante el ejercicio (index.html, #roomInfoBtn) ----------
+   Reusa .lobby-grid/.lobby-join-card/.lobby-roster-card de #screen-lobby dentro de un
+   .modal-box más ancho que el default (440px), mismo patrón que .builder-act-modal. */
+.room-panel-box{max-width:700px;}
+.room-panel-box .lobby-grid{margin-top:16px;}
+
 /* ---------- tally de votación en vivo sobre .char-card (Fase 2, index.html) ---------- */
 .mp-vote-badge{
   position:absolute; top:10px; right:10px; font-family:var(--mono); font-weight:700;

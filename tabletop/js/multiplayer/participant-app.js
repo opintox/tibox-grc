@@ -1,7 +1,7 @@
 // Lógica de join.html (celular del participante): entrar con código de sala, nombre y función
 // (Fase 1), votar quién debe actuar (Fase 2) y, si le tocó a la función que reclamó este
 // celular, responder la alternativa (Fase 3).
-import { getRoom, listenRoom, listenParticipants, joinRoom, castVote, submitAnswer } from './room.js';
+import { getRoom, getMyParticipant, listenRoom, listenParticipants, joinRoom, castVote, submitAnswer } from './room.js';
 
 const codeInput = document.getElementById('joinCodeInput');
 const nameInput = document.getElementById('joinNameInput');
@@ -86,6 +86,21 @@ async function loadRoom(code){
 
   if(code !== codeInput.value.trim().toUpperCase()) return; // el usuario ya cambió el código mientras esperábamos la respuesta
   if(!room){ setStatus('No existe una sala con ese código.', 'error'); return; }
+
+  // Reingreso: si esta misma sesión anónima (mismo navegador/celular) ya estaba en la sala
+  // —cerró la pestaña sin querer o perdió la conexión—, se reconecta directo con la función
+  // que ya tenía, sin pasar por el formulario ni por el bloqueo de "sala ya iniciada" de abajo.
+  let mine = null;
+  try{ mine = await getMyParticipant(code); }catch(err){ /* si falla, se sigue como unión nueva */ }
+  if(code !== codeInput.value.trim().toUpperCase()) return;
+  if(mine){
+    currentRoom = room;
+    currentCode = code;
+    setStatus('');
+    enterWaitingMode(code, mine.claimedRoleKey, room.roleRoster || [], room);
+    return;
+  }
+
   if(room.status !== 'lobby'){ setStatus('Esta sala ya inició el ejercicio — no se pueden sumar nuevos participantes.', 'error'); return; }
 
   currentRoom = room;
@@ -118,6 +133,30 @@ codeInput.addEventListener('input', () => {
 });
 nameInput.addEventListener('input', updateSubmitEnabled);
 
+// Deja al celular en modo "unido, esperando" y arranca la escucha de la sala (no de la lista
+// de participantes: ya no hace falta acá) para avisar cuando el facilitador inicie el
+// ejercicio y reaccionar al acto vigente (Fase 2: votar quién debe actuar; Fase 3: responder
+// si le tocó a la función de este celular). `room`: si ya se tiene el snapshot a mano (caso
+// reingreso), se pinta el estado vigente de inmediato en vez de esperar el próximo cambio.
+function enterWaitingMode(code, roleKey, roleRoster, room){
+  myRoleKey = roleKey;
+  const role = roleRoster.find(r => r.roleKey === roleKey);
+  joinedRoleName.textContent = role ? role.name : roleKey;
+  roleSection.classList.add('hidden');
+  formPanel.classList.add('hidden');
+  votePanel.classList.add('hidden');
+  answerPanel.classList.add('hidden');
+  waitingPanel.classList.remove('hidden');
+
+  if(unsubscribeParticipants){ unsubscribeParticipants(); unsubscribeParticipants = null; }
+  if(unsubscribeRoom) unsubscribeRoom();
+  if(room) handleActUpdate(room, roleRoster);
+  unsubscribeRoom = listenRoom(code, updatedRoom => {
+    if(!updatedRoom) return;
+    handleActUpdate(updatedRoom, roleRoster);
+  });
+}
+
 submitBtn.addEventListener('click', async () => {
   if(submitBtn.disabled) return;
   submitBtn.disabled = true;
@@ -129,22 +168,7 @@ submitBtn.addEventListener('click', async () => {
     submitBtn.disabled = false;
     return;
   }
-  const joinedRoleRoster = currentRoom.roleRoster || [];
-  const role = joinedRoleRoster.find(r => r.roleKey === selectedRoleKey);
-  joinedRoleName.textContent = role ? role.name : selectedRoleKey;
-  myRoleKey = selectedRoleKey;
-  formPanel.classList.add('hidden');
-  waitingPanel.classList.remove('hidden');
-
-  // Se mantiene la escucha de la sala (no de la lista de participantes: ya no hace falta acá)
-  // para avisar cuando el facilitador inicie el ejercicio y para reaccionar al acto vigente
-  // (Fase 2: votar quién debe actuar; Fase 3: responder si le tocó a la función de este celular).
-  if(unsubscribeParticipants){ unsubscribeParticipants(); unsubscribeParticipants = null; }
-  if(unsubscribeRoom) unsubscribeRoom();
-  unsubscribeRoom = listenRoom(currentCode, room => {
-    if(!room) return;
-    handleActUpdate(room, joinedRoleRoster);
-  });
+  enterWaitingMode(currentCode, selectedRoleKey, currentRoom.roleRoster || [], null);
 });
 
 // Alterna entre "esperando", la vista de voto (Fase 2) y la vista de respuesta (Fase 3) según
