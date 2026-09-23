@@ -1465,11 +1465,11 @@ let multiplayerEnabled = false;
 // publicar el acto y la votación) — solo tiene valor mientras dura un ejercicio que arrancó
 // desde el lobby; se vuelve a fijar en cada "Comenzar ejercicio" con celulares.
 let mpRoomCode = null;
-// Cuántas veces se reabrió la votación para el acto vigente (0 = primera vez). Sube cada vez
-// que una respuesta incorrecta manda de vuelta a "quién debe actuar" (ver onAnswerPick) y
-// vuelve a 0 apenas se avanza a un acto distinto (ver renderStage). Forma parte del actKey
-// que se publica en Firestore para que los celulares sepan que hay una ronda de voto NUEVA
-// (si no, un participante que ya votó en la ronda anterior quedaría con su pantalla congelada).
+// Cuántas veces se reintentó el acto vigente (0 = primera vez). Sube cada vez que la persona
+// responde mal desde su celular y se le vuelve a habilitar la misma pregunta (ver onAnswerPick)
+// y vuelve a 0 apenas se avanza a un acto distinto (ver renderStage). Forma parte del actKey
+// que se publica en Firestore para que los celulares sepan que hay una ronda NUEVA (si no, un
+// participante que ya votó/respondió en la ronda anterior quedaría con su pantalla congelada).
 let mpActRevote = 0;
 function currentActKey(){
   return `${gameState.stepIndex}-${gameState.subIndex}-${mpActRevote}`;
@@ -1782,10 +1782,9 @@ function renderStage(opts){
   gameState.chosenCorrectParticipant = null;
   gameState.nextAction = null;
   gameState.currentAnswerAttempts = 0;
-  // opts.mpRevote: true solo cuando onAnswerPick reabre la votación de este mismo acto tras
-  // una respuesta incorrecta (modo "Con celulares") — sube el contador en vez de reiniciarlo,
-  // para que currentActKey() cambie y los celulares sepan que empezó una ronda de voto nueva.
-  mpActRevote = opts.mpRevote ? mpActRevote + 1 : 0;
+  // Acto distinto: se reinicia el contador de reintentos (ver onAnswerPick, que lo sube cuando
+  // una respuesta incorrecta republica el mismo acto para que el celular reintente).
+  mpActRevote = 0;
 
   // Guarda un snapshot del estado ANTES de que esta pregunta pueda generar errores, para poder
   // deshacerla con "← Pregunta anterior". No se guarda al re-renderizar por un "volver" (skipHistory),
@@ -2060,18 +2059,29 @@ function onAnswerPick(idx, btn, q){
     document.querySelectorAll('#answerOptions .answer-btn').forEach(b => b.classList.remove('chosen-wrong'));
     btn.classList.add('chosen-wrong');
     renderExplanation(idx, false, q);
-    // Modo "Con celulares": una respuesta incorrecta reabre la votación de "quién debe actuar"
-    // para este mismo acto (currentActKey() cambia — ver mpActRevote — así los celulares ven
-    // una ronda de voto nueva) en vez de solo permitir reintentar con la misma persona. La
-    // función que ya respondió mal puede volver a salir elegida, a propósito. El modo de una
-    // sola pantalla no cambia: sigue siendo un reintento normal de la alternativa.
+    // Modo "Con celulares": una respuesta incorrecta deja a la MISMA persona reintentar la
+    // misma pregunta desde su celular — no se reabre la votación de personaje. Se sube el
+    // contador de reintentos (currentActKey() cambia) y se republica el acto en fase
+    // 'answering' con la misma función objetivo, para que el celular vuelva a mostrar las 4
+    // alternativas habilitadas (ver handleActUpdate en participant-app.js, que repinta cuando
+    // el actKey cambia). El modo de una sola pantalla no cambia: sigue siendo un reintento
+    // normal de la alternativa, sin pasos extra.
     if(multiplayerEnabled && mpRoomCode && window.MP){
-      gameState.nextAction = () => renderStage({skipHistory: true, mpRevote: true});
-      setActionButton(true, 'Volver a votar →');
-    } else {
-      setActionButton(false);
-      gameState.nextAction = null;
+      mpActRevote++;
+      window.MP.retryAnswer(mpRoomCode, {
+        actKey: currentActKey(),
+        stage: gameState.stages[gameState.stepIndex].stage,
+        title: q.title || '', situation: q.situation || q.text || '',
+        meta: q.meta || [], target: q.target, options: q.options, explanations: q.explanations,
+        correctIndex: q.correctIndex ?? 0, mismatchContext: q.mismatchContext || ''
+      });
+      window.MP.attachAnsweringPhase(mpRoomCode, currentActKey(), gameState.chosenCorrectParticipant.roleKey, origIdx => {
+        const retryBtn = document.querySelector(`#answerOptions .answer-btn[data-orig-idx="${origIdx}"]`);
+        if(retryBtn) onAnswerPick(origIdx, retryBtn, q);
+      });
     }
+    setActionButton(false);
+    gameState.nextAction = null;
     return;
   }
 

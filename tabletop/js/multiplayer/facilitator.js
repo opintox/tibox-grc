@@ -266,7 +266,18 @@ function closeAnswering(roomCode){
   });
 }
 
+// Se llama desde onAnswerPick() cuando la respuesta llega incorrecta: republica el mismo acto
+// (misma función objetivo) en fase 'answering' con un actKey nuevo, para que el celular de
+// quien respondió mal vuelva a mostrar las 4 alternativas habilitadas y pueda reintentar — a
+// diferencia de mpPublishAct, acá NO se fuerza la fase a 'voting' (no se reabre la elección
+// de personaje).
+function mpRetryAnswer(roomCode, act){
+  publishAct(roomCode, {...act, phase: 'answering'}).catch(err => {
+    console.error('[multiplayer] No se pudo republicar el acto para reintentar la respuesta:', err);
+  });
+}
+
 window.MP = {
   openLobby, publishAct: mpPublishAct, attachVotingPhase, closeVoting,
-  attachAnsweringPhase, closeAnswering
+  attachAnsweringPhase, closeAnswering, retryAnswer: mpRetryAnswer
 };
