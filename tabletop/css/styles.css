@@ -39,14 +39,20 @@
     background:var(--bg); color:var(--text); font-family:var(--sans); min-height:100vh; min-height:100dvh;
     -webkit-font-smoothing:antialiased; overflow-x:hidden; position:relative;
   }
-  /* Mismo fondo que la portada (img/slide3.webp), para que se sienta un solo sitio al pasar
-     de una pantalla a otra. Una capa oscura semitransparente encima mantiene la legibilidad. */
-  body::before{
-    content:''; position:fixed; inset:0; z-index:-2; pointer-events:none;
-    background:
-      linear-gradient(rgba(7,12,26,.72),rgba(7,12,26,.72)),
-      url('../../img/slide3.webp');
-    background-size:cover; background-position:center; background-repeat:no-repeat;
+  /* La imagen de fondo (img/fondo.png) solo se muestra en portada y sala de espera: el resto
+     de las pantallas (wizard, juego, resultados) tiene texto denso y se lee mejor sobre el
+     fondo sólido (--bg). Tampoco se muestra en mobile (min-width:721px de acá abajo, mismo
+     corte que .lobby-grid): en el celular de cada participante (join.html) es una descarga de
+     más sobre datos móviles en vivo, y la pantalla angosta no tiene espacio para apreciarla.
+     Una capa oscura semitransparente encima mantiene la legibilidad donde sí se muestra. */
+  body::before{ content:''; position:fixed; inset:0; z-index:-2; pointer-events:none; }
+  @media (min-width:721px){
+    body.intro-mode::before, body.lobby-mode::before{
+      background:
+        linear-gradient(rgba(7,12,26,.72),rgba(7,12,26,.72)),
+        url('../../img/fondo.png');
+      background-size:cover; background-position:center; background-repeat:no-repeat;
+    }
   }
   body::after{
     content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
