@@ -1265,46 +1265,51 @@ function goToStep(n){
 const RULE_ICON_WHY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 7.5h.01"/></svg>';
 const RULE_ICON_HOW = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M5 3l6.5 16 2-6.5L20 10.5z"/></svg>';
 const RULE_ICON_TIP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M12 3l2.6 5.9 6.4.6-4.8 4.3 1.4 6.3L12 16.9 6.4 20.1l1.4-6.3L3 9.5l6.4-.6z"/></svg>';
+// Lenguaje pensado para cualquier persona que participe del ejercicio, no solo para quienes
+// ya conocen el vocabulario de gestión de crisis/ciberseguridad (ej. evitar "comité de
+// crisis", "matriz de responsabilidades", "post-mortem", "segregación de funciones") — este
+// modal lo puede leer cualquiera antes de empezar, incluida gente de Legal, RRHH o Comunicaciones
+// que nunca ha participado de un ejercicio así.
 const RULE_DETAILS = {
   1: {
-    badge: 'Fase de preparación',
+    badge: 'Antes de empezar',
     accent: '#0FC7F6',
-    title: 'Arma el terreno antes del combate',
-    why: 'En un incidente real, buena parte del caos inicial no lo causa el ataque, sino no saber quién está en la sala, qué activos están en juego y bajo qué marco se está actuando. Los equipos que improvisan su comité de crisis en el momento pierden minutos críticos — y en ciberseguridad, el minuto es el activo más caro.',
-    how: 'Elige el tipo de ataque a simular y marca qué funciones participan hoy (TI, Legal, Comunicaciones, RRHH, Dirección — Seguridad y TI siempre están activas). Guarda el perfil del cliente: sin eso, la aplicación no te deja empezar.',
-    tip: 'Un plan de respuesta a incidentes que nadie ha ensayado con los roles reales de la organización es solo un documento. Mientras más real sea esta configuración, más útil va a ser el diagnóstico al final.'
+    title: 'Preparen el terreno antes de partir',
+    why: 'En una crisis real, gran parte del caos inicial no lo causa el ataque, sino no saber quién está participando, qué está en juego, y quién decide qué. Los equipos que improvisan sobre la marcha pierden minutos valiosos — y esos minutos importan.',
+    how: 'Elijan el tipo de ataque que van a simular y marquen qué áreas participan hoy (TI, Legal, Comunicaciones, RRHH, Dirección — Seguridad y TI siempre están presentes). Guarden el perfil del cliente: es un paso obligatorio antes de poder empezar.',
+    tip: 'Un plan que nunca se ha ensayado con las personas reales de la organización es solo un documento. Mientras más parecida sea esta preparación a la realidad, más útil va a ser lo que aprendan al final.'
   },
   2: {
-    badge: 'Mecánica core',
+    badge: 'Cómo avanza',
     accent: '#F3E006',
-    title: 'Cada etapa es un punto de no retorno',
-    why: 'Un incidente de ciberseguridad no es un evento único, es una secuencia: lo que se decide (o no se decide) en Detección condiciona qué opciones quedan disponibles en Contención. Los equipos reales fallan más seguido por saltarse una etapa que por una mala decisión dentro de ella.',
-    how: 'El ejercicio avanza en orden fijo: Detección → Clasificación → Contención → Recuperación → Cierre. Cada etapa plantea una situación nueva dentro del mismo caso — no puedes adelantarte, y solo puedes volver atrás con el botón "Pregunta anterior".',
-    tip: 'En una crisis real, resiste la tentación de "saltar a la solución". Contener antes de tener claro el alcance casi siempre significa contener lo que no correspondía.'
+    title: 'El ejercicio avanza paso a paso, sin volver atrás',
+    why: 'Una crisis de ciberseguridad no pasa de una vez: lo que se decide (o no se decide) en un momento afecta qué opciones quedan disponibles después. Los equipos suelen fallar más por saltarse un paso que por tomar una mala decisión dentro de él.',
+    how: 'El ejercicio avanza en un orden fijo, de principio a fin. Cada paso plantea una situación nueva dentro del mismo caso — no se puede adelantar, y solo se puede volver atrás con el botón "Pregunta anterior".',
+    tip: 'En una crisis real, resistan la tentación de "saltar directo a la solución". Actuar antes de entender bien la situación casi siempre significa actuar sobre lo que no correspondía.'
   },
   3: {
-    badge: 'Asignación de responsabilidad',
+    badge: 'Quién actúa',
     accent: '#FF8A3D',
-    title: 'La función correcta, no la persona más rápida',
-    why: 'En un incidente real, quien está más disponible no siempre es quien debe actuar — a veces por función, a veces por segregación de responsabilidades. Confundir esto genera respuestas descoordinadas y, en el peor caso, evidencia contaminada o decisiones tomadas sin la autoridad correspondiente.',
-    how: 'Frente a cada situación, elige entre las tarjetas de función quién debe hacerse cargo de esa acción específica. Elegir a alguien a quien no le corresponde cuenta como error, y la aplicación te explica por qué antes de dejarte reintentar.',
-    tip: 'Si tu equipo duda todo el tiempo sobre "a quién le toca esto", el problema no es el ejercicio — es que la matriz de responsabilidades del plan real no está bien socializada. Anótalo para el cierre.'
+    title: 'Que actúe quien corresponde, no quien esté más rápido',
+    why: 'En una crisis real, quien está más disponible no siempre es quien debe tomar la decisión — a veces por su función, a veces porque esa decisión requiere una autoridad específica. Confundir esto genera respuestas desordenadas y decisiones tomadas por quien no correspondía.',
+    how: 'Frente a cada situación, el equipo elige entre las funciones disponibles quién debería hacerse cargo. Elegir a la persona equivocada cuenta como error, y la aplicación explica por qué antes de dejarlos intentar de nuevo.',
+    tip: 'Si el equipo duda todo el tiempo sobre "a quién le toca esto", el problema no es el ejercicio — es que en la vida real tampoco está claro quién hace qué. Anótenlo para conversarlo al final.'
   },
   4: {
-    badge: 'Decisión táctica',
+    badge: 'Qué se decide',
     accent: '#FF4D6A',
-    title: 'Entre varias opciones plausibles, solo una es correcta',
-    why: 'Las alternativas incorrectas de este ejercicio no son absurdas a propósito: están escritas para parecerse a la decisión correcta, con un solo defecto real (un paso omitido, un orden equivocado, un supuesto sin verificar). Así se entrena el juicio, no la memoria.',
-    how: 'Con la función correcta ya elegida, revisen las alternativas y discutan en equipo cuál es la más adecuada. Si se equivocan, la aplicación explica exactamente por qué antes de dejarlos reintentar — no hay penalización por reintentar, solo por no analizar bien.',
-    tip: 'Discutan el razonamiento en voz alta antes de elegir. El valor real de un tabletop no es "acertar": es escuchar cómo argumenta el equipo bajo presión, ahí es donde salen a la luz los supuestos equivocados.'
+    title: 'De varias opciones parecidas, solo una es la correcta',
+    why: 'Las alternativas incorrectas no son absurdas a propósito: se parecen mucho a la correcta, con un solo detalle que las hace equivocadas (un paso que falta, un orden distinto, algo que no se confirmó). Así se pone a prueba el criterio del equipo, no la memoria.',
+    how: 'Con la función correcta ya elegida, el equipo revisa las alternativas y conversa cuál es la más adecuada. Si se equivocan, la aplicación explica exactamente por qué antes de dejarlos volver a intentar — no hay problema en equivocarse, solo en no conversarlo bien.',
+    tip: 'Conversen en voz alta antes de elegir. Lo más valioso de este ejercicio no es acertar: es escuchar cómo razona el equipo bajo presión — ahí es donde aparecen los supuestos equivocados.'
   },
   5: {
-    badge: 'Evaluación',
+    badge: 'Al cerrar',
     accent: '#22D3A6',
-    title: 'Lo que no se documenta, se repite',
-    why: 'Un ejercicio de simulación que termina sin informe es una tarde bien invertida y nada más. El valor real de un tabletop —igual que el de un incidente real— está en el post-mortem: qué salió bien, dónde hubo fricción, y qué acción concreta evita que el mismo error vuelva a ocurrir.',
-    how: 'Al terminar la última etapa, la aplicación genera un puntaje, un informe ejecutivo con los patrones de error y recomendaciones, y un acta de la sesión. Pueden guardarlo en este navegador o descargarlo en JSON para adjuntarlo a su propio reporte.',
-    tip: 'Compartan el informe con el equipo mientras el ejercicio sigue fresco. Un hallazgo sin dueño ni plazo es un hallazgo que va a reaparecer — el propio informe lo señala cuando corresponde.'
+    title: 'Lo que no se conversa después, se repite',
+    why: 'Un ejercicio que termina sin conversar los resultados es solo una tarde bien invertida y nada más. Lo más valioso —igual que después de una crisis real— está en revisar qué salió bien, dónde hubo problemas, y qué se puede mejorar concretamente.',
+    how: 'Al terminar la última etapa, la aplicación genera un puntaje, un resumen con los errores más comunes y recomendaciones, y un acta de la sesión. Se puede guardar en este navegador o descargar para adjuntar a un reporte propio.',
+    tip: 'Compartan el resumen con el equipo mientras el ejercicio está fresco. Algo que se detecta pero nadie se hace cargo de mejorar, tarde o temprano vuelve a pasar.'
   }
 };
 let activeRuleModal = null;
@@ -1371,7 +1376,7 @@ document.querySelectorAll('.rule-step[data-rule]').forEach(el => {
   const prevBtn = document.getElementById('carouselPrevBtn');
   const nextBtn = document.getElementById('carouselNextBtn');
   const slideCount = track.children.length;
-  const SLIDE_MS = 8000; // tiempo para leer título + resumen de cada regla sin sentirse apurado
+  const SLIDE_MS = 10000; // tiempo para leer título + resumen de cada regla sin sentirse apurado
 
   let current = 0;
   let rafId = null;

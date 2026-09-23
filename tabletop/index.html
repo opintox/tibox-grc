@@ -100,7 +100,7 @@
                 <span class="rule-step-num">1</span>
                 <div>
                   <div class="rule-step-title">Configuren la <b>sesión</b></div>
-                  <p class="rule-step-summary">Improvisar el comité de crisis en el momento cuesta los minutos más caros del incidente.</p>
+                  <p class="rule-step-summary">Definir quién participa antes de empezar evita perder minutos valiosos cuando de verdad importan.</p>
                   <span class="rule-step-cta">Ver detalle <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
                 </div>
               </div>
@@ -108,7 +108,7 @@
                 <span class="rule-step-num">2</span>
                 <div>
                   <div class="rule-step-title">El incidente avanza en <b>5 etapas</b></div>
-                  <p class="rule-step-summary">Saltarse una etapa falla más seguido que tomar una mala decisión dentro de ella.</p>
+                  <p class="rule-step-summary">El caso avanza en orden, un paso a la vez — no se puede saltar directo a la solución.</p>
                   <span class="rule-step-cta">Ver detalle <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
                 </div>
               </div>
@@ -116,7 +116,7 @@
                 <span class="rule-step-num">3</span>
                 <div>
                   <div class="rule-step-title">Decidan <b>quién actúa</b></div>
-                  <p class="rule-step-summary">Quien está más disponible no siempre es quien debe actuar — confundirlo descoordina la respuesta.</p>
+                  <p class="rule-step-summary">Que actúe quien realmente le corresponde, no quien esté más disponible en ese momento.</p>
                   <span class="rule-step-cta">Ver detalle <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
                 </div>
               </div>
@@ -124,7 +124,7 @@
                 <span class="rule-step-num">4</span>
                 <div>
                   <div class="rule-step-title">Decidan <b>qué hacer</b></div>
-                  <p class="rule-step-summary">Las alternativas incorrectas parecen correctas a propósito: acá se entrena el juicio, no la memoria.</p>
+                  <p class="rule-step-summary">Varias opciones se parecen a la correcta — el objetivo es pensarlo en equipo, no adivinar.</p>
                   <span class="rule-step-cta">Ver detalle <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
                 </div>
               </div>
@@ -132,7 +132,7 @@
                 <span class="rule-step-num">5</span>
                 <div>
                   <div class="rule-step-title">Cierren con el <b>informe</b></div>
-                  <p class="rule-step-summary">Sin informe, el ejercicio es solo una tarde bien invertida — el valor real está en el post-mortem.</p>
+                  <p class="rule-step-summary">Conversar los resultados al final es lo que hace que el ejercicio realmente sirva.</p>
                   <span class="rule-step-cta">Ver detalle <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
                 </div>
               </div>
@@ -269,7 +269,8 @@
         <p class="section-sub">Los participantes escanean el código o entran al link desde su celular, escriben su nombre y eligen su función. Cuando estén listos, inicia el ejercicio — se juega igual que siempre en esta pantalla.</p>
       </div>
       <div class="lobby-grid">
-        <div class="lobby-join">
+        <div class="lobby-join-card">
+          <div class="eyebrow">Código de sala</div>
           <div class="lobby-code" id="lobbyRoomCode">——————</div>
           <div class="lobby-qr" id="lobbyQr"></div>
           <div class="lobby-link-row">
@@ -277,8 +278,11 @@
             <button class="btn btn-sm" id="lobbyCopyBtn" type="button">Copiar link</button>
           </div>
         </div>
-        <div class="lobby-roster">
-          <div class="eyebrow">Participantes conectados</div>
+        <div class="lobby-roster-card">
+          <div class="lobby-roster-head">
+            <div class="eyebrow" style="margin-bottom:0;">Participantes conectados</div>
+            <span class="setup-badge" id="lobbyRosterCount">0</span>
+          </div>
           <div class="lobby-roster-list" id="lobbyRosterList"></div>
         </div>
       </div>

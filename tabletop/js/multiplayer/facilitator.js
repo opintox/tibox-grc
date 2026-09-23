@@ -30,10 +30,18 @@ function renderQr(url){
   }
 }
 
+const LOBBY_EMPTY_ICON = '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7"/><path d="M12 2v2M4 4l1.5 1.5M20 4l-1.5 1.5"/></svg>';
+
 function renderRoster(participantList, roleRoster){
   const list = document.getElementById('lobbyRosterList');
+  const countBadge = document.getElementById('lobbyRosterCount');
+  if(countBadge) countBadge.textContent = String(participantList.length);
   if(participantList.length === 0){
-    list.innerHTML = '<p class="lobby-roster-empty">Nadie se ha unido todavía. Comparte el código o el QR.</p>';
+    list.innerHTML = `<div class="empty-state">
+      <div class="empty-state-icon">${LOBBY_EMPTY_ICON}</div>
+      <p class="empty-state-title">Esperando participantes</p>
+      <p class="empty-state-desc">Nadie se ha unido todavía — comparte el código o el QR de la izquierda.</p>
+    </div>`;
     return;
   }
   list.innerHTML = participantList.map(p => {
@@ -66,7 +74,8 @@ async function openLobby({scenarioId, roleRoster, onStart, onCancel}){
   document.body.classList.add('lobby-mode');
   if(statusLabel) statusLabel.textContent = 'SALA DE ESPERA';
   codeEl.textContent = 'Creando sala…';
-  document.getElementById('lobbyRosterList').innerHTML = '';
+  document.getElementById('lobbyQr').innerHTML = '';
+  renderRoster([], roleRoster);
   startBtn.disabled = true;
 
   const exitLobby = () => {
