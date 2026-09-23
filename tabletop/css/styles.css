@@ -1394,6 +1394,10 @@
     transition:background-color .15s ease, border-color .15s ease, color .15s ease;
   }
   .step3-alert:empty{display:none;}
+  /* Vive dentro de .wizard-col-body (paso 1), no como hermano suelto entre el cuerpo y los
+     botones — así ambas columnas del paso 1 crecen igual y "Guardar perfil"/"Cargar playbook"
+     quedan en la misma fila, tenga o no tenga contenido extra la columna de la izquierda. */
+  #wizardStep1Summary{margin-top:var(--sp-3);}
   .step3-alert svg{flex-shrink:0; margin-top:1px;}
   .step3-alert.is-warning{background:var(--amber-dim); border-color:rgba(255,138,0,0.4); color:#FFCE94;}
   .step3-alert.is-ready{background:rgba(249,115,22,0.12); border-color:rgba(249,115,22,0.35); color:#FFC28A;}

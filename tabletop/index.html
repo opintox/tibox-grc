@@ -190,8 +190,8 @@
                 <label>Facilitador</label>
                 <input type="text" id="facilitatorNameInput" placeholder="Quién conduce la sesión">
               </div>
+              <p class="step3-alert" id="wizardStep1Summary" role="status" aria-live="polite"></p>
             </div>
-            <p class="step3-alert" id="wizardStep1Summary" role="status" aria-live="polite"></p>
             <div class="profile-actions">
               <button class="btn btn-sm btn-primary" id="saveProfileBtn">Guardar perfil</button>
               <button class="btn btn-sm" id="profilesToggleBtn">Perfiles guardados</button>
@@ -214,12 +214,12 @@
                 <span class="playbook-dropzone-filename" id="playbookFileName">Ningún archivo seleccionado</span>
                 <input type="file" id="playbookFile" accept=".json,.pdf,.doc,.docx,.txt,application/json,application/pdf,text/plain">
               </label>
+              <p class="playbook-status" id="playbookStatus" role="status" aria-live="polite"></p>
             </div>
             <div class="playbook-actions">
               <button class="btn btn-sm btn-primary" id="loadPlaybookBtn" type="button">Cargar playbook</button>
               <button class="btn btn-sm" id="openBuilderBtn" type="button">Arma el escenario</button>
             </div>
-            <p class="playbook-status" id="playbookStatus" role="status" aria-live="polite"></p>
           </div>
         </section>
 
