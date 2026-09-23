@@ -1465,6 +1465,9 @@ let multiplayerEnabled = false;
 // publicar el acto y la votación) — solo tiene valor mientras dura un ejercicio que arrancó
 // desde el lobby; se vuelve a fijar en cada "Comenzar ejercicio" con celulares.
 let mpRoomCode = null;
+// Roster {roleKey,name,org,accent} publicado al crear la sala (ver startGameOrLobby) — se
+// reusa tal cual para repintar el popout "Sala" (#roomInfoBtn) sin recalcularlo.
+let mpRoleRoster = [];
 // Cuántas veces se reintentó el acto vigente (0 = primera vez). Sube cada vez que la persona
 // responde mal desde su celular y se le vuelve a habilitar la misma pregunta (ver onAnswerPick)
 // y vuelve a 0 apenas se avanza a un acto distinto (ver renderStage). Forma parte del actKey
@@ -1493,8 +1496,13 @@ function startGameOrLobby(){
       org: p.empresa || rm.org[p.roleKey],
       accent: rm.accents[p.roleKey] || ['#5AD1E8','#0B8FD6']
     }));
+  mpRoleRoster = roleRoster; // se reusa en el popout "Sala" (#roomInfoBtn) durante el ejercicio
   window.MP.openLobby({scenarioId: selectedScenarioId, roleRoster, onStart: code => { mpRoomCode = code; startGame(); }});
 }
+
+document.getElementById('roomInfoBtn').addEventListener('click', () => {
+  if(multiplayerEnabled && mpRoomCode && window.MP) window.MP.openRoomPanel(mpRoomCode, mpRoleRoster);
+});
 
 document.getElementById('setupNextBtn').addEventListener('click', () => {
   if(currentSetupStep === 3){
@@ -1671,6 +1679,8 @@ function startGame(){
   document.getElementById('continueBtn').classList.add('hidden');
   document.getElementById('gameSessionBadge').textContent = SCENARIOS.find(s=>s.id===selectedScenarioId).name;
   document.getElementById('statusLabel').textContent = 'EN CURSO';
+  // Botón "Sala": solo tiene sentido si este ejercicio arrancó desde el lobby con celulares.
+  document.getElementById('roomInfoBtn').classList.toggle('hidden', !(multiplayerEnabled && mpRoomCode));
 
   if(gameState.timerInterval) clearInterval(gameState.timerInterval);
   gameState.timerInterval = null;
@@ -2299,6 +2309,8 @@ function showResults(){
   if(gameState.timerInterval) clearInterval(gameState.timerInterval);
   document.getElementById('screen-game').classList.add('hidden');
   document.body.classList.remove('game-mode');
+  document.getElementById('roomInfoBtn').classList.add('hidden');
+  if(window.MP) window.MP.closeRoomPanel();
   document.getElementById('screen-report').classList.add('hidden');
   document.getElementById('screen-results').classList.remove('hidden');
   document.getElementById('statusLabel').textContent = 'FINALIZADO';
@@ -2519,6 +2531,8 @@ function backToSetup(){
   if(gameState.timerInterval) clearInterval(gameState.timerInterval);
   document.getElementById('screen-game').classList.add('hidden');
   document.body.classList.remove('game-mode');
+  document.getElementById('roomInfoBtn').classList.add('hidden');
+  if(window.MP) window.MP.closeRoomPanel();
   document.getElementById('screen-setup').classList.remove('hidden');
   document.getElementById('continueBtn').classList.remove('hidden');
   document.getElementById('statusLabel').textContent = 'CONFIGURACIÓN';

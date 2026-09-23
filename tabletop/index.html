@@ -43,6 +43,7 @@
     <div class="gh-steps" id="gameStepper"></div>
 
     <div class="gh-right">
+      <button class="btn btn-sm hidden" id="roomInfoBtn" type="button" title="Ver código/QR de la sala — útil si alguien salió sin querer y necesita reingresar" aria-label="Sala">Sala</button>
       <span class="gh-count"><b id="globalProgressText">1 / 1</b><span id="globalProgressRemaining"></span></span>
       <span class="game-timer" id="gameTimer">00:00</span>
       <button class="btn btn-sm" id="prevQuestionBtn" disabled title="Pregunta anterior" aria-label="Pregunta anterior">←</button>
@@ -289,6 +290,38 @@
       <div class="lobby-actions">
         <button class="btn" id="lobbyCancelBtn" type="button">← Volver</button>
         <button class="btn-cta" id="lobbyStartBtn" type="button" disabled>Iniciar ejercicio →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Popout "Sala": disponible durante el ejercicio en modo "Con celulares" (ver #roomInfoBtn
+       en la barra superior). Muestra de nuevo el código/QR/link y el roster en vivo, para que
+       el facilitador se lo pueda mostrar a alguien que salió de la sala sin querer y necesita
+       reingresar (ver getMyParticipant en room.js). -->
+  <div class="modal-overlay hidden" id="roomPanelOverlay">
+    <div class="modal-box room-panel-box" role="dialog" aria-modal="true" aria-labelledby="roomPanelTitle">
+      <div class="modal-head">
+        <div class="modal-title" id="roomPanelTitle">Sala del ejercicio</div>
+        <button class="modal-close-btn" id="roomPanelClose" aria-label="Cerrar">✕</button>
+      </div>
+      <p class="modal-message">Si alguien salió de la sala sin querer (cerró el navegador o perdió la conexión), puede reingresar con este mismo código, QR o link desde el mismo celular con el que se unió.</p>
+      <div class="lobby-grid">
+        <div class="lobby-join-card">
+          <div class="eyebrow">Código de sala</div>
+          <div class="lobby-code" id="roomPanelCode">——————</div>
+          <div class="lobby-qr" id="roomPanelQr"></div>
+          <div class="lobby-link-row">
+            <input type="text" id="roomPanelJoinUrl" readonly aria-label="Link para unirse">
+            <button class="btn btn-sm" id="roomPanelCopyBtn" type="button">Copiar link</button>
+          </div>
+        </div>
+        <div class="lobby-roster-card">
+          <div class="lobby-roster-head">
+            <div class="eyebrow" style="margin-bottom:0;">Participantes conectados</div>
+            <span class="setup-badge" id="roomPanelRosterCount">0</span>
+          </div>
+          <div class="lobby-roster-list" id="roomPanelRosterList"></div>
+        </div>
       </div>
     </div>
   </div>

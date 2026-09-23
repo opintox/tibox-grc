@@ -57,6 +57,16 @@ export async function getRoom(code){
   return snap.exists() ? snap.data() : null;
 }
 
+// Si esta sesión anónima (mismo navegador/celular) ya tiene un documento de participante en
+// esta sala —se unió antes y cerró la pestaña o perdió la conexión sin querer—, lo devuelve
+// para poder reconectarlo directo, sin pasar por el formulario ni por el bloqueo de "sala ya
+// iniciada" de joinRoom(). null si nunca se unió desde este navegador.
+export async function getMyParticipant(code){
+  const {db, uid} = await firebaseReady();
+  const snap = await getDoc(doc(db, 'rooms', code, 'participants', uid));
+  return snap.exists() ? {uid, ...snap.data()} : null;
+}
+
 // Devuelve la función para cancelar la suscripción (llamarla al salir de la pantalla).
 export function listenRoom(code, cb){
   const fb = window.TIBOX_MP_FIREBASE;
