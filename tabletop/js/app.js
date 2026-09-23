@@ -1274,42 +1274,42 @@ const RULE_DETAILS = {
   1: {
     badge: 'Antes de empezar',
     accent: '#0FC7F6',
-    title: 'Preparen el terreno antes de partir',
-    why: 'En una crisis real, gran parte del caos inicial no lo causa el ataque, sino no saber quién está participando, qué está en juego, y quién decide qué. Los equipos que improvisan sobre la marcha pierden minutos valiosos — y esos minutos importan.',
-    how: 'Elijan el tipo de ataque que van a simular y marquen qué áreas participan hoy (TI, Legal, Comunicaciones, RRHH, Dirección — Seguridad y TI siempre están presentes). Guarden el perfil del cliente: es un paso obligatorio antes de poder empezar.',
-    tip: 'Un plan que nunca se ha ensayado con las personas reales de la organización es solo un documento. Mientras más parecida sea esta preparación a la realidad, más útil va a ser lo que aprendan al final.'
+    title: 'Se prepara el terreno antes de comenzar',
+    why: 'En una crisis real, gran parte del caos inicial no lo causa el ataque, sino no saber quién está participando, qué está en juego y quién decide qué. Cuando el comité de respuesta se arma improvisando sobre la marcha, se pierden minutos valiosos — y esos minutos son los que más importan.',
+    how: 'Primero se elige el tipo de ataque que se va a simular (por ejemplo, un ransomware o un phishing dirigido) y se marca qué áreas de la organización participan en esta sesión: Tecnología (TI), Legal, Comunicaciones, Recursos Humanos y Dirección son opcionales según el caso, mientras que Seguridad y TI participan siempre. Junto con esto, se registra el perfil del cliente (su nombre y el del facilitador a cargo): es un dato obligatorio, y la aplicación no permite continuar sin completarlo.',
+    tip: 'Un plan de respuesta que nunca se ha ensayado con las personas reales de la organización es solo un documento. Mientras más parecida sea esta configuración inicial a la realidad de la organización, más útil resulta el diagnóstico que arroja el ejercicio al final.'
   },
   2: {
     badge: 'Cómo avanza',
     accent: '#F3E006',
-    title: 'El ejercicio avanza paso a paso, sin volver atrás',
-    why: 'Una crisis de ciberseguridad no pasa de una vez: lo que se decide (o no se decide) en un momento afecta qué opciones quedan disponibles después. Los equipos suelen fallar más por saltarse un paso que por tomar una mala decisión dentro de él.',
-    how: 'El ejercicio avanza en un orden fijo, de principio a fin. Cada paso plantea una situación nueva dentro del mismo caso — no se puede adelantar, y solo se puede volver atrás con el botón "Pregunta anterior".',
-    tip: 'En una crisis real, resistan la tentación de "saltar directo a la solución". Actuar antes de entender bien la situación casi siempre significa actuar sobre lo que no correspondía.'
+    title: 'El ejercicio avanza por etapas, sin poder adelantarse',
+    why: 'Una crisis de ciberseguridad no ocurre de una sola vez: es una secuencia de momentos, y lo que se decide (o no se decide) en uno de ellos condiciona qué opciones quedan disponibles en el siguiente. Los equipos suelen fallar más seguido por saltarse un paso que por tomar una mala decisión dentro de él.',
+    how: 'El incidente se juega en un orden fijo, de principio a fin, dividido en varias etapas (por ejemplo: detección, contención, recuperación y cierre). Cada etapa presenta una o más situaciones nuevas dentro del mismo caso. No es posible adelantarse a una etapa futura, y solo se puede retroceder a la pregunta anterior con el botón correspondiente en la parte superior de la pantalla.',
+    tip: 'En una crisis real conviene resistir la tentación de "saltar directo a la solución": actuar antes de entender bien la situación casi siempre significa actuar sobre lo que no correspondía.'
   },
   3: {
     badge: 'Quién actúa',
     accent: '#FF8A3D',
-    title: 'Que actúe quien corresponde, no quien esté más rápido',
-    why: 'En una crisis real, quien está más disponible no siempre es quien debe tomar la decisión — a veces por su función, a veces porque esa decisión requiere una autoridad específica. Confundir esto genera respuestas desordenadas y decisiones tomadas por quien no correspondía.',
-    how: 'Frente a cada situación, el equipo elige entre las funciones disponibles quién debería hacerse cargo. Elegir a la persona equivocada cuenta como error, y la aplicación explica por qué antes de dejarlos intentar de nuevo.',
-    tip: 'Si el equipo duda todo el tiempo sobre "a quién le toca esto", el problema no es el ejercicio — es que en la vida real tampoco está claro quién hace qué. Anótenlo para conversarlo al final.'
+    title: 'Actúa quien corresponde, no quien esté más disponible',
+    why: 'En una crisis real, la persona más disponible no siempre es quien debe tomar la decisión — a veces por su función dentro de la organización, a veces porque esa decisión requiere una autoridad específica. Confundir esto genera respuestas desordenadas y, en el peor de los casos, decisiones tomadas por quien no tenía la atribución para hacerlo.',
+    how: 'Frente a cada situación planteada, se elige entre las funciones disponibles (por ejemplo, Seguridad, TI o Legal) cuál de ellas debería hacerse cargo de esa acción específica. Elegir una función que no corresponde cuenta como error, y antes de permitir un nuevo intento la aplicación explica por qué esa función no era la indicada.',
+    tip: 'Si durante el ejercicio hay dudas constantes sobre "a quién le toca esto", el problema no es el ejercicio en sí — es una señal de que, en la organización real, tampoco está del todo claro quién hace qué. Conviene anotarlo para conversarlo en el cierre de la sesión.'
   },
   4: {
     badge: 'Qué se decide',
     accent: '#FF4D6A',
     title: 'De varias opciones parecidas, solo una es la correcta',
-    why: 'Las alternativas incorrectas no son absurdas a propósito: se parecen mucho a la correcta, con un solo detalle que las hace equivocadas (un paso que falta, un orden distinto, algo que no se confirmó). Así se pone a prueba el criterio del equipo, no la memoria.',
-    how: 'Con la función correcta ya elegida, el equipo revisa las alternativas y conversa cuál es la más adecuada. Si se equivocan, la aplicación explica exactamente por qué antes de dejarlos volver a intentar — no hay problema en equivocarse, solo en no conversarlo bien.',
-    tip: 'Conversen en voz alta antes de elegir. Lo más valioso de este ejercicio no es acertar: es escuchar cómo razona el equipo bajo presión — ahí es donde aparecen los supuestos equivocados.'
+    why: 'Las alternativas incorrectas de este ejercicio no son absurdas a propósito: están escritas para parecerse mucho a la decisión correcta, con un solo detalle que las hace equivocadas (un paso que falta, un orden distinto, un supuesto que no se confirmó). De esta forma se pone a prueba el criterio del equipo, no su memoria.',
+    how: 'Una vez elegida la función correcta, se revisan las alternativas disponibles y se conversa en equipo cuál es la más adecuada para la situación planteada. Si la elección es incorrecta, la aplicación explica exactamente por qué antes de permitir un nuevo intento — no hay penalización por volver a intentarlo, solo por no analizar bien la situación antes de decidir.',
+    tip: 'Conviene conversar en voz alta antes de elegir una alternativa. Lo más valioso de este ejercicio no es acertar: es observar cómo razona el equipo bajo presión, ya que ahí suelen aparecer los supuestos equivocados.'
   },
   5: {
     badge: 'Al cerrar',
     accent: '#22D3A6',
     title: 'Lo que no se conversa después, se repite',
-    why: 'Un ejercicio que termina sin conversar los resultados es solo una tarde bien invertida y nada más. Lo más valioso —igual que después de una crisis real— está en revisar qué salió bien, dónde hubo problemas, y qué se puede mejorar concretamente.',
-    how: 'Al terminar la última etapa, la aplicación genera un puntaje, un resumen con los errores más comunes y recomendaciones, y un acta de la sesión. Se puede guardar en este navegador o descargar para adjuntar a un reporte propio.',
-    tip: 'Compartan el resumen con el equipo mientras el ejercicio está fresco. Algo que se detecta pero nadie se hace cargo de mejorar, tarde o temprano vuelve a pasar.'
+    why: 'Un ejercicio de simulación que termina sin conversar los resultados es, en el mejor de los casos, una tarde bien invertida y nada más. Lo más valioso de un tabletop —igual que el de un incidente real— está en la revisión posterior: qué salió bien, dónde hubo dificultades y qué acción concreta evita que el mismo error vuelva a ocurrir.',
+    how: 'Al terminar la última etapa, la aplicación genera automáticamente un puntaje general, un informe con los patrones de error más frecuentes y recomendaciones asociadas, y un acta de la sesión con los datos del cliente y del facilitador. Este informe se puede guardar en el navegador o descargar en formato JSON para adjuntarlo a un reporte propio de la organización.',
+    tip: 'Conviene compartir el informe con el equipo mientras el ejercicio todavía está fresco en la memoria de todos. Un hallazgo que se detecta pero que nadie asume como propio para mejorarlo, tarde o temprano, vuelve a repetirse.'
   }
 };
 let activeRuleModal = null;
