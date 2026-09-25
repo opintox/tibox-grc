@@ -236,30 +236,21 @@ function renderVoteGrid(act, roleRoster){
   });
 }
 
-function shuffledIndicesLocal(n){
-  const arr = Array.from({length: n}, (_, i) => i);
-  for(let i = arr.length - 1; i > 0; i--){
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
-
-// Cada celular mezcla las 4 alternativas por su cuenta y envía por índice en act.options (el
-// orden publicado, que el facilitador ya mezcló y sabe traducir), no por posición visual —
-// así no hace falta sincronizar el orden entre dispositivos (ver room.js, submitAnswer).
+// Las alternativas se muestran tal como vienen en act.options: el facilitador ya las publicó
+// mezcladas en el mismo orden que su pantalla, así el celular y la pantalla grande coinciden.
+// Se envía la posición en act.options (ver room.js, submitAnswer).
 function renderAnswerGrid(act){
   answerStatusEl.textContent = 'Elige la alternativa correcta.';
   const options = act.options || [];
-  answerGrid.innerHTML = shuffledIndicesLocal(options.length).map(origIdx =>
-    `<button type="button" class="answer-btn" data-orig-idx="${origIdx}">${escapeHtmlLocal(options[origIdx])}</button>`
+  answerGrid.innerHTML = options.map((text, pos) =>
+    `<button type="button" class="answer-btn" data-pos="${pos}">${escapeHtmlLocal(text)}</button>`
   ).join('');
   answerGrid.querySelectorAll('.answer-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
       answerGrid.querySelectorAll('.answer-btn').forEach(b => { b.disabled = true; });
       const actKey = act.actKey;
       try{
-        await submitAnswer(currentCode, actKey, parseInt(btn.dataset.origIdx, 10));
+        await submitAnswer(currentCode, actKey, parseInt(btn.dataset.pos, 10));
         lastAnsweredActKey = actKey;
         answerStatusEl.textContent = 'Respuesta enviada — esperando al facilitador.';
       }catch(err){

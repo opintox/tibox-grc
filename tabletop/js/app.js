@@ -1977,7 +1977,10 @@ function onCharacterPick(participant, el){
   // votación resuelta (ver renderCharGrid), corta el listener/timeout de la votación y avisa
   // a Firestore que la fase pasó a 'answering' — así los celulares dejan de mostrar la
   // votación de este acto ya resuelto.
-  if(multiplayerEnabled && mpRoomCode && window.MP) window.MP.closeVoting(mpRoomCode, {target: q.target, options: q.options});
+  // El orden de las alternativas se decide acá, una sola vez: la pantalla del facilitador y
+  // los celulares muestran exactamente el mismo orden (ver renderAnswerOptions).
+  const answerOrder = shuffledIndices(q.options.length);
+  if(multiplayerEnabled && mpRoomCode && window.MP) window.MP.closeVoting(mpRoomCode, {target: q.target, options: q.options, order: answerOrder});
   el.classList.add('correct-flash');
   document.querySelectorAll('.char-card').forEach(c => {
     if(c !== el) c.style.opacity = '0.35';
@@ -2001,7 +2004,7 @@ function onCharacterPick(participant, el){
 
     document.getElementById('answeringAs').textContent = `${rmPick.names[participant.roleKey]} · ${participant.empresa || rmPick.org[participant.roleKey]}`;
     hideExplain();
-    renderAnswerOptions(q);
+    renderAnswerOptions(q, answerOrder);
     document.getElementById('answerBlock').classList.remove('hidden');
     setActionButton(false, 'Siguiente →');
     gameState.nextAction = null;
@@ -2032,10 +2035,11 @@ function shuffledIndices(n){
   return arr;
 }
 
-function renderAnswerOptions(q){
+// order: índices originales de q.options en el orden en que se muestran (ver onCharacterPick).
+function renderAnswerOptions(q, order){
   const el = document.getElementById('answerOptions');
   el.innerHTML = '';
-  shuffledIndices(q.options.length).forEach(origIdx => {
+  order.forEach(origIdx => {
     const b = document.createElement('button');
     b.className = 'answer-btn';
     b.textContent = q.options[origIdx];
@@ -2081,7 +2085,9 @@ function onAnswerPick(idx, btn, q){
       window.MP.retryAnswer(mpRoomCode, {
         actKey: currentActKey(),
         stage: gameState.stages[gameState.stepIndex].stage,
-        title: q.title || '', target: q.target, options: q.options
+        title: q.title || '', target: q.target, options: q.options,
+        // mismo orden que ya está en pantalla (el reintento no vuelve a mezclar)
+        order: [...document.querySelectorAll('#answerOptions .answer-btn')].map(b => Number(b.dataset.origIdx))
       });
       window.MP.attachAnsweringPhase(mpRoomCode, currentActKey(), gameState.chosenCorrectParticipant.roleKey, origIdx => {
         const retryBtn = document.querySelector(`#answerOptions .answer-btn[data-orig-idx="${origIdx}"]`);
