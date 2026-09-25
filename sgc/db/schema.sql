@@ -72,9 +72,8 @@ alter table snapshots enable row level security;
 
 -- Las antiguas políticas "acceso publico" (using (true) para la clave anon) dejaban leer,
 -- modificar y borrar todo a cualquiera, porque la anon key está en sgc/js/db.js dentro de un
--- repo público. Con RLS habilitado y sin políticas, la clave anon no ve ni escribe nada. Si se
--- reactiva el SGC, primero hay que agregar login y crear políticas "to authenticated" que
--- limiten por auth.uid() / auth.jwt() ->> 'email'.
+-- repo público. Se eliminan acá; las políticas reales (login con MFA, roles, auditoría) están
+-- en seguridad.sql, que se ejecuta después de este archivo.
 drop policy if exists "dominios acceso publico" on dominios;
 drop policy if exists "requerimientos acceso publico" on requerimientos;
 drop policy if exists "entregables acceso publico" on entregables;
