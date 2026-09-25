@@ -1854,12 +1854,12 @@ function renderStage(opts){
   // Modo "Con celulares" (Fase 2): publica el acto vigente para que los celulares puedan
   // votar quién debe actuar. mpRoomCode solo tiene valor si este ejercicio arrancó desde el
   // lobby (ver startGameOrLobby) — en el modo de siempre esto no hace nada.
+  // Solo lo que el celular muestra: cualquier participante puede leer la sala completa, así
+  // que target/alternativas se publican recién al pasar a 'answering' (ver MP.closeVoting) y
+  // correctIndex/explicaciones nunca salen de esta pantalla.
   if(multiplayerEnabled && mpRoomCode && window.MP){
     window.MP.publishAct(mpRoomCode, {
-      actKey: currentActKey(),
-      stage: stageLabel, title: q.title || '', situation: q.situation || q.text || '',
-      meta: q.meta || [], target: q.target, options: q.options, explanations: q.explanations,
-      correctIndex: q.correctIndex ?? 0, mismatchContext: q.mismatchContext || ''
+      actKey: currentActKey(), stage: stageLabel, title: q.title || ''
     });
   }
 
@@ -1977,7 +1977,7 @@ function onCharacterPick(participant, el){
   // votación resuelta (ver renderCharGrid), corta el listener/timeout de la votación y avisa
   // a Firestore que la fase pasó a 'answering' — así los celulares dejan de mostrar la
   // votación de este acto ya resuelto.
-  if(multiplayerEnabled && mpRoomCode && window.MP) window.MP.closeVoting(mpRoomCode, 'answering');
+  if(multiplayerEnabled && mpRoomCode && window.MP) window.MP.closeVoting(mpRoomCode, {target: q.target, options: q.options});
   el.classList.add('correct-flash');
   document.querySelectorAll('.char-card').forEach(c => {
     if(c !== el) c.style.opacity = '0.35';
@@ -2081,9 +2081,7 @@ function onAnswerPick(idx, btn, q){
       window.MP.retryAnswer(mpRoomCode, {
         actKey: currentActKey(),
         stage: gameState.stages[gameState.stepIndex].stage,
-        title: q.title || '', situation: q.situation || q.text || '',
-        meta: q.meta || [], target: q.target, options: q.options, explanations: q.explanations,
-        correctIndex: q.correctIndex ?? 0, mismatchContext: q.mismatchContext || ''
+        title: q.title || '', target: q.target, options: q.options
       });
       window.MP.attachAnsweringPhase(mpRoomCode, currentActKey(), gameState.chosenCorrectParticipant.roleKey, origIdx => {
         const retryBtn = document.querySelector(`#answerOptions .answer-btn[data-orig-idx="${origIdx}"]`);

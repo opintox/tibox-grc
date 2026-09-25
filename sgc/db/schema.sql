@@ -62,20 +62,21 @@ create index if not exists idx_entregables_requerimiento on entregables(requerim
 -- cuando se agregue esa mejora, sin otra migración de esquema.
 alter publication supabase_realtime add table dominios, requerimientos, entregables, personas, snapshots;
 
--- RLS: esta es una herramienta interna sin login propio, así que se habilita
--- acceso de lectura/escritura completo con la clave "anon" pública. La
--- seguridad real la dan estas políticas (no el hecho de que la anon key esté
--- oculta: es pública por diseño en Supabase). Si más adelante se agrega
--- autenticación, hay que cambiar "using (true)" por una condición sobre
--- auth.uid() / auth.role().
+-- RLS: la seguridad real la dan estas políticas, no el hecho de que la anon
+-- key esté oculta (es pública por diseño en Supabase).
 alter table dominios enable row level security;
 alter table requerimientos enable row level security;
 alter table entregables enable row level security;
 alter table personas enable row level security;
 alter table snapshots enable row level security;
 
-create policy "dominios acceso publico" on dominios for all using (true) with check (true);
-create policy "requerimientos acceso publico" on requerimientos for all using (true) with check (true);
-create policy "entregables acceso publico" on entregables for all using (true) with check (true);
-create policy "personas acceso publico" on personas for all using (true) with check (true);
-create policy "snapshots acceso publico" on snapshots for all using (true) with check (true);
+-- Las antiguas políticas "acceso publico" (using (true) para la clave anon) dejaban leer,
+-- modificar y borrar todo a cualquiera, porque la anon key está en sgc/js/db.js dentro de un
+-- repo público. Con RLS habilitado y sin políticas, la clave anon no ve ni escribe nada. Si se
+-- reactiva el SGC, primero hay que agregar login y crear políticas "to authenticated" que
+-- limiten por auth.uid() / auth.jwt() ->> 'email'.
+drop policy if exists "dominios acceso publico" on dominios;
+drop policy if exists "requerimientos acceso publico" on requerimientos;
+drop policy if exists "entregables acceso publico" on entregables;
+drop policy if exists "personas acceso publico" on personas;
+drop policy if exists "snapshots acceso publico" on snapshots;
