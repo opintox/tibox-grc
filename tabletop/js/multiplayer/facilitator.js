@@ -222,11 +222,12 @@ function attachVotingPhase(roomCode, actKey, roleKeys, onResolve){
 // Se llama desde onCharacterPick() apenas se resuelve el acto (por clic manual o por
 // votación) — corta cualquier listener/timeout de votación pendiente y marca en Firestore
 // que la fase pasó a 'answering', para que los celulares dejen de mostrar la votación.
-// `answer`: {target, options} de la pregunta vigente — se publican recién acá (ver
-// openAnswering en room.js), mezcladas para que el índice publicado no delate la correcta.
+// `answer`: {target, options, order} de la pregunta vigente — se publican recién acá (ver
+// openAnswering en room.js), en el mismo orden que muestra la pantalla del facilitador.
 function closeVoting(roomCode, answer){
   clearVotingWatch();
-  publishAnswering(roomCode, answer.target, answer.options).catch(err => {
+  answerOrder = answer.order;
+  openAnswering(roomCode, answer.target, answerOrder.map(i => answer.options[i])).catch(err => {
     console.error('[multiplayer] No se pudo cerrar la fase de votación:', err);
   });
 }
@@ -241,25 +242,11 @@ function closeVoting(roomCode, answer){
 let answerUnsub = null;
 
 // La alternativa correcta siempre es q.options[0] (ver README). Si se publicara tal cual,
-// cualquier participante la vería en la sala; por eso se publican mezcladas y
-// answerOrder[i] guarda el índice ORIGINAL de la alternativa publicada en la posición i.
-// El celular responde por posición publicada y acá se traduce de vuelta.
+// cualquier participante la vería en la sala; por eso se publican en el orden mezclado de la
+// pantalla del facilitador (lo decide app.js) y answerOrder[i] guarda el índice ORIGINAL de la
+// alternativa publicada en la posición i. El celular responde por posición publicada —la misma
+// que ve en la pantalla grande— y acá se traduce de vuelta.
 let answerOrder = [];
-
-function shuffledOrder(n){
-  const arr = Array.from({length: n}, (_, i) => i);
-  const rnd = crypto.getRandomValues(new Uint32Array(n));
-  for(let i = arr.length - 1; i > 0; i--){
-    const j = rnd[i] % (i + 1);
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
-
-function publishAnswering(roomCode, target, options){
-  answerOrder = shuffledOrder((options || []).length);
-  return openAnswering(roomCode, target, answerOrder.map(i => options[i]));
-}
 
 function clearAnsweringWatch(){
   if(answerUnsub){ answerUnsub(); answerUnsub = null; }
@@ -300,10 +287,10 @@ function closeAnswering(roomCode){
 // quien respondió mal vuelva a mostrar las 4 alternativas habilitadas y pueda reintentar — a
 // diferencia de mpPublishAct, acá NO se fuerza la fase a 'voting' (no se reabre la elección
 // de personaje).
-// `act`: {actKey, stage, title, target, options} — options se vuelven a mezclar (ver answerOrder).
-function mpRetryAnswer(roomCode, act){
-  answerOrder = shuffledOrder((act.options || []).length);
-  publishAct(roomCode, {...act, options: answerOrder.map(i => act.options[i]), phase: 'answering'}).catch(err => {
+// `act`: {actKey, stage, title, target, options, order} — order es el que ya está en pantalla.
+function mpRetryAnswer(roomCode, {order, ...act}){
+  answerOrder = order;
+  publishAct(roomCode, {...act, options: order.map(i => act.options[i]), phase: 'answering'}).catch(err => {
     console.error('[multiplayer] No se pudo republicar el acto para reintentar la respuesta:', err);
   });
 }
