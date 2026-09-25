@@ -39,7 +39,7 @@ function buildDomChips(){
   Object.values(DATA.dominios).forEach(d=>{
     const label=document.createElement('label');
     label.className='sb-check';
-    label.innerHTML='<input type="checkbox" data-df="'+d.id+'">'+d.code;
+    label.innerHTML='<input type="checkbox" data-df="'+esc(d.id)+'">'+esc(d.code);
     el.appendChild(label);
     // Solo marca selección; el filtro se aplica al presionar "Filtrar Dominio"
   });
@@ -84,10 +84,10 @@ function buildTable(){
     const reqs=porDominio[domId];
     const entregablesGrupo=[];
     reqs.forEach(req=>req.entregables.forEach(e=>entregablesGrupo.push(e)));
-    h+='<tr class="group-row" data-dom="'+domId+'"><td colspan="6"><div class="group-head">'
-      +'<span class="group-dot" style="background:'+dom.color+'"></span>'
-      +'<span class="group-code" style="color:'+lightenForDark(dom.color,.35)+'">'+dom.emoji+' '+dom.code+'</span>'
-      +'<span class="group-name">'+dom.name+'</span>'
+    h+='<tr class="group-row" data-dom="'+esc(domId)+'"><td colspan="6"><div class="group-head">'
+      +'<span class="group-dot" style="background:'+esc(dom.color)+'"></span>'
+      +'<span class="group-code" style="color:'+esc(lightenForDark(dom.color,.35))+'">'+esc(dom.emoji)+' '+esc(dom.code)+'</span>'
+      +'<span class="group-name">'+esc(dom.name)+'</span>'
       +'<span class="group-summary">'+resumenGrupo(entregablesGrupo)+'</span>'
     +'</div></td></tr>';
     let n=0;
@@ -96,16 +96,16 @@ function buildTable(){
         n++;
         const st=e.estado||'Pendiente';
         const srch=[e.aspecto,e.evidencia,e.responsable,req.descripcion,dom.name,req.codigo].join(' ').toLowerCase().replace(/"/g,'');
-        h+='<tr class="data-row" data-dom="'+domId+'" data-req="'+req.id+'" data-st="'+st+'" data-org="'+(e.org||'sin-asignar')+'" data-search="'+srch+'">'
+        h+='<tr class="data-row" data-dom="'+esc(domId)+'" data-req="'+esc(req.id)+'" data-st="'+esc(st)+'" data-org="'+esc(e.org||'sin-asignar')+'" data-search="'+esc(srch)+'">'
           +'<td class="rnum">'+n+'</td>'
-          +'<td class="req-code">'+req.codigo+'</td>'
+          +'<td class="req-code">'+esc(req.codigo)+'</td>'
           +'<td class="aspecto-cell">'+esc(e.aspecto||'—')+'</td>'
           +'<td class="evidencia-cell">'+esc(e.evidencia||'—')+'</td>'
           +'<td class="resp-cell">'+celdaResponsable(e)+'</td>'
-          +'<td><select class="stsel" data-eid="'+e.id+'" style="border-color:'+STCOLOR[st]+';background:'+getBg(st)+';color:'+STCOLOR[st]+';font-weight:700">'
+          +'<td><select class="stsel" data-eid="'+esc(e.id)+'" style="border-color:'+STCOLOR[st]+';background:'+getBg(st)+';color:'+STCOLOR[st]+';font-weight:700">'
             +STATES.map(s=>'<option'+(st===s?' selected':'')+'>'+s+'</option>').join('')
           +'</select>'
-          +'<div class="cell-sub">'+(e.periodicidad||'—')+'</div></td>'
+          +'<div class="cell-sub">'+esc(e.periodicidad||'—')+'</div></td>'
           +'</tr>';
       });
     });
@@ -212,7 +212,7 @@ document.addEventListener('keydown',function(ev){
 // Celda de responsable: nombre arriba, organización debajo
 function orgPill(org){
   const o=org||'sin-asignar';
-  return '<span class="org-pill org-'+o+'">'+ORG_LABEL[o]+'</span>';
+  return '<span class="org-pill org-'+esc(o)+'">'+esc(ORG_LABEL[o]||o)+'</span>';
 }
 function celdaResponsable(e){
   return '<span class="resp-pill">'+esc(e.responsable||'—')+'</span>'

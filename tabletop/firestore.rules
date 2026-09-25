@@ -14,19 +14,43 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Facilitador autorizado: correo+contraseña, segundo factor TOTP, correo verificado y del
+    // dominio de TIBOX. Firebase firma estos datos en el token, no se pueden falsificar desde
+    // el navegador. Sin el chequeo de dominio, cualquiera que se registre por la API REST de
+    // Firebase Auth (con la apiKey pública) y active su propio TOTP pasaría como facilitador.
+    // Mantener alineado con isAuthorizedFacilitator() en auth/auth-core.js.
+    function isFacilitator() {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider == 'password'
+        && request.auth.token.firebase.sign_in_second_factor == 'totp'
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.lower().matches('^[^@]+@tibox[.]cl$');
+    }
+
+    function roomData(roomCode) {
+      return get(/databases/$(database)/documents/rooms/$(roomCode)).data;
+    }
+
     match /rooms/{roomCode} {
       allow get: if request.auth != null;
       allow list: if false; // sin esto, alguien podría listar/enumerar salas ajenas
 
-      allow create: if request.auth != null
+      // Solo un facilitador autorizado (ver isFacilitator) puede crear salas; los
+      // participantes siguen entrando con auth anónima. expiresAt es obligatorio para que la
+      // política TTL de Firestore la limpie sola.
+      allow create: if isFacilitator()
+        && roomCode.matches('^[A-Z0-9]{6}$')
+        && request.resource.data.keys().hasOnly(['facilitatorUid', 'status', 'scenarioId', 'roleRoster', 'createdAt', 'expiresAt'])
         && request.resource.data.facilitatorUid == request.auth.uid
         && request.resource.data.status == 'lobby'
-        && roomCode.matches('^[A-Z0-9]{6}$');
+        && request.resource.data.roleRoster is list
+        && request.resource.data.expiresAt is timestamp;
 
       // Solo el facilitador que la creó puede modificar su propia sala (ej. pasar a
-      // 'in_progress', o publicar currentAct en las Fases 2/3).
+      // 'in_progress', o publicar currentAct en las Fases 2/3), y no puede traspasarla.
       allow update: if request.auth != null
-        && request.auth.uid == resource.data.facilitatorUid;
+        && request.auth.uid == resource.data.facilitatorUid
+        && request.resource.data.facilitatorUid == resource.data.facilitatorUid;
 
       allow delete: if false; // se limpian solas por TTL (ver expiresAt), no hace falta borrado manual
 
@@ -39,14 +63,23 @@ service cloud.firestore {
       // este documento ANTES de crear el de participants/{uid}; si falla, la función ya está
       // tomada. No se valida acá que roleKey pertenezca al roleRoster real del escenario
       // (las reglas no pueden recorrer fácilmente un arreglo de mapas) — esa parte sigue
-      // siendo un chequeo del lado del cliente en joinRoom().
+      // siendo un chequeo del lado del cliente en joinRoom(). Solo se puede reclamar mientras
+      // la sala existe y sigue en 'lobby': si no, cualquiera con el código podría acaparar
+      // todas las funciones de una sala (o reclamar en salas que no existen).
       match /roleClaims/{roleKeyId} {
         allow get, list: if request.auth != null;
-        allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
+        allow create: if request.auth != null
+          && roleKeyId.size() <= 100
+          && request.resource.data.keys().hasOnly(['uid', 'claimedAt', 'expiresAt'])
+          && request.resource.data.uid == request.auth.uid
+          && roomData(roomCode).status == 'lobby';
         // Solo quien ya tenía este reclamo puede "actualizarlo" (en la práctica, solo pasa si
         // vuelve a intentar tras una falla de red a mitad del join) — cualquier otro uid que
         // llegue después de que el documento ya existe queda bloqueado acá.
-        allow update: if request.auth != null && request.auth.uid == resource.data.uid;
+        allow update: if request.auth != null
+          && request.auth.uid == resource.data.uid
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.keys().hasOnly(['uid', 'claimedAt', 'expiresAt']);
         allow delete: if false; // se limpia sola por TTL, igual que participants
       }
 
@@ -55,28 +88,48 @@ service cloud.firestore {
         // el roster completo (quién se unió, qué función tomó) para evitar duplicados.
         allow get, list: if request.auth != null;
 
+        // claimedRoleKey tiene que estar respaldado por un roleClaims/{key} a nombre de este
+        // mismo uid: sin esto, un cliente que se salta la UI podría crear su participante con
+        // la función de otro y responder por él (la unicidad de roleClaims no serviría de nada).
         allow create: if request.auth != null
           && request.auth.uid == uid
+          && request.resource.data.keys().hasOnly(['uid', 'displayName', 'claimedRoleKey', 'joinedAt', 'lastSeen', 'expiresAt', 'vote', 'answer'])
           && request.resource.data.uid == uid
+          && request.resource.data.displayName is string
+          && request.resource.data.displayName.size() > 0
+          && request.resource.data.displayName.size() <= 60
+          && request.resource.data.claimedRoleKey is string
+          && get(/databases/$(database)/documents/rooms/$(roomCode)/roleClaims/$(request.resource.data.claimedRoleKey)).data.uid == uid
           && request.resource.data.vote == null
           && request.resource.data.answer == null
-          && get(/databases/$(database)/documents/rooms/$(roomCode)).data.status == 'lobby';
+          && roomData(roomCode).status == 'lobby';
 
-        // Cada participante solo puede tocar su propio documento, y nunca puede cambiar la
-        // función que reclamó al unirse (si pudiera, cualquiera podría "convertirse" en quien
-        // ganó la votación justo antes de responder). Los campos `vote`/`answer` (Fases 2/3)
-        // quedan acotados: solo se pueden escribir en la fase que corresponde y solo si el
-        // uid reclamó la función a la que le toca actuar/responder.
+        // Cada participante solo puede tocar su propio documento, y solo los campos `vote` y
+        // `answer` — nunca la función que reclamó (si pudiera, cualquiera podría "convertirse"
+        // en quien ganó la votación justo antes de responder). `vote`/`answer` (Fases 2/3)
+        // quedan acotados: solo se pueden escribir en la fase que corresponde, con la forma
+        // que espera facilitator.js, y `answer` solo si el uid reclamó la función a la que le
+        // toca responder.
         allow update: if request.auth != null && request.auth.uid == uid
-          && request.resource.data.claimedRoleKey == resource.data.claimedRoleKey
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['vote', 'answer'])
           && (
             !('vote' in request.resource.data.diff(resource.data).affectedKeys())
-            || get(/databases/$(database)/documents/rooms/$(roomCode)).data.get('currentAct', {}).get('phase', null) == 'voting'
+            || (
+              roomData(roomCode).get('currentAct', {}).get('phase', null) == 'voting'
+              && request.resource.data.vote.keys().hasOnly(['actKey', 'roleKey', 'castAt'])
+              && request.resource.data.vote.actKey is string
+              && request.resource.data.vote.roleKey is string
+            )
           ) && (
             !('answer' in request.resource.data.diff(resource.data).affectedKeys())
             || (
-              get(/databases/$(database)/documents/rooms/$(roomCode)).data.get('currentAct', {}).get('phase', null) == 'answering'
-              && resource.data.claimedRoleKey == get(/databases/$(database)/documents/rooms/$(roomCode)).data.get('currentAct', {}).get('target', null)
+              roomData(roomCode).get('currentAct', {}).get('phase', null) == 'answering'
+              && resource.data.claimedRoleKey == roomData(roomCode).get('currentAct', {}).get('target', null)
+              && request.resource.data.answer.keys().hasOnly(['actKey', 'optionIndex', 'submittedAt'])
+              && request.resource.data.answer.actKey is string
+              && request.resource.data.answer.optionIndex is int
+              && request.resource.data.answer.optionIndex >= 0
+              && request.resource.data.answer.optionIndex < 10
             )
           );
 

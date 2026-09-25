@@ -1,1 +1,8 @@
 .claude/
+
+# Material de clientes: nunca al repo (es público y se publica en GitHub Pages)
+*.docx
+*.pptx
+*.xlsx
+*.pdf
+tabletop-resultado_*.json

@@ -10,9 +10,12 @@ import {
 const ROOM_CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // sin 0/O ni 1/I/L: se confunden al leerlos en voz alta o a distancia
 const ROOM_TTL_MS = 12 * 60 * 60 * 1000; // 12h — sesión corta, no hace falta más
 
+// crypto.getRandomValues y no Math.random: el código de sala es la única barrera para
+// entrar, así que no debe ser predecible. El sesgo de módulo (256 % 31) es despreciable acá.
 function randomRoomCode(){
+  const bytes = crypto.getRandomValues(new Uint8Array(6));
   let code = '';
-  for(let i = 0; i < 6; i++) code += ROOM_CODE_ALPHABET[Math.floor(Math.random() * ROOM_CODE_ALPHABET.length)];
+  for(const b of bytes) code += ROOM_CODE_ALPHABET[b % ROOM_CODE_ALPHABET.length];
   return code;
 }
 
@@ -113,7 +116,7 @@ export async function joinRoom(code, {displayName, roleKey}){
   }
 
   await setDoc(doc(db, 'rooms', code, 'participants', uid), {
-    uid, displayName: displayName.trim(), claimedRoleKey: roleKey,
+    uid, displayName: displayName.trim().slice(0, 60), claimedRoleKey: roleKey, // 60: tope de firestore.rules
     joinedAt: serverTimestamp(), lastSeen: serverTimestamp(),
     expiresAt,
     vote: null, answer: null
@@ -145,6 +148,16 @@ export async function setActPhase(code, phase){
   await updateDoc(doc(db, 'rooms', code), {'currentAct.phase': phase});
 }
 
+// Pasa el acto vigente a 'answering' y recién ahí publica la función que debe responder y
+// las alternativas. Durante la votación currentAct no las trae: cualquier participante puede
+// leer la sala completa (DevTools), así que publicar `target` antes delataría la respuesta.
+export async function openAnswering(code, target, options){
+  const {db} = await firebaseReady();
+  await updateDoc(doc(db, 'rooms', code), {
+    'currentAct.phase': 'answering', 'currentAct.target': target, 'currentAct.options': options
+  });
+}
+
 // El participante actual vota por un roleKey para el acto vigente (actKey). Las reglas de
 // seguridad ya exigen que currentAct.phase sea 'voting' para poder escribir este campo.
 export async function castVote(code, actKey, roleKey){
@@ -156,8 +169,8 @@ export async function castVote(code, actKey, roleKey){
 
 // ---------------- Fase 3: respuesta individual ----------------
 
-// El participante actual envía su alternativa (optionIndex, en el orden ORIGINAL de q.options
-// — cada celular mezcla las 4 por su cuenta, ver participant-app.js) para el acto vigente.
+// El participante actual envía su alternativa (optionIndex, en el orden de currentAct.options
+// tal como lo publicó el facilitador — ver answerOrder en facilitator.js) para el acto vigente.
 // Las reglas de seguridad ya exigen phase == 'answering' y que este uid haya reclamado
 // exactamente la función a la que le toca responder (currentAct.target).
 export async function submitAnswer(code, actKey, optionIndex){

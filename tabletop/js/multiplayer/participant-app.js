@@ -245,9 +245,9 @@ function shuffledIndicesLocal(n){
   return arr;
 }
 
-// Cada celular mezcla las 4 alternativas por su cuenta (igual que la pantalla del
-// facilitador) y envía por índice ORIGINAL, no por posición visual — así no hace falta
-// sincronizar el orden entre dispositivos (ver room.js, submitAnswer).
+// Cada celular mezcla las 4 alternativas por su cuenta y envía por índice en act.options (el
+// orden publicado, que el facilitador ya mezcló y sabe traducir), no por posición visual —
+// así no hace falta sincronizar el orden entre dispositivos (ver room.js, submitAnswer).
 function renderAnswerGrid(act){
   answerStatusEl.textContent = 'Elige la alternativa correcta.';
   const options = act.options || [];
