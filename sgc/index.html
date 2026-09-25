@@ -3,40 +3,296 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>SGC · No disponible</title>
+<meta name="robots" content="noindex">
+<!-- CSP: solo scripts propios y de los CDN usados abajo (con versión fija + SRI); conexiones solo
+     a Supabase y Firebase Auth. Si se agrega otra librería o servicio, hay que sumarlo acá. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://tufpwziickeigrbfeqvh.supabase.co wss://tufpwziickeigrbfeqvh.supabase.co https://identitytoolkit.googleapis.com https://securetoken.googleapis.com; frame-src https://cosmic-roaming-walrus.firebaseapp.com; object-src 'none'; base-uri 'self'; form-action 'self'">
+<title>SGC · Cumplimiento CIP</title>
+<style id="authHide">html{visibility:hidden}</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" integrity="sha384-bs/nf9FbdNouRbMiFcrcZfLXYPKiPaGVGplVbv7dLGECccEXDW+S3zjqSKR5ZEaD" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js" integrity="sha384-y49Zu59jZHJL/PLKgZPv3k2WI9c0Yp3pWB76V8OBVCb0QBKS8l4Ff3YslzHVX76Y" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.min.js" integrity="sha384-WgXwGL6fUsYJWNaKJgVbrJKGRQwc1vieh2oy4kw9nXqpNDz3tdSsqEYUgeHD/NuF" crossorigin="anonymous"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<style>
-:root{
-  --bg:#070C1A; --panel:rgba(15,23,42,0.55); --border:rgba(255,255,255,0.08);
-  --text:#F1F5F9; --muted:#8592AE; --blue:#0EA5E9;
-  --sans:'Plus Jakarta Sans',-apple-system,sans-serif;
-}
-*{box-sizing:border-box}
-html,body{margin:0;padding:0}
-body{
-  background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;
-  display:flex;align-items:center;justify-content:center;text-align:center;
-  padding:24px;
-}
-.box{
-  max-width:26rem;padding:36px 30px;border-radius:16px;
-  background:var(--panel);border:1px solid var(--border);
-}
-.box h1{font-size:1.25rem;font-weight:800;margin:0 0 10px}
-.box p{color:var(--muted);font-size:0.9rem;line-height:1.5;margin:0 0 22px}
-.box a{
-  display:inline-flex;align-items:center;gap:6px;color:var(--blue);
-  font-size:0.85rem;font-weight:700;text-decoration:none;
-}
-</style>
+<link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-  <div class="box">
-    <h1>Herramienta no disponible</h1>
-    <p>El SGC está deshabilitado temporalmente.</p>
-    <a href="../index.html">&larr; Volver al inicio</a>
+
+<div class="topbar" style="flex-wrap:wrap">
+  <div class="brand">
+    <a href="../index.html" aria-label="Volver al inicio" style="display:inline-flex;line-height:0">
+      <img src="img/logo-tibox-ok.png" alt="TIBOX" style="width:110px;height:32px;object-fit:contain">
+    </a>
+    <div style="width:1px;height:24px;background:var(--br)"></div>
   </div>
+  <div class="tabs">
+    <button class="tab on icon-only" data-tab="req" title="Requerimientos">📋</button>
+    <button class="tab icon-only" data-tab="dash" title="Dashboard">📊</button>
+  </div>
+  <div class="topright">
+    <button class="btn icon-only" id="btnGuardarSnapshot" title="Guardar snapshot — Guarda una foto del estado de hoy en la base de datos, para poder compararla más adelante en 'Comparar avances'">📸</button>
+    <button class="btn icon-only" id="btnCompare" title="Comparar avances — Compara el estado entre dos fechas guardadas en la base de datos">📅</button>
+    <button class="btn icon-only" id="btnExcel" title="Exportar Excel — Exporta a Excel lo que estés viendo con los filtros actuales">📊</button>
+    <button class="btn" type="button" data-auth-signout title="Cerrar sesión">Salir</button>
+  </div>
+</div>
+
+<aside class="app-sidebar" id="appSidebar">
+  <div class="sidebar-body">
+
+    <!-- FILTROS: REQUERIMIENTOS -->
+    <div class="sidebar-section on" id="sidebar-req">
+      <div class="sb-block">
+        <div class="sb-label">Buscar</div>
+        <input type="text" class="search-input" id="searchInput" placeholder="🔍 Aspecto, evidencia, responsable..." style="width:100%">
+      </div>
+      <div class="sb-block">
+        <details class="sb-accordion">
+          <summary class="sb-label">Organización</summary>
+          <div class="sb-checks">
+            <label class="sb-check"><input type="checkbox" data-of="tibox">TIBOX</label>
+            <label class="sb-check"><input type="checkbox" data-of="quintero">Quintero</label>
+            <label class="sb-check"><input type="checkbox" data-of="sin-asignar">Sin Asignar</label>
+          </div>
+        </details>
+      </div>
+      <div class="sb-block">
+        <details class="sb-accordion">
+          <summary class="sb-label">Dominio</summary>
+          <div id="domChips" class="sb-checks"></div>
+          <button class="btn btn-primary" id="btnFiltrarDominio" style="width:100%;justify-content:center;margin-top:10px">🔍 Filtrar Dominio</button>
+        </details>
+      </div>
+      <div class="sb-block">
+        <div class="sb-label">Estado</div>
+        <div class="sb-chips">
+          <button class="chip on" data-sf="all">Todos</button>
+          <button class="chip" data-sf="Pendiente">Pendiente</button>
+          <button class="chip" data-sf="En proceso">En proceso</button>
+          <button class="chip" data-sf="Listo">Listo</button>
+        </div>
+      </div>
+      <div class="sb-block">
+        <div class="sb-label">Resumen</div>
+        <div class="summary" id="summary" style="flex-wrap:wrap"></div>
+      </div>
+
+      <!-- PERSONAS POR ORGANIZACIÓN (abre popout) -->
+      <button type="button" class="btn" id="btnResponsables" style="width:100%;justify-content:center;gap:8px">
+        👥 Responsables <span class="p-badge" id="pBadge"></span>
+      </button>
+    </div>
+
+    <!-- FILTROS: DASHBOARD -->
+    <div class="sidebar-section" id="sidebar-dash">
+      <div class="sb-block">
+        <div class="sb-label">Organización</div>
+        <select id="dashOrgSel" class="fsel" style="width:100%">
+          <option value="all">Todas</option>
+          <option value="quintero">Quintero Energía</option>
+          <option value="tibox">TIBOX</option>
+          <option value="sin-asignar">Sin Asignar</option>
+        </select>
+      </div>
+      <div class="sb-block">
+        <div class="sb-label">Responsable</div>
+        <select id="dashRespSel" class="fsel" style="width:100%">
+          <option value="all">Todos los responsables</option>
+        </select>
+      </div>
+      <div class="sb-block">
+        <div class="sb-label">Aspectos por estado</div>
+        <div class="chip-filter" id="respStFilter" style="margin:0">
+          <button data-st="all" class="on">Todos</button>
+          <button data-st="Pendiente">Pendiente</button>
+          <button data-st="En proceso">En proceso</button>
+          <button data-st="Listo">Listo</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</aside>
+
+<!-- REQUERIMIENTOS -->
+<section class="page on" id="page-req">
+  <div class="ph">
+    <h2>Requerimientos CIP</h2>
+    <p>Registros y documentos requeridos por el Estándar de Ciberseguridad SEN</p>
+  </div>
+
+  <!-- FORM (popout) -->
+  <div class="modal-overlay" id="editModalOverlay">
+  <div class="edit-form">
+    <button type="button" class="modal-close" id="modalCloseBtn" title="Cerrar">✕</button>
+    <span class="feyebrow">Panel de cumplimiento CIP</span>
+    <div class="ftitle">Asignar evidencia y estado del entregable <span id="formFilterBadge" style="font-size:0.72rem;font-weight:600;text-transform:none;letter-spacing:0;color:var(--mu)"></span></div>
+
+    <div class="step"><span class="num">1</span><span class="lbl">Ubicación del requerimiento</span></div>
+    <div class="row1">
+      <div><label>Dominio</label><select id="fDomSel" class="fsel"><option value="">— Seleccionar —</option></select></div>
+      <div><label>Requerimiento</label><select id="fReqSel" class="fsel" disabled><option value="">— Primero selecciona dominio —</option></select></div>
+    </div>
+    <div class="req-desc-full" id="fReqDescFull"></div>
+    <div class="row-aspecto">
+      <label>Aspecto a Mejorar</label>
+      <div class="asp-wrap">
+        <select id="fAspSel" class="asp-native" disabled><option value="">— Primero selecciona requerimiento —</option></select>
+        <button type="button" class="asp-btn ph" id="aspBtn" disabled>— Primero selecciona requerimiento —</button>
+        <span class="asp-caret">▾</span>
+        <div class="asp-menu" id="aspMenu"></div>
+      </div>
+    </div>
+
+    <div class="step"><span class="num">2</span><span class="lbl">Evidencia, responsable y estado</span></div>
+    <div class="row2">
+      <div><label>Evidencia</label><textarea id="fEvidencia" class="ftarea" rows="3" placeholder="Redacta la evidencia..."></textarea></div>
+      <div><label>Responsable</label><input type="text" id="fResponsable" class="finput" placeholder="Nombre del responsable"></div>
+      <div><label>Organización</label><select id="fOrg" class="fsel" title="Se calcula desde el responsable. Si la cambias, ese valor se conserva."><option value="sin-asignar">Sin Asignar</option><option value="tibox">TIBOX</option><option value="quintero">Quintero</option></select></div>
+      <div><label>Estado</label>
+        <select id="fEstado" class="fsel">
+          <option>Pendiente</option><option>En proceso</option><option>Listo</option>
+        </select>
+      </div>
+    </div>
+    <div id="fMsg" style="margin-bottom:14px;font-size:0.8rem;display:none"></div>
+    <div class="factions">
+      <button id="fLimpiar" class="btn">Cancelar</button>
+      <button id="fGuardar" class="btn btn-primary">💾 Guardar</button>
+    </div>
+  </div>
+  </div>
+
+  <!-- PERSONAS POR ORGANIZACIÓN (popout) -->
+  <div class="modal-overlay" id="personasModalOverlay">
+  <div class="edit-form" style="max-width:820px">
+    <button type="button" class="modal-close" id="personasCloseBtn" title="Cerrar">✕</button>
+    <span class="feyebrow">Panel de cumplimiento CIP</span>
+    <div class="ftitle">👥 Responsables por Organización</div>
+    <p class="p-desc">Define a qué organización pertenece cada responsable. La organización de cada entregable se calcula a partir de esta lista.</p>
+    <div class="p-add">
+      <div>
+        <label>Nombre</label>
+        <input type="text" id="pNombre" class="finput" placeholder="Escríbelo igual que en la columna Responsable">
+      </div>
+      <div>
+        <label>Organización</label>
+        <select id="pOrg" class="fsel">
+          <option value="tibox">TIBOX</option>
+          <option value="quintero">Quintero</option>
+          <option value="sin-asignar">Sin Asignar</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:8px;padding-bottom:1px">
+        <button id="pAgregar" class="btn btn-primary">＋ Agregar persona</button>
+      </div>
+    </div>
+    <div id="pMsg" style="margin-top:10px;font-size:0.75rem;display:none"></div>
+    <div id="pSinClasificar" style="margin-top:12px"></div>
+    <div class="tbl-wrap" style="margin-top:12px">
+      <table>
+        <thead><tr>
+          <th>#</th><th>Nombre</th><th>Organización</th><th>Entregables</th><th></th>
+        </tr></thead>
+        <tbody id="pTbody"></tbody>
+      </table>
+    </div>
+    <div class="count-bar" id="pCount"></div>
+  </div>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <colgroup>
+        <col class="c-num"><col class="c-req"><col class="c-asp">
+        <col class="c-ev"><col class="c-resp"><col class="c-est">
+      </colgroup>
+      <thead><tr>
+        <th>#</th><th>Req.</th><th>Aspecto a Mejorar</th>
+        <th>Evidencia</th><th>Responsable</th><th>Estado</th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+  <div class="count-bar" id="countBar"></div>
+</section>
+
+<!-- DASHBOARD -->
+<section class="page" id="page-dash">
+
+  <!-- Row 1: Aspectos por Responsable — Quintero | Entregables por Estado | TIBOX -->
+  <div class="dash-row-est">
+    <div class="card">
+      <div class="card-title">Aspectos por Responsable — Quintero Energía</div>
+      <div class="card-sub">Distribución de aspectos entre los responsables de Quintero</div>
+      <div class="chart-wrap" style="position:relative">
+        <canvas id="chartAspQ"></canvas>
+        <div class="pie-empty" id="emptyQ" style="display:none">Sin aspectos para el filtro seleccionado</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Entregables por Estado</div>
+      <div class="card-sub">Total de entregables según su estado de cumplimiento</div>
+      <div class="chart-wrap" style="position:relative">
+        <canvas id="chartEstado"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Aspectos por Responsable — TIBOX</div>
+      <div class="card-sub">Distribución de aspectos entre los responsables de TIBOX</div>
+      <div class="chart-wrap" style="position:relative">
+        <canvas id="chartAspT"></canvas>
+        <div class="pie-empty" id="emptyT" style="display:none">Sin aspectos para el filtro seleccionado</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 2: Dominio y Estado | Avance comparado -->
+  <div class="dash-row">
+    <div class="card">
+      <div class="card-title">Entregables por Dominio y Estado</div>
+      <div class="card-sub">Desglose de Pendiente / En proceso / Listo por dominio</div>
+      <div class="chart-wrap" style="min-height:300px"><canvas id="chartStacked"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title" id="compareChartTitle">Avance por Dominio</div>
+      <div class="card-sub" id="compareChartSub">Progreso ponderado del estado actual por dominio</div>
+      <div class="chart-wrap" style="min-height:300px"><canvas id="chartOrg"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<div class="toast" id="toast"></div>
+
+<div class="compare-modal" id="compareModal">
+  <div class="compare-box">
+    <div class="compare-title">Comparar avances</div>
+    <div class="compare-sub">Elige dos fechas guardadas con "📸 Guardar snapshot" para comparar su avance. Los días marcados tienen snapshot; el resto no se puede elegir.</div>
+    <div class="compare-fields">
+      <div class="compare-field"><label>Fecha anterior</label>
+        <div class="mini-cal" id="calPrev" style="--mc-accent:var(--accent2);--mc-on:var(--accent2-on)"></div>
+      </div>
+      <div class="compare-field"><label>Fecha actual</label>
+        <div class="mini-cal" id="calCurrent"></div>
+      </div>
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:0.72rem;color:var(--mu);cursor:pointer">
+      <input type="checkbox" id="compareUsarEnVivo" checked>
+      🔴 Comparar "Fecha actual" contra el estado en vivo (ahora), no una fecha guardada
+    </label>
+    <div id="compareFileStatus" style="font-size:0.68rem;color:var(--mu);margin-top:12px"></div>
+    <div class="compare-actions">
+      <button class="btn" id="btnCloseCompare">Cancelar</button>
+      <button class="btn btn-primary" id="btnRunCompare" disabled>Comparar avances</button>
+    </div>
+  </div>
+</div>
+
+<script src="../tabletop/js/multiplayer/firebase-config.js"></script>
+<script src="js/db.js"></script>
+<script src="js/app.js"></script>
+<script type="module" src="../auth/guard.js"></script>
+<script type="module" src="js/auth-bridge.js"></script>
 </body>
 </html>

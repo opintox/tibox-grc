@@ -1530,5 +1530,8 @@ dbCargarTodo().then(function(data){
   loadData(data);
 }).catch(function(err){
   toast('❌ No se pudo conectar a la base de datos: '+err.message);
+  // El toast se va solo; el motivo (ej. cuenta sin acceso) queda visible en la tabla.
+  const tbody=document.getElementById('tbody');
+  if(tbody) tbody.innerHTML='<tr><td colspan="6" style="padding:24px 12px;color:var(--mu)">'+esc(err.message)+'</td></tr>';
   console.error(err);
 });
