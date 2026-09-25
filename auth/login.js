@@ -3,14 +3,15 @@
 import { auth, hasMfaSession, isAllowedUser } from './auth-core.js';
 import {
   signInWithEmailAndPassword, signOut, sendEmailVerification, multiFactor,
-  getMultiFactorResolver, TotpMultiFactorGenerator
+  getMultiFactorResolver, TotpMultiFactorGenerator, applyActionCode
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 
 const $ = id => document.getElementById(id);
-const steps = { creds: $('stepCreds'), mfa: $('stepMfa'), enroll: $('stepEnroll') };
+const steps = { creds: $('stepCreds'), mfa: $('stepMfa'), enroll: $('stepEnroll'), verify: $('stepVerify') };
 let resolver = null;      // resolver de Firebase mientras se espera el código TOTP
 let totpHint = null;
 let pendingSecret = null; // secreto TOTP a punto de registrarse
+const VERIFY_RESEND_MS = 10 * 60 * 1000; // ver startEnrollment
 
 function show(name){
   Object.entries(steps).forEach(([k, el]) => el.classList.toggle('on', k === name));
@@ -35,6 +36,8 @@ function errText(err){
     case 'auth/network-request-failed': return 'Sin conexión. Revisa tu internet e inténtalo de nuevo.';
     case 'auth/operation-not-allowed': return 'El acceso con correo o la verificación en 2 pasos no está habilitado en Firebase todavía (falta activar Correo/contraseña, Identity Platform y TOTP).';
     case 'auth/unverified-email': return 'Debes verificar tu correo antes de activar la verificación en 2 pasos.';
+    case 'auth/invalid-action-code':
+    case 'auth/expired-action-code': return 'Este link de verificación ya no es válido. Inicia sesión otra vez para recibir uno nuevo y usa solo el más reciente.';
     default: return 'No se pudo completar. Inténtalo de nuevo.';
   }
 }
@@ -59,11 +62,22 @@ async function startEnrollment(user){
     return;
   }
   if(!user.emailVerified){
-    await sendEmailVerification(user);
+    // Cada envío invalida el link anterior: si se reintenta el login antes de abrir el correo,
+    // no se manda otro (así el link que ya está en la bandeja sigue sirviendo).
     const email = user.email;
+    const sentKey = 'tibox.verifySentAt.' + email;
+    let lastSent = 0;
+    try{ lastSent = Number(localStorage.getItem(sentKey)) || 0; }catch(e){ /* sin localStorage */ }
+    const recent = Date.now() - lastSent < VERIFY_RESEND_MS;
+    if(!recent){
+      await sendEmailVerification(user);
+      try{ localStorage.setItem(sentKey, String(Date.now())); }catch(e){ /* sin localStorage */ }
+    }
     await signOut(auth);
     show('creds');
-    setMsg(`Te enviamos un correo de verificación a ${email}. Ábrelo, confirma y vuelve a iniciar sesión.`, 'ok');
+    setMsg(recent
+      ? `Ya te enviamos un correo de verificación a ${email} hace poco. Usa ese link; si no llegó, espera unos minutos y vuelve a intentar.`
+      : `Te enviamos un correo de verificación a ${email}. Ábrelo, presiona "Confirmar mi correo" y vuelve a iniciar sesión.`, 'ok');
     return;
   }
   const session = await multiFactor(user).getSession();
@@ -157,7 +171,44 @@ document.querySelectorAll('[data-cancel]').forEach(b => b.addEventListener('clic
   show('creds');
 }));
 
+// Links de los correos de Firebase (plantillas con "URL de acción" apuntando a esta página).
+// La verificación de correo se aplica recién cuando la persona presiona el botón: los filtros
+// de correo corporativo (ej. Microsoft Defender Safe Links) abren los links para revisarlos y,
+// con la página por defecto de Firebase, eso gastaba el código antes de que la persona llegara.
+// Cualquier otra acción (ej. restablecer contraseña) se deriva a la página estándar de Firebase.
+function handleActionLink(){
+  const params = new URLSearchParams(location.search);
+  const mode = params.get('mode');
+  const oobCode = params.get('oobCode');
+  if(!mode || !oobCode) return false;
+  if(mode !== 'verifyEmail'){
+    location.replace(`https://${window.TIBOX_FIREBASE_CONFIG.authDomain}/__/auth/action${location.search}`);
+    return true;
+  }
+  show('verify');
+  steps.verify.addEventListener('submit', async e => {
+    e.preventDefault();
+    setMsg('');
+    const btn = $('verifyBtn');
+    btn.disabled = true;
+    try{
+      await applyActionCode(auth, oobCode);
+      history.replaceState(null, '', location.pathname); // saca el código de la URL
+      show('creds');
+      setMsg('Correo verificado. Ahora inicia sesión para activar tu autenticador.', 'ok');
+    }catch(err){
+      history.replaceState(null, '', location.pathname);
+      show('creds');
+      setMsg(errText(err));
+    }finally{
+      btn.disabled = false;
+    }
+  });
+  return true;
+}
+
 (async () => {
+  if(handleActionLink()) return;
   await auth.authStateReady();
   if(await hasMfaSession(auth.currentUser)) location.replace(destination());
 })();
