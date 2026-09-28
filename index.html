@@ -72,11 +72,12 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;justify-conten
 }
 .hub-head p{color:var(--muted);font-size:var(--fs-lg);line-height:1.5;margin:0;max-width:34rem;margin-inline:auto}
 
+/* Una sola columna mientras el SGC está deshabilitado; con las dos tarjetas visibles era:
+   grid-template-columns:repeat(2,minmax(0,300px)); max-width:660px; y en ≤640px 1fr / 340px. */
 .card-grid{
-  display:grid;grid-template-columns:repeat(2,minmax(0,300px));gap:var(--sp-5);
-  width:100%;max-width:660px;
+  display:grid;grid-template-columns:minmax(0,300px);gap:var(--sp-5);
+  width:100%;max-width:300px;justify-content:center;
 }
-@media (max-width:640px){.card-grid{grid-template-columns:1fr;max-width:340px}}
 
 .hub-card{
   --glow:var(--blue);
@@ -93,6 +94,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;justify-conten
   box-shadow:0 1px 0 0 rgba(255,255,255,.06) inset,0 24px 44px -20px rgba(0,0,0,.65),0 18px 32px -14px var(--glow);
 }
 .hub-card:focus-visible{outline:none;border-color:var(--glow)}
+.hub-card[hidden]{display:none} /* .hub-card usa display:flex, que si no anula el atributo hidden */
 .hub-card.acc-amber{--glow:var(--amber)}
 .hub-card.acc-blue{--glow:var(--blue)}
 
@@ -147,7 +149,9 @@ footer{padding:var(--sp-5);text-align:center;color:var(--muted-2);font-size:var(
       </span>
     </a>
 
-    <a class="hub-card acc-blue" href="sgc/index.html">
+    <!-- SGC deshabilitado: la tarjeta queda oculta (hidden). Para reactivarlo, quitar
+         "hidden" y renombrar sgc/_index.app.html a sgc/index.html. -->
+    <a class="hub-card acc-blue" href="sgc/index.html" hidden>
       <div class="hub-card-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
           <rect x="6" y="4" width="12" height="17" rx="2"/>
