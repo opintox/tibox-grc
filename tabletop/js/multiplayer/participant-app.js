@@ -3,8 +3,9 @@
 // celular, responder la alternativa (Fase 3).
 import {
   getRoom, getMyParticipant, listenRoom, listenParticipants, listenMyParticipant, joinRoom, castVote, submitAnswer,
-  PARTICIPANT_STATUS
+  submitAccessCode, PARTICIPANT_STATUS, MAX_CODE_ATTEMPTS, codeAttemptsUsed
 } from './room.js';
+import { signOut } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 
 const codeInput = document.getElementById('joinCodeInput');
 const nameInput = document.getElementById('joinNameInput');
@@ -17,6 +18,10 @@ const waitingPanel = document.getElementById('joinWaitingPanel');
 const joinedRoleName = document.getElementById('joinedRoleName');
 const joinWaitingText = document.getElementById('joinWaitingText');
 const joinWaitingEyebrow = document.getElementById('joinWaitingEyebrow');
+const codeForm = document.getElementById('joinCodeForm');
+const codeField = document.getElementById('joinAccessCode');
+const codeBtn = document.getElementById('joinCodeBtn');
+const codeMsg = document.getElementById('joinCodeMsg');
 const votePanel = document.getElementById('joinVotePanel');
 const voteStageEl = document.getElementById('joinVoteStage');
 const voteTitleEl = document.getElementById('joinVoteTitle');
@@ -43,6 +48,8 @@ let lastAnsweredActKey = null; // evita re-mostrar las alternativas ya enviadas 
 let myStatus = null;
 let unsubscribeMine = null;
 let lastRoom = null;
+let me = null;            // último documento propio (intentos de código, resultado)
+let sessionEnded = false; // la sala se cerró: ya no se escucha ni se escribe nada
 
 function setStatus(text, kind){
   statusEl.textContent = text || '';
@@ -98,6 +105,7 @@ async function loadRoom(code){
 
   if(code !== codeInput.value.trim().toUpperCase()) return; // el usuario ya cambió el código mientras esperábamos la respuesta
   if(!room){ setStatus('No existe una sala con ese código.', 'error'); return; }
+  if(room.status === 'closed'){ setStatus('Este ejercicio ya terminó.', 'error'); return; }
 
   // Reingreso: si esta misma sesión anónima (mismo navegador/celular) ya estaba en la sala
   // —cerró la pestaña sin querer o perdió la conexión—, se reconecta directo con la función
@@ -175,17 +183,46 @@ function enterWaitingMode(code, roleKey, roleRoster, room, status){
     if(!updatedRoom) return;
     handleActUpdate(updatedRoom, roleRoster);
   });
-  // Cuando el facilitador admite o rechaza, se vuelve a pintar con la última sala conocida.
-  unsubscribeMine = listenMyParticipant(code, me => {
-    if(!me) return;
-    myStatus = me.status;
+  // Cuando el facilitador revisa un código, admite o rechaza, se vuelve a pintar con la última
+  // sala conocida. Si el documento desaparece después de haber existido, el facilitador cerró
+  // el ejercicio (closeRoom borra a todos los participantes).
+  let hadDoc = false;
+  unsubscribeMine = listenMyParticipant(code, doc => {
+    if(!doc){ if(hadDoc) endSession(); return; }
+    hadDoc = true;
+    me = doc;
+    myStatus = doc.status;
     if(lastRoom) handleActUpdate(lastRoom, roleRoster);
     else renderAdmissionWait();
   });
 }
 
+// Fin del ejercicio: se cortan las escuchas, se ocultan votación/respuestas y se cierra la
+// sesión anónima de este celular (queda desconectado de la sala).
+function endSession(){
+  if(sessionEnded) return;
+  sessionEnded = true;
+  stopWatchingRoom();
+  if(unsubscribeMine){ unsubscribeMine(); unsubscribeMine = null; }
+  votePanel.classList.add('hidden');
+  answerPanel.classList.add('hidden');
+  codeForm.classList.add('hidden');
+  renderBriefing(null);
+  waitingPanel.classList.remove('hidden');
+  joinWaitingEyebrow.textContent = 'Ejercicio finalizado';
+  joinWaitingText.textContent = 'El facilitador cerró el ejercicio y tu conexión a la sala terminó. ¡Gracias por participar!';
+  const fb = window.TIBOX_MP_FIREBASE;
+  if(fb){
+    fb.sessionEnded = true; // firebase-init no vuelve a abrir una sesión anónima
+    if(fb.auth) signOut(fb.auth).catch(() => {});
+  }
+}
+
 // Pantalla de espera mientras este celular no está admitido (pendiente o rechazado).
+// Pantalla de espera mientras este celular no está admitido: pendiente (pide el código que le
+// da el facilitador) o rechazado.
 function renderAdmissionWait(){
+  if(sessionEnded) return;
   votePanel.classList.add('hidden');
   answerPanel.classList.add('hidden');
   waitingPanel.classList.remove('hidden');
@@ -194,8 +231,47 @@ function renderAdmissionWait(){
   joinWaitingEyebrow.textContent = rejected ? 'Ingreso no autorizado' : 'Solicitud enviada';
   joinWaitingText.textContent = rejected
     ? 'El facilitador no autorizó tu ingreso a esta sala. Si crees que es un error, avísale.'
-    : 'Esperando que el facilitador autorice tu ingreso. Cuando lo haga, esta pantalla se actualiza sola.';
+    : 'Para entrar, pide tu código personal al facilitador y escríbelo aquí.';
+  codeForm.classList.toggle('hidden', rejected);
+  if(rejected) return;
+
+  const attempt = me && me.codeAttempt;
+  const checked = (me && me.codeChecked) || 0;
+  const remaining = MAX_CODE_ATTEMPTS - codeAttemptsUsed(me);
+  const reviewing = !!attempt && attempt.n > checked;
+  let msg = '', kind = '';
+  if(reviewing){ msg = 'Revisando el código…'; }
+  else if(remaining <= 0){ msg = 'Se acabaron los intentos. Pide al facilitador un código nuevo.'; kind = 'error'; }
+  else if(attempt && attempt.n === checked && codeAttemptsUsed(me) > 0){
+    msg = `Código incorrecto. Te quedan ${remaining} intento${remaining === 1 ? '' : 's'}.`; kind = 'error';
+  }
+  codeMsg.textContent = msg;
+  codeMsg.className = 'join-code-msg' + (kind ? ` is-${kind}` : '');
+  const locked = reviewing || remaining <= 0;
+  codeField.disabled = locked;
+  codeBtn.disabled = locked;
 }
+
+codeForm.addEventListener('submit', async e => {
+  e.preventDefault();
+  const value = codeField.value.replace(/\D/g, '');
+  if(value.length !== 6){ codeMsg.textContent = 'El código tiene 6 dígitos.'; codeMsg.className = 'join-code-msg is-error'; return; }
+  const n = ((me && me.codeAttempt && me.codeAttempt.n) || 0) + 1;
+  codeBtn.disabled = true;
+  codeField.disabled = true;
+  codeMsg.textContent = 'Revisando el código…';
+  codeMsg.className = 'join-code-msg';
+  try{
+    await submitAccessCode(currentCode, value, n);
+    codeField.value = '';
+  }catch(err){
+    codeMsg.textContent = 'No se pudo enviar el código. Revisa tu conexión e intenta de nuevo.';
+    codeMsg.className = 'join-code-msg is-error';
+    codeBtn.disabled = false;
+    codeField.disabled = false;
+  }
+});
+codeField.addEventListener('input', () => { codeField.value = codeField.value.replace(/\D/g, '').slice(0, 6); });
 
 submitBtn.addEventListener('click', async () => {
   if(submitBtn.disabled) return;
@@ -215,9 +291,12 @@ submitBtn.addEventListener('click', async () => {
 // room.status/currentAct.phase. Solo redibuja cada vista cuando cambia el actKey (si no, cada
 // snapshot de la sala volvería a pintar el formulario y perdería "ya voté"/"ya respondí").
 function handleActUpdate(room, roleRoster){
+  if(sessionEnded) return;
   lastRoom = room;
+  if(room.status === 'closed'){ endSession(); return; }
   if(myStatus !== PARTICIPANT_STATUS.ADMITTED){ renderAdmissionWait(); return; }
   joinWaitingEyebrow.textContent = 'Listo';
+  codeForm.classList.add('hidden');
   const act = room.currentAct;
   // Introducción del escenario: solo entre que el facilitador inicia y publica el primer acto.
   const showBriefing = room.status === 'in_progress' && !act && !!room.briefing;

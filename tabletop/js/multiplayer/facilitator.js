@@ -4,13 +4,72 @@
 // Expone window.MP para que app.js (script clásico, no módulo) lo llame sin imports.
 import {
   createRoom, listenParticipants, startRoom, publishAct, setActPhase, openAnswering, publishBriefing,
-  admitParticipant, rejectParticipant, PARTICIPANT_STATUS, isAdmitted
+  resolveCodeAttempt, resetCodeAttempts, rejectParticipant, closeRoom,
+  PARTICIPANT_STATUS, MAX_CODE_ATTEMPTS, isAdmitted, codeAttemptsUsed
 } from './room.js';
 
-let unsubscribeParticipants = null;
-// Último roster visto (sala de espera o popout "Sala"): app.js lo usa para el informe final
-// (quién tomó cada función), ver getPersonByRole.
-let lastParticipants = [];
+// ---------------- admisión por código (una escucha por sala) ----------------
+// Desde que se crea la sala hasta que se cierra hay UNA escucha de participantes: revisa los
+// intentos de código y redibuja las vistas abiertas (sala de espera y popout "Sala"). Así un
+// código se verifica aunque ninguna de las dos esté abierta en ese momento.
+let watchUnsub = null;
+let watchCode = null;
+let lastParticipants = [];          // también lo usa getPersonByRole para el informe final
+const rosterViews = new Map();      // 'lobby' | 'panel' -> {listEl, countEl, roleRoster}
+const issuedCodes = new Map();      // uid -> código de 6 dígitos (solo en este navegador)
+const revealUntil = new Map();      // uid -> hasta cuándo se muestra el código sin ocultar
+const inFlight = new Set();         // `${uid}:${n}` en revisión, para no resolver dos veces
+const REVEAL_MS = 10000;
+
+function newAccessCode(){
+  return String(crypto.getRandomValues(new Uint32Array(1))[0] % 1000000).padStart(6, '0');
+}
+
+function renderAllViews(){
+  rosterViews.forEach(v => renderRoster(lastParticipants, v.roleRoster, v.listEl, v.countEl, watchCode));
+}
+
+// Compara cada intento nuevo con el código que se le dio a esa persona (si no se le dio
+// ninguno, cualquier intento es incorrecto) y deja el resultado en Firestore.
+function processCodeAttempts(list){
+  list.forEach(p => {
+    if(p.status !== PARTICIPANT_STATUS.PENDING || !p.codeAttempt) return;
+    const n = p.codeAttempt.n;
+    if(n <= (p.codeChecked || 0)) return;
+    const key = `${p.uid}:${n}`;
+    if(inFlight.has(key)) return;
+    inFlight.add(key);
+    const issued = issuedCodes.get(p.uid);
+    const correct = !!issued && p.codeAttempt.value === issued;
+    resolveCodeAttempt(watchCode, p.uid, n, correct)
+      .then(() => { if(correct){ issuedCodes.delete(p.uid); revealUntil.delete(p.uid); } })
+      .catch(err => reportSyncError('revisar el código de un participante', err))
+      .finally(() => inFlight.delete(key));
+  });
+}
+
+function startAdmissionWatch(code){
+  stopAdmissionWatch();
+  watchCode = code;
+  watchUnsub = listenParticipants(code, list => { lastParticipants = list; processCodeAttempts(list); renderAllViews(); });
+}
+function stopAdmissionWatch(){
+  if(watchUnsub){ watchUnsub(); watchUnsub = null; }
+  watchCode = null;
+  lastParticipants = [];
+  rosterViews.clear();
+  issuedCodes.clear();
+  revealUntil.clear();
+  inFlight.clear();
+}
+
+// Cierra el ejercicio: corta la escucha, olvida los códigos y borra a todos los participantes
+// y sus funciones (ver closeRoom en room.js); cada celular se desconecta solo al detectarlo.
+function mpCloseRoom(code){
+  stopAdmissionWatch();
+  closeRoomPanel();
+  closeRoom(code).catch(err => reportSyncError('cerrar la sala y desconectar a los participantes', err));
+}
 
 function joinUrlFor(code){
   return new URL('join.html?room=' + encodeURIComponent(code), location.href).href;
@@ -62,9 +121,11 @@ const LOBBY_EMPTY_ICON = '<svg viewBox="0 0 24 24" width="26" height="26" fill="
 
 // listEl/countEl: mismo motivo que renderQr — la sala de espera y el popout "Sala" comparten
 // esta función con sus propios contenedores.
-// Roster con admisión: los pendientes aparecen primero con "Admitir"/"Rechazar"; los
-// admitidos, con "Quitar" por si se admitió a alguien por error; los rechazados no se
-// muestran. roomCode: la sala sobre la que actúan los botones (lobby o popout "Sala").
+// Roster con admisión por código: los pendientes aparecen primero con "Dar código" (o su código
+// oculto con "Ver", los intentos usados y "Nuevo código") y "Rechazar"; los admitidos, con
+// "Quitar"; los rechazados no se muestran. El código se muestra oculto (•••) porque la pantalla
+// del facilitador suele estar proyectada: "Ver" lo deja visible unos segundos para dictarlo.
+// roomCode: la sala sobre la que actúan los botones.
 function renderRoster(participantList, roleRoster, listEl, countEl, roomCode){
   const visibles = participantList.filter(p => p.status !== PARTICIPANT_STATUS.REJECTED);
   const pending = visibles.filter(p => p.status === PARTICIPANT_STATUS.PENDING);
@@ -78,14 +139,27 @@ function renderRoster(participantList, roleRoster, listEl, countEl, roomCode){
     </div>`;
     return;
   }
+  const now = Date.now();
   listEl.innerHTML = pending.concat(admitted).map(p => {
     const role = roleRoster.find(r => r.roleKey === p.claimedRoleKey);
     const [a] = (role && role.accent) || ['#8592AE'];
     const isPending = p.status === PARTICIPANT_STATUS.PENDING;
-    const actions = isPending
-      ? `<button type="button" class="btn btn-sm lobby-admit-btn" data-admit="${escapeHtmlLocal(p.uid)}">Admitir</button>
-         <button type="button" class="btn btn-sm lobby-reject-btn" data-reject="${escapeHtmlLocal(p.uid)}" data-role="${escapeHtmlLocal(p.claimedRoleKey || '')}">Rechazar</button>`
-      : `<button type="button" class="btn btn-sm lobby-reject-btn" data-reject="${escapeHtmlLocal(p.uid)}" data-role="${escapeHtmlLocal(p.claimedRoleKey || '')}" title="Quitar de la sala y liberar la función">Quitar</button>`;
+    const uid = escapeHtmlLocal(p.uid);
+    const rejectBtn = `<button type="button" class="btn btn-sm lobby-reject-btn" data-reject="${uid}" data-role="${escapeHtmlLocal(p.claimedRoleKey || '')}"${isPending ? '' : ' title="Quitar de la sala y liberar la función"'}>${isPending ? 'Rechazar' : 'Quitar'}</button>`;
+    let actions = rejectBtn;
+    if(isPending){
+      const issued = issuedCodes.get(p.uid);
+      const used = codeAttemptsUsed(p);
+      const shown = !!issued && (revealUntil.get(p.uid) || 0) > now;
+      const attempts = used > 0
+        ? `<span class="lobby-attempts${used >= MAX_CODE_ATTEMPTS ? ' is-out' : ''}">${used >= MAX_CODE_ATTEMPTS ? 'Sin intentos' : `${used}/${MAX_CODE_ATTEMPTS} intentos`}</span>`
+        : '';
+      const code = issued
+        ? `<span class="lobby-access-code${shown ? ' is-shown' : ''}">${shown ? `${issued.slice(0, 3)} ${issued.slice(3)}` : '••• •••'}</span>
+           <button type="button" class="btn btn-sm" data-show="${uid}">${shown ? 'Ocultar' : 'Ver'}</button>`
+        : '';
+      actions = `${code}${attempts}<button type="button" class="btn btn-sm lobby-give-btn" data-give="${uid}">${issued ? 'Nuevo código' : 'Dar código'}</button>${rejectBtn}`;
+    }
     return `<div class="lobby-roster-item${isPending ? ' is-pending' : ''}" style="--a:${a};">
       <span class="lobby-roster-dot"></span>
       <span class="lobby-roster-name">${escapeHtmlLocal(p.displayName || 'Sin nombre')}${isPending ? ' <span class="lobby-roster-pending">Por autorizar</span>' : ''}</span>
@@ -95,17 +169,40 @@ function renderRoster(participantList, roleRoster, listEl, countEl, roomCode){
   }).join('');
   if(!roomCode) return;
   listEl.onclick = async e => {
-    const admitBtn = e.target.closest('[data-admit]');
+    const giveBtn = e.target.closest('[data-give]');
+    const showBtn = e.target.closest('[data-show]');
     const rejectBtn = e.target.closest('[data-reject]');
-    const btn = admitBtn || rejectBtn;
-    if(!btn) return;
-    btn.disabled = true;
-    try{
-      if(admitBtn) await admitParticipant(roomCode, admitBtn.dataset.admit);
-      else await rejectParticipant(roomCode, rejectBtn.dataset.reject, rejectBtn.dataset.role);
-    }catch(err){
-      btn.disabled = false;
-      reportSyncError(admitBtn ? 'admitir al participante' : 'rechazar al participante', err);
+    if(showBtn){
+      const uid = showBtn.dataset.show;
+      if((revealUntil.get(uid) || 0) > Date.now()) revealUntil.delete(uid);
+      else { revealUntil.set(uid, Date.now() + REVEAL_MS); setTimeout(renderAllViews, REVEAL_MS + 100); }
+      renderAllViews();
+      return;
+    }
+    if(giveBtn){
+      // Código nuevo (o reemplazo): se muestra unos segundos para dictarlo. Si la persona ya
+      // había gastado intentos, se le vuelven a habilitar.
+      const uid = giveBtn.dataset.give;
+      const participant = lastParticipants.find(x => x.uid === uid);
+      issuedCodes.set(uid, newAccessCode());
+      revealUntil.set(uid, Date.now() + REVEAL_MS);
+      setTimeout(renderAllViews, REVEAL_MS + 100);
+      renderAllViews();
+      if(participant && participant.codeAttempt && participant.codeAttempt.n){
+        try{ await resetCodeAttempts(roomCode, uid, participant.codeAttempt.n); }
+        catch(err){ reportSyncError('habilitar nuevos intentos de código', err); }
+      }
+      return;
+    }
+    if(rejectBtn){
+      rejectBtn.disabled = true;
+      try{
+        await rejectParticipant(roomCode, rejectBtn.dataset.reject, rejectBtn.dataset.role);
+        issuedCodes.delete(rejectBtn.dataset.reject);
+      }catch(err){
+        rejectBtn.disabled = false;
+        reportSyncError('rechazar al participante', err);
+      }
     }
   };
 }
@@ -133,7 +230,7 @@ async function openLobby({scenarioId, roleRoster, onStart, onCancel}){
   // La pantalla siguiente (introducción o configuración) la muestra quien sigue: acá solo se
   // cortan la escucha y los botones de la sala.
   const exitLobby = () => {
-    if(unsubscribeParticipants){ unsubscribeParticipants(); unsubscribeParticipants = null; }
+    rosterViews.delete('lobby');
     startBtn.onclick = null;
     cancelBtn.onclick = null;
     copyBtn.onclick = null;
@@ -156,8 +253,9 @@ async function openLobby({scenarioId, roleRoster, onStart, onCancel}){
   renderQr(url, qrEl);
   startBtn.disabled = false;
 
-  if(unsubscribeParticipants) unsubscribeParticipants();
-  unsubscribeParticipants = listenParticipants(code, list => { lastParticipants = list; renderRoster(list, roleRoster, listEl, countEl, code); });
+  startAdmissionWatch(code);
+  rosterViews.set('lobby', {listEl, countEl, roleRoster});
+  renderAllViews();
 
   copyBtn.onclick = async () => {
     try{
@@ -177,8 +275,10 @@ async function openLobby({scenarioId, roleRoster, onStart, onCancel}){
     onStart(code);
   };
 
+  // Volver sin iniciar: la sala se cierra y se desconecta a quienes ya se habían unido.
   cancelBtn.onclick = () => {
     exitLobby();
+    mpCloseRoom(code);
     window.TabletopScreens.show('setup', {scroll: false});
     if(onCancel) onCancel();
   };
@@ -354,7 +454,6 @@ function mpRetryAnswer(roomCode, {order, ...act}){
 // a mostrar el código/QR/link de la sala y el roster en vivo, para que el facilitador se lo
 // pueda mostrar de nuevo a alguien que cerró su navegador sin querer y necesita reingresar
 // (ver getMyParticipant en room.js — el reingreso funciona solo desde el mismo celular).
-let roomPanelUnsub = null;
 
 function openRoomPanel(roomCode, roleRoster){
   const overlay = document.getElementById('roomPanelOverlay');
@@ -371,10 +470,9 @@ function openRoomPanel(roomCode, roleRoster){
   const url = joinUrlFor(roomCode);
   urlInput.value = url;
   renderQr(url, qrEl);
-  renderRoster([], roleRoster, listEl, countEl);
-
-  if(roomPanelUnsub) roomPanelUnsub();
-  roomPanelUnsub = listenParticipants(roomCode, list => { lastParticipants = list; renderRoster(list, roleRoster, listEl, countEl, roomCode); });
+  rosterViews.set('panel', {listEl, countEl, roleRoster});
+  if(watchCode === roomCode) renderAllViews();
+  else renderRoster([], roleRoster, listEl, countEl);
 
   copyBtn.onclick = async () => {
     try{
@@ -398,7 +496,7 @@ function openRoomPanel(roomCode, roleRoster){
 function closeRoomPanel(){
   const overlay = document.getElementById('roomPanelOverlay');
   if(!overlay || overlay.classList.contains('hidden')) return;
-  if(roomPanelUnsub){ roomPanelUnsub(); roomPanelUnsub = null; }
+  rosterViews.delete('panel');
   if(overlay._onKeydown){ document.removeEventListener('keydown', overlay._onKeydown); overlay._onKeydown = null; }
   overlay.classList.add('hidden');
 }
@@ -406,7 +504,7 @@ function closeRoomPanel(){
 window.MP = {
   openLobby, publishBriefing: mpPublishBriefing, publishAct: mpPublishAct, attachVotingPhase, closeVoting,
   attachAnsweringPhase, closeAnswering, retryAnswer: mpRetryAnswer,
-  openRoomPanel, closeRoomPanel,
+  openRoomPanel, closeRoomPanel, closeRoom: mpCloseRoom,
   // {roleKey: nombre de la persona} según el último roster visto.
   getPersonByRole: () => Object.fromEntries(lastParticipants.filter(p => isAdmitted(p) && p.claimedRoleKey).map(p => [p.claimedRoleKey, p.displayName || '']))
 };

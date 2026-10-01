@@ -25,6 +25,9 @@ let resolveReady;
 const ready = new Promise(res => { resolveReady = res; });
 onAuthStateChanged(auth, user => {
   if(user){ resolveReady(user.uid); return; }
+  // Al cerrar el ejercicio el celular cierra su sesión (endSession en participant-app.js):
+  // no se abre otra sola, para que quede realmente desconectado.
+  if(window.TIBOX_MP_FIREBASE && window.TIBOX_MP_FIREBASE.sessionEnded) return;
   signInAnonymously(auth).catch(err => {
     console.error('[multiplayer] No se pudo iniciar sesión anónima en Firebase:', err);
   });
