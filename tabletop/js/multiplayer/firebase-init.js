@@ -2,9 +2,9 @@
 // Módulo ES (import por URL, sin npm/build — mismo criterio que el resto de la app, que no
 // tiene bundler) que expone lo necesario en window.TIBOX_MP_FIREBASE para que tanto app.js
 // (script clásico) como participant-app.js (otro módulo) lo consuman sin duplicar la carga
-// del SDK. Requiere que js/multiplayer/firebase-config.js ya haya corrido (define
+// del SDK. Requiere que shared/firebase-config.js ya haya corrido (define
 // window.TIBOX_FIREBASE_CONFIG) y que <script> para este archivo tenga type="module".
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import {
   getFirestore
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
@@ -12,7 +12,8 @@ import {
   getAuth, signInAnonymously, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 
-const app = initializeApp(window.TIBOX_FIREBASE_CONFIG);
+// Misma app que auth/auth-core.js si el guard ya la inicializó (página del facilitador).
+const app = getApps().length ? getApp() : initializeApp(window.TIBOX_FIREBASE_CONFIG);
 const db = getFirestore(app);
 const auth = getAuth(app);
 

@@ -119,3 +119,13 @@ body.lobby-mode .topbar-right{display:none;}
 .join-briefing-text{font-size:var(--fs-sm); line-height:1.6; color:var(--text);}
 .join-briefing-text p{margin:0 0 12px;}
 .join-briefing-text p:last-child{margin-bottom:0;}
+
+/* Aviso de falla de sincronización con los celulares (ver reportSyncError en facilitator.js) */
+.mp-sync-alert{
+  position:fixed; left:50%; bottom:24px; transform:translate(-50%, 16px); z-index:1000;
+  max-width:min(560px, calc(100vw - 32px)); padding:12px 16px; border-radius:12px;
+  background:rgba(127,29,29,0.95); border:1px solid rgba(255,107,127,0.55); color:#FFE4E8;
+  font-size:var(--fs-sm); line-height:1.45; box-shadow:0 16px 32px -16px rgba(0,0,0,0.7);
+  opacity:0; pointer-events:none; transition:opacity .2s ease, transform .2s ease;
+}
+.mp-sync-alert.is-visible{opacity:1; transform:translate(-50%, 0); pointer-events:auto;}

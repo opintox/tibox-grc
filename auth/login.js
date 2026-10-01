@@ -51,7 +51,7 @@ function destination(){
       if(u.origin === location.origin) return u.pathname + u.search + u.hash;
     }catch(e){ /* next inválido: se ignora */ }
   }
-  return 'index.html';
+  return './';
 }
 
 async function startEnrollment(user){

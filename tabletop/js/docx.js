@@ -64,6 +64,7 @@ const TibDocx = (function(){
     const props = [];
     if(opts.bold) props.push('<w:b/>');
     if(opts.italic) props.push('<w:i/>');
+    if(opts.color) props.push(`<w:color w:val="${opts.color}"/>`);
     if(opts.size) props.push(`<w:sz w:val="${opts.size}"/><w:szCs w:val="${opts.size}"/>`);
     const rPr = props.length ? `<w:rPr>${props.join('')}</w:rPr>` : '';
     const segs = String(text == null ? '' : text).split('\n');
@@ -254,6 +255,68 @@ const TibDocx = (function(){
     const xml = buildScenarioParagraphsXml(scenario);
     const blob = await paragraphsXmlToDocxBlob(xml, 'Plantilla de escenario');
     downloadBlob(blob, 'plantilla_escenario_tabletop.docx');
+  }
+
+  // ================================================================
+  // INFORME DEL EJERCICIO (resultado -> .docx)
+  // ================================================================
+  // report: {title, subtitle, sections:[{title, blocks}], filename}. Bloques (los arma
+  // reportElementToDocBlocks en app.js): {type:'p'|'bullet', runs:[{text,bold}]},
+  // {type:'heading', level, text}, {type:'table', rows:[[texto]], header:bool}.
+  const REPORT_NAVY = '1F3A5F';
+  const PAGE_TEXT_WIDTH = 9072; // A4 (11906) menos márgenes de 1417 a cada lado, en twips
+
+  function reportRunsXml(runs, extra){
+    return (runs || []).map(r => runXml(r.text, Object.assign({bold: !!r.bold}, extra || {}))).join('');
+  }
+  function reportParagraph(runsXml, opts){
+    opts = opts || {};
+    // Orden exigido por el esquema de Word dentro de <w:pPr>: keepNext, spacing, ind.
+    const ppr = [];
+    if(opts.keepNext) ppr.push('<w:keepNext/>');
+    ppr.push(`<w:spacing w:after="${opts.after == null ? 120 : opts.after}"/>`);
+    if(opts.indent) ppr.push(`<w:ind w:left="${opts.indent}" w:hanging="240"/>`);
+    return `<w:p><w:pPr>${ppr.join('')}</w:pPr>${runsXml}</w:p>`;
+  }
+  function reportTableXml(rows, header){
+    const cols = Math.max(1, ...rows.map(r => r.length));
+    const colW = Math.floor(PAGE_TEXT_WIDTH / cols);
+    const border = '<w:top w:val="single" w:sz="4" w:color="BFBFBF"/><w:left w:val="single" w:sz="4" w:color="BFBFBF"/><w:bottom w:val="single" w:sz="4" w:color="BFBFBF"/><w:right w:val="single" w:sz="4" w:color="BFBFBF"/><w:insideH w:val="single" w:sz="4" w:color="BFBFBF"/><w:insideV w:val="single" w:sz="4" w:color="BFBFBF"/>';
+    const grid = Array.from({length: cols}, () => `<w:gridCol w:w="${colW}"/>`).join('');
+    const body = rows.map((row, ri) => {
+      const isHead = header && ri === 0;
+      const cells = Array.from({length: cols}, (_, ci) => {
+        const shade = isHead ? `<w:shd w:val="clear" w:color="auto" w:fill="${REPORT_NAVY}"/>` : '';
+        const text = runXml(row[ci] || '', isHead ? {bold: true, size: 20, color: 'FFFFFF'} : {size: 20});
+        return `<w:tc><w:tcPr><w:tcW w:w="${colW}" w:type="dxa"/>${shade}</w:tcPr><w:p><w:pPr><w:spacing w:after="0"/></w:pPr>${text}</w:p></w:tc>`;
+      }).join('');
+      return `<w:tr>${isHead ? '<w:trPr><w:tblHeader/></w:trPr>' : ''}${cells}</w:tr>`;
+    }).join('');
+    return `<w:tbl><w:tblPr><w:tblW w:w="${PAGE_TEXT_WIDTH}" w:type="dxa"/><w:tblBorders>${border}</w:tblBorders>` +
+      `<w:tblCellMar><w:top w:w="60" w:type="dxa"/><w:left w:w="100" w:type="dxa"/><w:bottom w:w="60" w:type="dxa"/><w:right w:w="100" w:type="dxa"/></w:tblCellMar></w:tblPr>` +
+      `<w:tblGrid>${grid}</w:tblGrid>${body}</w:tbl>` + reportParagraph('', {after: 120});
+  }
+
+  function buildReportXml(report){
+    const out = [];
+    out.push(reportParagraph(runXml(report.title || 'Informe', {bold: true, size: 36, color: REPORT_NAVY}), {after: 60}));
+    if(report.subtitle) out.push(reportParagraph(runXml(report.subtitle, {size: 24, color: '555555'}), {after: 360}));
+    (report.sections || []).forEach(sec => {
+      out.push(reportParagraph(runXml(sec.title, {bold: true, size: 28, color: REPORT_NAVY}), {after: 120, keepNext: true}));
+      (sec.blocks || []).forEach(b => {
+        if(b.type === 'heading') out.push(reportParagraph(runXml(b.text, {bold: true, size: 23}), {after: 80, keepNext: true}));
+        else if(b.type === 'bullet') out.push(reportParagraph(runXml('•  ') + reportRunsXml(b.runs), {indent: 480}));
+        else if(b.type === 'table') out.push(reportTableXml(b.rows, b.header));
+        else out.push(reportParagraph(reportRunsXml(b.runs)));
+      });
+      out.push(reportParagraph('', {after: 120}));
+    });
+    return out.join('');
+  }
+
+  async function downloadReportDocx(report){
+    const blob = await paragraphsXmlToDocxBlob(buildReportXml(report), report.title || 'Informe');
+    downloadBlob(blob, report.filename || 'informe_tabletop.docx');
   }
 
   // ================================================================
@@ -477,5 +540,5 @@ const TibDocx = (function(){
     return paragraphsToScenario(paragraphs);
   }
 
-  return {downloadScenarioDocx, downloadBlankTemplate, parseScenarioDocxFile};
+  return {downloadScenarioDocx, downloadBlankTemplate, parseScenarioDocxFile, downloadReportDocx};
 })();

@@ -105,6 +105,22 @@ function activeRoleKeysFor(scenarioId){
   const matrix = getMatrix(scenarioId);
   return rm.keys.filter(k => matrix[k]);
 }
+// Regla única de "función activa en esta sesión": está en la matriz del escenario (getMatrix,
+// con los ajustes de la sesión) Y sigue marcada en participantes. La usan las preguntas que
+// entran al juego, el tablero de personajes, el roster de la sala, la introducción y el informe.
+function isRoleActive(roleKey, scenarioId){
+  const p = participants.find(x => x.roleKey === roleKey);
+  return !!(p && p.checked && getMatrix(scenarioId)[roleKey]);
+}
+function sessionRoleKeys(scenarioId){
+  return roleMetaFor(scenarioId).keys.filter(k => isRoleActive(k, scenarioId));
+}
+// Empresa que ejecuta una función en esta sesión: la asignada en participantes o, si no hay
+// ninguna, la que trae el organigrama del escenario.
+function roleCompanyFor(roleKey, scenarioId){
+  const p = participants.find(x => x.roleKey === roleKey);
+  return (p && p.empresa) || roleMetaFor(scenarioId).org[roleKey] || '';
+}
 function defaultParticipantsFor(scenarioId){
   return activeRoleKeysFor(scenarioId).map(k => ({roleKey:k, empresa:'', checked:true}));
 }
@@ -183,13 +199,16 @@ function enforceMandatoryRoles(){
 // matrices), no el progreso dentro de un ejercicio en curso: eso requeriría serializar gameState
 // completo (incluye funciones y referencias al DOM) y queda fuera de alcance por ahora. Aun así,
 // evita perder toda la configuración del cliente ante un refresh accidental antes de empezar.
+// sessionStorage (no localStorage): sobrevive a recargar la misma pestaña, pero una pestaña o
+// visita nueva empieza en blanco — para reutilizar un cliente están los perfiles guardados.
 const SETUP_STORAGE_KEY = 'tabletop_setup_v1';
+try{ localStorage.removeItem(SETUP_STORAGE_KEY); }catch(e){ /* borrador de la versión anterior */ }
 let setupSaveTimer = null;
 function saveSetupState(){
   clearTimeout(setupSaveTimer);
   setupSaveTimer = setTimeout(() => {
     try{
-      localStorage.setItem(SETUP_STORAGE_KEY, JSON.stringify({
+      sessionStorage.setItem(SETUP_STORAGE_KEY, JSON.stringify({
         clientName, facilitatorName, participants, selectedScenarioId, sessionMatrices,
         savedAt: new Date().toISOString()
       }));
@@ -391,10 +410,10 @@ function showConfirmModal({title, message, confirmText = 'Aceptar', cancelText =
 function loadSetupState(){
   let data;
   try{
-    const raw = localStorage.getItem(SETUP_STORAGE_KEY);
+    const raw = sessionStorage.getItem(SETUP_STORAGE_KEY);
     if(!raw) return;
     data = JSON.parse(raw);
-  }catch(e){ localStorage.removeItem(SETUP_STORAGE_KEY); return; } // datos corruptos: se borran y se ignora
+  }catch(e){ try{ sessionStorage.removeItem(SETUP_STORAGE_KEY); }catch(e2){ /* sin sessionStorage */ } return; } // datos corruptos: se borran y se ignora
   clientName = data.clientName || '';
   facilitatorName = data.facilitatorName || '';
   const expectedKeys = activeRoleKeysFor(data.selectedScenarioId || null);
@@ -614,428 +633,6 @@ function registerCustomScenario(data){
 }
 
 renderScenarioCards();
-
-// ---------------- constructor de escenarios (cuestionario guiado -> Word) ----------------
-// Alimentador: en vez de editar a mano la plantilla Word, un cuestionario paso a paso que
-// termina generando el mismo .docx (mismo formato que ya entiende TibDocx.parseScenarioDocxFile,
-// ver docx.js) — así no se toca la lógica de importación, ya probada, solo se agrega una forma
-// más guiada de producir el documento. "Usar ahora" además registra el escenario directo en la
-// sesión actual (registerCustomScenario), sin pasar por guardar y volver a subir el archivo.
-const BUILDER_STEPS = ['Datos', 'Funciones', 'Etapas y actos', 'Revisar y generar'];
-const BUILDER_EXTRA_ROLES = [['legal','Legal'], ['comunicaciones','Comunicaciones'], ['rrhh','RRHH'], ['direccion','Dirección']];
-const BUILDER_LETTERS = ['A','B','C','D'];
-let builderState = null;
-let builderStep = 1;
-
-function freshBuilderState(){
-  return {name:'', blurb:'', target:'', intro:'', roleMode:'standard', extraRoleKeys:[], customRoles:[], stages:[]};
-}
-function newRoleKey(){ return 'rol_' + Math.random().toString(36).slice(2, 8); }
-function freshBuilderQuestion(){
-  return {target:'', title:'', meta:[], situation:'', options:['','','',''], explanations:['','','',''], correctIndex:0, mismatchContext:''};
-}
-// Lista de funciones disponibles para elegir como "quién responde" en un acto — según el modo
-// de funciones elegido en el paso 2 (estándar + adicionales marcadas, o la lista propia).
-function builderRoleList(){
-  if(builderState.roleMode === 'custom') return builderState.customRoles;
-  return ['seguridad', 'ti', ...builderState.extraRoleKeys].map(k => ({key:k, name: ROLE_NAMES[k]}));
-}
-function builderIsCustomRoles(){ return builderState.roleMode === 'custom'; }
-
-function builderValidate(){
-  const errors = [];
-  const s = builderState;
-  if(!s.name.trim()) errors.push('Falta el nombre del escenario.');
-  const roles = builderRoleList();
-  if(builderIsCustomRoles() && roles.length === 0) errors.push('Agrega al menos una función propia.');
-  if(builderIsCustomRoles() && roles.some(r => !r.name.trim())) errors.push('Hay una función propia sin nombre.');
-  if(s.stages.length === 0) errors.push('Agrega al menos una etapa.');
-  s.stages.forEach((st, si) => {
-    const stageLabel = st.stage.trim() || `Etapa ${si + 1}`;
-    if(!st.stage.trim()) errors.push(`La etapa ${si + 1} no tiene nombre.`);
-    if(st.questions.length === 0){ errors.push(`La etapa "${stageLabel}" no tiene ningún acto.`); return; }
-    st.questions.forEach((q, qi) => {
-      const missing = [];
-      if(!q.target || !roles.some(r => r.key === q.target)) missing.push('función que responde');
-      if(!q.title.trim()) missing.push('título');
-      if(!q.situation.trim()) missing.push('situación');
-      if(q.options.some(o => !o.trim())) missing.push('las 4 alternativas');
-      if(q.explanations.some(e => !e.trim())) missing.push('las 4 explicaciones');
-      if(missing.length) errors.push(`Etapa "${stageLabel}", acto ${qi + 1}: falta ${missing.join(', ')}.`);
-    });
-  });
-  return errors;
-}
-
-function builderToDocxScenario(){
-  const s = builderState;
-  const isCustom = builderIsCustomRoles();
-  const roleNames = {};
-  if(isCustom) s.customRoles.forEach(r => { roleNames[r.key] = r.name; });
-  return {
-    name: s.name.trim(), blurb: s.blurb.trim(), target: s.target.trim(), intro: s.intro.trim(),
-    roleNames: isCustom ? roleNames : undefined,
-    customRoleList: isCustom ? s.customRoles : null,
-    extraRoleKeys: isCustom ? [] : s.extraRoleKeys,
-    stages: s.stages
-  };
-}
-function builderToRegisterData(){
-  const s = builderState;
-  const isCustom = builderIsCustomRoles();
-  return {
-    name: s.name.trim(), blurb: s.blurb.trim(), target: s.target.trim(), intro: s.intro.trim(),
-    customStages: s.stages.map(st => st.stage),
-    customRoles: isCustom ? s.customRoles : null,
-    extraRoleKeys: isCustom ? [] : s.extraRoleKeys,
-    stages: s.stages
-  };
-}
-
-function openBuilder(){
-  builderState = freshBuilderState();
-  builderStep = 1;
-  document.getElementById('screen-setup').classList.add('hidden');
-  document.body.classList.remove('setup-mode');
-  document.getElementById('screen-builder').classList.remove('hidden');
-  document.body.classList.add('builder-mode');
-  document.getElementById('statusLabel').textContent = 'CREAR ESCENARIO';
-  renderBuilder();
-  window.scrollTo({top: 0, behavior: 'smooth'});
-}
-function closeBuilder(){
-  document.getElementById('screen-builder').classList.add('hidden');
-  document.body.classList.remove('builder-mode');
-  document.getElementById('screen-setup').classList.remove('hidden');
-  document.body.classList.add('setup-mode');
-  document.getElementById('statusLabel').textContent = 'CONFIGURACIÓN';
-}
-
-function renderBuilderStepper(){
-  document.getElementById('builderStepper').innerHTML = BUILDER_STEPS.map((label, i) => {
-    const n = i + 1;
-    const done = n < builderStep;
-    const active = n === builderStep;
-    const cls = ['wizard-step-item', done ? 'done' : '', active ? 'active' : ''].filter(Boolean).join(' ');
-    return `<div class="${cls}"><span class="wizard-step-n">${done ? CHECK_ICON : n}</span><span class="wizard-step-label">${escapeHtml(label)}</span></div>`;
-  }).join('');
-}
-
-function builderStep1Html(){
-  const s = builderState;
-  return `
-    <div class="builder-step">
-      <div class="field-row">
-        <label>Nombre del escenario</label>
-        <input type="text" id="bldName" value="${escapeHtml(s.name)}" placeholder="Ej: Ataque al proveedor de nómina">
-      </div>
-      <div class="field-row">
-        <label>Descripción corta (se muestra en la tarjeta de selección)</label>
-        <input type="text" id="bldBlurb" value="${escapeHtml(s.blurb)}" placeholder="Una frase que resuma el ataque">
-      </div>
-      <div class="field-row">
-        <label>Activo u objetivo principal afectado</label>
-        <input type="text" id="bldTarget" value="${escapeHtml(s.target)}" placeholder="Ej: Servidor de nómina">
-      </div>
-      <div class="field-row" style="margin-bottom:0;">
-        <label>Introducción (se muestra en pantalla antes de la primera etapa)</label>
-        <textarea id="bldIntro" style="min-height:120px;" placeholder="Presenta la organización, el momento en que ocurre el ejercicio y qué se busca practicar, sin adelantar lo que va a pasar. Deja una línea en blanco entre párrafos.">${escapeHtml(s.intro)}</textarea>
-      </div>
-    </div>`;
-}
-function wireBuilderStep1(){
-  document.getElementById('bldName').addEventListener('input', e => { builderState.name = e.target.value; });
-  document.getElementById('bldBlurb').addEventListener('input', e => { builderState.blurb = e.target.value; });
-  document.getElementById('bldTarget').addEventListener('input', e => { builderState.target = e.target.value; });
-  document.getElementById('bldIntro').addEventListener('input', e => { builderState.intro = e.target.value; });
-}
-
-function builderStep2Html(){
-  const s = builderState;
-  return `
-    <div class="builder-step">
-      <div class="builder-role-mode">
-        <button type="button" class="builder-mode-btn${s.roleMode === 'standard' ? ' active' : ''}" data-mode="standard">Organigrama estándar</button>
-        <button type="button" class="builder-mode-btn${s.roleMode === 'custom' ? ' active' : ''}" data-mode="custom">Funciones propias</button>
-      </div>
-      ${s.roleMode === 'standard' ? `
-        <p class="builder-hint">Seguridad y TI participan siempre. Marca qué otras funciones participan en este escenario.</p>
-        <div class="builder-role-checks">
-          ${BUILDER_EXTRA_ROLES.map(([k, name]) => `
-            <label class="builder-role-check">
-              <input type="checkbox" data-extra-role="${k}" ${s.extraRoleKeys.includes(k) ? 'checked' : ''}>
-              ${escapeHtml(name)}
-            </label>`).join('')}
-        </div>
-      ` : `
-        <p class="builder-hint">Define las funciones propias de este ejercicio (ej. "Encargado Regulatorio", "Team Leader del cliente") — se usarán en vez de Seguridad/TI/Legal/Comunicaciones/RRHH/Dirección.</p>
-        <div class="builder-role-list" id="bldCustomRoleList">
-          ${s.customRoles.map((r, i) => `
-            <div class="builder-role-item">
-              <input type="text" data-role-i="${i}" value="${escapeHtml(r.name)}" placeholder="Nombre de la función">
-              <button type="button" class="pc-empresa-remove" data-remove-role="${i}" aria-label="Quitar función">×</button>
-            </div>`).join('') || '<p class="builder-hint">Todavía no agregaste ninguna función.</p>'}
-        </div>
-        <button type="button" class="btn btn-sm" id="bldAddRole">+ Agregar función</button>
-      `}
-    </div>`;
-}
-function wireBuilderStep2(){
-  document.querySelectorAll('.builder-mode-btn').forEach(btn => {
-    btn.addEventListener('click', () => { builderState.roleMode = btn.dataset.mode; renderBuilder(); });
-  });
-  if(builderState.roleMode === 'standard'){
-    document.querySelectorAll('[data-extra-role]').forEach(cb => {
-      cb.addEventListener('change', e => {
-        const k = cb.dataset.extraRole;
-        if(e.target.checked){ if(!builderState.extraRoleKeys.includes(k)) builderState.extraRoleKeys.push(k); }
-        else { builderState.extraRoleKeys = builderState.extraRoleKeys.filter(x => x !== k); }
-      });
-    });
-  } else {
-    document.querySelectorAll('[data-role-i]').forEach(inp => {
-      inp.addEventListener('input', e => { builderState.customRoles[parseInt(inp.dataset.roleI, 10)].name = e.target.value; });
-    });
-    document.querySelectorAll('[data-remove-role]').forEach(btn => {
-      btn.addEventListener('click', () => { builderState.customRoles.splice(parseInt(btn.dataset.removeRole, 10), 1); renderBuilder(); });
-    });
-    const addBtn = document.getElementById('bldAddRole');
-    if(addBtn) addBtn.addEventListener('click', () => { builderState.customRoles.push({key: newRoleKey(), name: ''}); renderBuilder(); });
-  }
-}
-
-function builderStep3Html(){
-  const s = builderState;
-  return `
-    <div class="builder-step">
-      <p class="builder-hint">Agrega las etapas del incidente en el orden en que se juegan y, dentro de cada una, uno o más actos (preguntas).</p>
-      <div class="builder-stage-list" id="bldStageList">
-        ${s.stages.map((st, si) => builderStageCardHtml(st, si)).join('') || '<p class="builder-hint">Todavía no agregaste ninguna etapa.</p>'}
-      </div>
-      <button type="button" class="btn btn-sm" id="bldAddStage">+ Agregar etapa</button>
-    </div>`;
-}
-function builderStageCardHtml(st, si){
-  const roles = builderRoleList();
-  return `
-    <div class="builder-stage-card">
-      <div class="builder-stage-head">
-        <span class="builder-stage-n">${si + 1}</span>
-        <input type="text" data-stage-i="${si}" value="${escapeHtml(st.stage)}" placeholder="Nombre de la etapa (ej: Detección)">
-        <button type="button" class="pc-empresa-remove" data-remove-stage="${si}" aria-label="Quitar etapa">×</button>
-      </div>
-      <div class="builder-act-list">
-        ${st.questions.map((q, qi) => builderActRowHtml(q, si, qi, roles)).join('') || '<p class="builder-hint" style="margin:0;">Sin actos todavía.</p>'}
-      </div>
-      <button type="button" class="btn btn-sm" data-add-act="${si}">+ Agregar acto</button>
-    </div>`;
-}
-function builderActRowHtml(q, si, qi, roles){
-  const role = roles.find(r => r.key === q.target);
-  const complete = !!(q.target && role && q.title.trim() && q.situation.trim() && q.options.every(o => o.trim()) && q.explanations.every(e => e.trim()));
-  return `
-    <div class="builder-act-row${complete ? '' : ' is-incomplete'}">
-      <span class="builder-act-title">${escapeHtml(q.title || `Acto ${qi + 1} (sin título)`)}</span>
-      <span class="builder-act-target">${escapeHtml(role ? role.name : 'sin función')}</span>
-      ${complete ? '' : '<span class="builder-act-incomplete-tag">Incompleto</span>'}
-      <button type="button" class="btn btn-sm" data-edit-act="${si}:${qi}">Editar</button>
-      <button type="button" class="pc-empresa-remove" data-remove-act="${si}:${qi}" aria-label="Quitar acto">×</button>
-    </div>`;
-}
-function wireBuilderStep3(){
-  document.querySelectorAll('[data-stage-i]').forEach(inp => {
-    inp.addEventListener('input', e => { builderState.stages[parseInt(inp.dataset.stageI, 10)].stage = e.target.value; });
-  });
-  document.querySelectorAll('[data-remove-stage]').forEach(btn => {
-    btn.addEventListener('click', () => { builderState.stages.splice(parseInt(btn.dataset.removeStage, 10), 1); renderBuilder(); });
-  });
-  document.querySelectorAll('[data-add-act]').forEach(btn => {
-    btn.addEventListener('click', () => openActEditor(parseInt(btn.dataset.addAct, 10), null));
-  });
-  document.querySelectorAll('[data-edit-act]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const [si, qi] = btn.dataset.editAct.split(':').map(Number);
-      openActEditor(si, qi);
-    });
-  });
-  document.querySelectorAll('[data-remove-act]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const [si, qi] = btn.dataset.removeAct.split(':').map(Number);
-      builderState.stages[si].questions.splice(qi, 1);
-      renderBuilder();
-    });
-  });
-  const addStageBtn = document.getElementById('bldAddStage');
-  if(addStageBtn) addStageBtn.addEventListener('click', () => { builderState.stages.push({stage:'', questions:[]}); renderBuilder(); });
-}
-
-// ---- editor de acto: modal ancho sobre la pantalla del constructor ----
-let closeActEditorFn = null;
-function closeActEditor(){ if(closeActEditorFn) closeActEditorFn(); }
-function openActEditor(si, qi){
-  closeActEditor();
-  const isNew = qi == null;
-  const q = isNew ? freshBuilderQuestion() : JSON.parse(JSON.stringify(builderState.stages[si].questions[qi]));
-  const roles = builderRoleList();
-  const stageLabel = builderState.stages[si].stage || `Etapa ${si + 1}`;
-
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay';
-  overlay.innerHTML = `
-    <div class="modal-box builder-act-modal" role="dialog" aria-modal="true" aria-labelledby="actModalTitle">
-      <div class="modal-head">
-        <div class="modal-title" id="actModalTitle">${isNew ? 'Nuevo acto' : 'Editar acto'} — ${escapeHtml(stageLabel)}</div>
-        <button class="modal-close-btn" id="actModalClose" aria-label="Cerrar">✕</button>
-      </div>
-      <div class="builder-step">
-        <div class="builder-act-grid">
-          <div class="field-row" style="margin-bottom:0;">
-            <label>Función que responde</label>
-            <select id="actTarget">
-              <option value="">— Elegir —</option>
-              ${roles.map(r => `<option value="${escapeHtml(r.key)}" ${q.target === r.key ? 'selected' : ''}>${escapeHtml(r.name)}</option>`).join('')}
-            </select>
-          </div>
-          <div class="field-row" style="margin-bottom:0;">
-            <label>Título del acto</label>
-            <input type="text" id="actTitle" value="${escapeHtml(q.title)}" placeholder='Ej: Acto 1 · El correo del banco'>
-          </div>
-        </div>
-        <div class="field-row" style="margin-bottom:0;">
-          <label>Contexto (opcional — hora, día, canal, sistema, separados por coma)</label>
-          <input type="text" id="actMeta" value="${escapeHtml((q.meta || []).join(', '))}" placeholder="Ej: 09:12, martes, Teams, Microsoft 365">
-        </div>
-        <div class="field-row" style="margin-bottom:0;">
-          <label>Situación (uno o más párrafos)</label>
-          <textarea id="actSituation" placeholder="Describe la situación que el equipo debe resolver: quién, qué pasó, qué se sabe y qué no todavía." style="min-height:120px;">${escapeHtml(q.situation)}</textarea>
-        </div>
-        <div>
-          <label>Alternativas (marca la correcta)</label>
-          <div class="builder-opt-list">
-            ${BUILDER_LETTERS.map((letter, i) => `
-              <div class="builder-opt-row${q.correctIndex === i ? ' is-correct' : ''}" data-opt-row="${i}">
-                <div class="builder-opt-head">
-                  <span class="builder-opt-letter">${letter}</span>
-                  <label class="builder-opt-correct-label"><input type="radio" name="actCorrect" value="${i}" ${q.correctIndex === i ? 'checked' : ''}> Correcta</label>
-                </div>
-                <textarea data-opt-text="${i}" placeholder="Texto de la alternativa ${letter}">${escapeHtml(q.options[i] || '')}</textarea>
-                <textarea data-opt-exp="${i}" style="margin-top:8px;" placeholder="Por qué es correcta / incorrecta">${escapeHtml(q.explanations[i] || '')}</textarea>
-              </div>`).join('')}
-          </div>
-        </div>
-        <div class="field-row" style="margin-bottom:0;">
-          <label>Por qué le corresponde a esta función (y no a otra)</label>
-          <textarea id="actMismatch" placeholder="Ej: el aislamiento y escalamiento son de TI porque es quien tiene acceso a la red y ve el incidente primero.">${escapeHtml(q.mismatchContext)}</textarea>
-        </div>
-      </div>
-      <div class="modal-actions" style="margin-top:18px;">
-        <button class="btn" id="actModalCancel">Cancelar</button>
-        <button class="btn-cta" id="actModalSave">Guardar acto</button>
-      </div>
-    </div>`;
-  document.body.appendChild(overlay);
-
-  function readForm(){
-    q.target = document.getElementById('actTarget').value;
-    q.title = document.getElementById('actTitle').value.trim();
-    q.meta = document.getElementById('actMeta').value.split(',').map(s => s.trim()).filter(Boolean);
-    q.situation = document.getElementById('actSituation').value.trim();
-    q.mismatchContext = document.getElementById('actMismatch').value.trim();
-    overlay.querySelectorAll('[data-opt-text]').forEach(t => { q.options[parseInt(t.dataset.optText, 10)] = t.value.trim(); });
-    overlay.querySelectorAll('[data-opt-exp]').forEach(t => { q.explanations[parseInt(t.dataset.optExp, 10)] = t.value.trim(); });
-    const checked = overlay.querySelector('input[name="actCorrect"]:checked');
-    q.correctIndex = checked ? parseInt(checked.value, 10) : 0;
-  }
-  function save(){
-    readForm();
-    if(isNew) builderState.stages[si].questions.push(q);
-    else builderState.stages[si].questions[qi] = q;
-    closeActEditor();
-    renderBuilder();
-  }
-  overlay.querySelectorAll('input[name="actCorrect"]').forEach(r => {
-    r.addEventListener('change', () => {
-      overlay.querySelectorAll('.builder-opt-row').forEach(row => row.classList.remove('is-correct'));
-      overlay.querySelector(`[data-opt-row="${r.value}"]`).classList.add('is-correct');
-    });
-  });
-  function onKey(e){ if(e.key === 'Escape') closeActEditor(); }
-  overlay.querySelector('#actModalSave').addEventListener('click', save);
-  overlay.querySelector('#actModalCancel').addEventListener('click', closeActEditor);
-  overlay.querySelector('#actModalClose').addEventListener('click', closeActEditor);
-  overlay.addEventListener('mousedown', e => { if(e.target === overlay) closeActEditor(); });
-  document.addEventListener('keydown', onKey);
-  closeActEditorFn = () => { overlay.remove(); document.removeEventListener('keydown', onKey); closeActEditorFn = null; };
-}
-
-function builderStep4Html(){
-  const s = builderState;
-  const roles = builderRoleList();
-  const errors = builderValidate();
-  const totalActs = s.stages.reduce((n, st) => n + st.questions.length, 0);
-  return `
-    <div class="builder-step">
-      <div class="builder-summary">
-        <div class="builder-summary-card">
-          <div class="builder-summary-label">Escenario</div>
-          <div style="font-size:var(--fs-md); font-weight:700;">${escapeHtml(s.name || '(sin nombre)')}</div>
-          <p class="builder-hint" style="margin-top:6px;">${escapeHtml(s.blurb || '(sin descripción)')}</p>
-        </div>
-        <div class="builder-summary-card">
-          <div class="builder-summary-label">Funciones (${roles.length})</div>
-          <p class="builder-hint">${roles.map(r => escapeHtml(r.name || '(sin nombre)')).join(', ') || '—'}</p>
-        </div>
-        <div class="builder-summary-card">
-          <div class="builder-summary-label">Etapas y actos (${totalActs} en total)</div>
-          ${s.stages.map(st => `<div class="builder-summary-stage">— <b>${escapeHtml(st.stage || '(sin nombre)')}</b> · ${st.questions.length} acto${st.questions.length === 1 ? '' : 's'}</div>`).join('') || '<p class="builder-hint">Sin etapas.</p>'}
-        </div>
-      </div>
-      ${errors.length ? `
-        <div class="builder-errors">
-          <div class="builder-errors-title">⚠ Falta completar esto antes de generar:</div>
-          ${errors.map(e => `<div>• ${escapeHtml(e)}</div>`).join('')}
-        </div>
-      ` : `
-        <div class="builder-ok-banner">✓ Todo listo — el escenario está completo.</div>
-        <div class="builder-final-actions">
-          <button type="button" class="btn" id="bldDownloadBtn">Descargar Word</button>
-          <button type="button" class="btn btn-cta" id="bldUseNowBtn">Usar ahora en esta sesión →</button>
-        </div>
-      `}
-    </div>`;
-}
-function wireBuilderStep4(){
-  const dl = document.getElementById('bldDownloadBtn');
-  if(dl) dl.addEventListener('click', () => { TibDocx.downloadScenarioDocx(builderToDocxScenario()); });
-  const use = document.getElementById('bldUseNowBtn');
-  if(use) use.addEventListener('click', () => {
-    const id = registerCustomScenario(builderToRegisterData());
-    applyScenarioSelection(id);
-    renderParticipants();
-    renderScenarioCards();
-    profileSaved = false;
-    closeBuilder();
-    goToStep(2);
-  });
-}
-
-function renderBuilder(){
-  renderBuilderStepper();
-  const body = document.getElementById('builderStepBody');
-  if(builderStep === 1){ body.innerHTML = builderStep1Html(); wireBuilderStep1(); }
-  else if(builderStep === 2){ body.innerHTML = builderStep2Html(); wireBuilderStep2(); }
-  else if(builderStep === 3){ body.innerHTML = builderStep3Html(); wireBuilderStep3(); }
-  else { body.innerHTML = builderStep4Html(); wireBuilderStep4(); }
-  document.getElementById('builderPrevBtn').disabled = builderStep === 1;
-  const nextBtn = document.getElementById('builderNextBtn');
-  nextBtn.style.display = builderStep === 4 ? 'none' : '';
-  window.scrollTo({top: 0, behavior: 'smooth'});
-}
-
-document.getElementById('openBuilderBtn').addEventListener('click', e => { e.preventDefault(); openBuilder(); });
-document.getElementById('builderBackBtn').addEventListener('click', closeBuilder);
-document.getElementById('builderPrevBtn').addEventListener('click', () => { if(builderStep > 1){ builderStep--; renderBuilder(); } });
-document.getElementById('builderNextBtn').addEventListener('click', () => { if(builderStep < 4){ builderStep++; renderBuilder(); } });
 
 // ---------------- participants table ----------------
 const bodyEl = document.getElementById('participantsBody');
@@ -1265,20 +862,15 @@ function updateBottomState(){
 }
 // La app abre siempre en la pantalla de bienvenida (reglas del ejercicio); recién al presionar
 // «Siguiente» ahí se entra al modo configuración que antes era la pantalla inicial.
-document.body.classList.add('intro-mode');
+TabletopScreens.show('intro', {scroll: false});
 updateBottomState();
 
-// Intenta restaurar configuración guardada de una sesión anterior (si existe). El modal de
-// confirmación se encarga de re-pintar la UI si el usuario decide restaurarla.
+// Restaura la configuración solo si esta misma pestaña se recargó (ver saveSetupState).
 loadSetupState();
 
 function enterSetup(){
-  document.getElementById('screen-intro').classList.add('hidden');
-  document.getElementById('screen-setup').classList.remove('hidden');
-  document.body.classList.remove('intro-mode');
-  document.body.classList.add('setup-mode');
+  TabletopScreens.show('setup');
   goToStep(1);
-  window.scrollTo({top: 0, behavior: 'smooth'});
 }
 
 // Vuelve de la configuración a la pantalla de bienvenida, dentro de la misma sesión
@@ -1286,16 +878,8 @@ function enterSetup(){
 function goHome(){
   hideExplain();
   if(gameState.timerInterval) clearInterval(gameState.timerInterval);
-  ['screen-setup', 'screen-lobby', 'screen-briefing', 'screen-game', 'screen-results', 'screen-report'].forEach(id => {
-    const screen = document.getElementById(id);
-    if(screen) screen.classList.add('hidden');
-  });
-  document.getElementById('screen-intro').classList.remove('hidden');
-  document.body.classList.remove('setup-mode', 'game-mode', 'lobby-mode', 'briefing-mode');
-  document.body.classList.add('intro-mode');
-  document.getElementById('statusLabel').textContent = 'CONFIGURACIÓN';
+  TabletopScreens.show('intro');
   updateBottomState();
-  window.scrollTo({top: 0, behavior: 'smooth'});
 }
 
 function goToStep(n){
@@ -1528,10 +1112,7 @@ function showBriefing(onStart, roomCode){
   const id = selectedScenarioId;
   const scenario = SCENARIOS.find(s => s.id === id);
   const rm = roleMetaFor(id);
-  const matrix = getMatrix(id);
-  const roleNames = rm.keys
-    .filter(k => { const p = participants.find(x => x.roleKey === k); return p && p.checked && matrix[k]; })
-    .map(k => rm.names[k]);
+  const roleNames = sessionRoleKeys(id).map(k => rm.names[k]);
   const stages = stagesFor(id);
   const intro = (SCENARIO_INTROS[id] || '').trim();
 
@@ -1544,31 +1125,21 @@ function showBriefing(onStart, roomCode){
   textEl.innerHTML = intro.split(/\n\s*\n/).filter(t => t.trim()).map(t => `<p>${escapeHtml(t.trim())}</p>`).join('');
   textEl.classList.toggle('hidden', !intro);
 
-  const screenBriefing = document.getElementById('screen-briefing');
   const backBtn = document.getElementById('briefingBackBtn');
   const startBtn = document.getElementById('briefingStartBtn');
-  document.getElementById('screen-setup').classList.add('hidden');
-  screenBriefing.classList.remove('hidden');
-  document.body.classList.remove('setup-mode');
-  document.body.classList.add('briefing-mode');
-  document.getElementById('statusLabel').textContent = 'INTRODUCCIÓN';
+  TabletopScreens.show('briefing');
   backBtn.classList.toggle('hidden', !!roomCode);
-  window.scrollTo({top: 0, behavior: 'smooth'});
 
   if(roomCode && window.MP) window.MP.publishBriefing(roomCode, {title: scenario ? scenario.name : '', intro});
 
   const leave = () => {
-    screenBriefing.classList.add('hidden');
-    document.body.classList.remove('briefing-mode');
     startBtn.onclick = null;
     backBtn.onclick = null;
   };
   startBtn.onclick = () => { leave(); onStart(); };
   backBtn.onclick = () => {
     leave();
-    document.getElementById('screen-setup').classList.remove('hidden');
-    document.body.classList.add('setup-mode');
-    document.getElementById('statusLabel').textContent = 'CONFIGURACIÓN';
+    TabletopScreens.show('setup', {scroll: false});
     updateBottomState();
   };
 }
@@ -1580,16 +1151,12 @@ function startGameOrLobby(){
     return;
   }
   const rm = roleMetaFor(selectedScenarioId);
-  const matrix = getMatrix(selectedScenarioId);
-  const roleRoster = rm.keys
-    .map(k => participants.find(p => p.roleKey === k))
-    .filter(p => p && p.checked && matrix[p.roleKey])
-    .map(p => ({
-      roleKey: p.roleKey,
-      name: rm.names[p.roleKey],
-      org: p.empresa || rm.org[p.roleKey],
-      accent: rm.accents[p.roleKey] || ['#5AD1E8','#0B8FD6']
-    }));
+  const roleRoster = sessionRoleKeys(selectedScenarioId).map(k => ({
+    roleKey: k,
+    name: rm.names[k],
+    org: roleCompanyFor(k, selectedScenarioId),
+    accent: rm.accents[k] || ['#5AD1E8','#0B8FD6']
+  }));
   mpRoleRoster = roleRoster; // se reusa en el popout "Sala" (#roomInfoBtn) durante el ejercicio
   window.MP.openLobby({scenarioId: selectedScenarioId, roleRoster, onStart: code => { mpRoomCode = code; showBriefing(startGame, code); }});
 }
@@ -1676,7 +1243,7 @@ document.getElementById('loadPlaybookBtn').addEventListener('click', async () =>
 });
 
 // ---------------- game screen ----------------
-let gameState = { scenarioId:null, stages:null, stepIndex:0, subIndex:0, chosenCorrectParticipant:null, nextAction:null, startTime:null, timerInterval:null, wrongCharacterCount:0, wrongAnswerCount:0, totalQuestions:0, stageStats:{}, characterMistakes:[], answerAttemptLog:[], currentAnswerAttempts:0, history:[] };
+let gameState = { scenarioId:null, stages:null, stepIndex:0, subIndex:0, chosenCorrectParticipant:null, nextAction:null, startTime:null, timerInterval:null, wrongCharacterCount:0, wrongAnswerCount:0, totalQuestions:0, stageStats:{}, characterMistakes:[], answerAttemptLog:[], currentAnswerAttempts:0, history:[], actLog:[], currentAct:null, personByRole:{} };
 
 function stageQuestions(stageEntry){
   return stageEntry.questions || [stageEntry];
@@ -1721,7 +1288,6 @@ function sampleVariants(qs){
 }
 
 function buildStagesForSession(scenarioId){
-  const matrix = getMatrix(scenarioId);
   const rawStages = QUESTIONS[scenarioId];
   const rm = roleMetaFor(scenarioId);
   // El auto-cierre (Dirección/Seguridad) y la red de seguridad de "seguridad" son reglas del
@@ -1730,17 +1296,15 @@ function buildStagesForSession(scenarioId){
   const isStandard = rm === DEFAULT_ROLE_META;
   return rawStages.map(stageEntry => {
     let qs = stageQuestions(stageEntry).filter(q => {
-      // una pregunta solo entra si su función participa en el escenario (matriz) Y sigue
-      // marcada como participante hoy (checked). TI/Seguridad siempre cumplen ambas: la matriz
-      // las fuerza en getMatrix() y su checkbox está bloqueado en renderParticipants().
-      const participant = participants.find(p => p.roleKey === q.target);
-      return !!matrix[q.target] && !!(participant && participant.checked);
+      // una pregunta solo entra si su función está activa en la sesión (isRoleActive). TI y
+      // Seguridad siempre lo están: la matriz las fuerza en getMatrix() y su checkbox está
+      // bloqueado en renderParticipants().
+      return isRoleActive(q.target, scenarioId);
     });
     qs = sampleVariants(qs);
     if(isStandard && stageEntry.stage === 'Cierre'){
       // el cierre lo autoriza Dirección si participa (matriz) y sigue marcada hoy; si no, lo asume Seguridad
-      const dirParticipant = participants.find(p => p.roleKey === 'direccion');
-      const closingRole = (matrix.direccion && dirParticipant && dirParticipant.checked) ? 'direccion' : 'seguridad';
+      const closingRole = isRoleActive('direccion', scenarioId) ? 'direccion' : 'seguridad';
       qs = qs.map(q => ({...q, target: closingRole}));
     }
     // red de seguridad: nunca dejar una etapa sin preguntas.
@@ -1763,16 +1327,17 @@ function startGame(){
   gameState.characterMistakes = [];
   gameState.answerAttemptLog = [];
   gameState.currentAnswerAttempts = 0;
+  // Registro acto por acto para el informe (ver onCharacterPick/onAnswerPick) y, con celulares,
+  // quién tomó cada función (foto del roster al iniciar).
+  gameState.actLog = [];
+  gameState.currentAct = null;
+  gameState.personByRole = (multiplayerEnabled && mpRoomCode && window.MP) ? window.MP.getPersonByRole() : {};
   gameState.history = []; // pila de snapshots para poder volver a la pregunta anterior
   gameState.stages.forEach(s => { gameState.stageStats[s.stage] = {questions: stageQuestions(s).length, wrongAnswers: 0, wrongCharacters: 0}; });
 
-  document.getElementById('screen-setup').classList.add('hidden');
-  document.getElementById('screen-game').classList.remove('hidden');
-  document.body.classList.remove('setup-mode');
-  document.body.classList.add('game-mode');
+  TabletopScreens.show('game', {scroll: false});
   document.getElementById('continueBtn').classList.add('hidden');
   document.getElementById('gameSessionBadge').textContent = SCENARIOS.find(s=>s.id===selectedScenarioId).name;
-  document.getElementById('statusLabel').textContent = 'EN CURSO';
   // Botón "Sala": solo tiene sentido si este ejercicio arrancó desde el lobby con celulares.
   document.getElementById('roomInfoBtn').classList.toggle('hidden', !(multiplayerEnabled && mpRoomCode));
 
@@ -1800,6 +1365,7 @@ function goToPreviousQuestion(){
   gameState.wrongAnswerCount = target.wrongAnswerCount;
   gameState.characterMistakes.length = target.characterMistakesLen;
   gameState.answerAttemptLog.length = target.answerAttemptLogLen;
+  gameState.actLog.length = target.actLogLen;
   gameState.stageStats = JSON.parse(JSON.stringify(target.stageStats));
   renderStage({skipHistory: true});
 }
@@ -1886,6 +1452,7 @@ function renderStage(opts){
   gameState.chosenCorrectParticipant = null;
   gameState.nextAction = null;
   gameState.currentAnswerAttempts = 0;
+  gameState.currentAct = {wrongRoles: [], wrongOptions: []};
   // Acto distinto: se reinicia el contador de reintentos (ver onAnswerPick, que lo sube cuando
   // una respuesta incorrecta republica el mismo acto para que el celular reintente).
   mpActRevote = 0;
@@ -1899,6 +1466,7 @@ function renderStage(opts){
       wrongCharacterCount: gameState.wrongCharacterCount, wrongAnswerCount: gameState.wrongAnswerCount,
       characterMistakesLen: gameState.characterMistakes.length,
       answerAttemptLogLen: gameState.answerAttemptLog.length,
+      actLogLen: gameState.actLog.length,
       stageStats: JSON.parse(JSON.stringify(gameState.stageStats))
     });
   }
@@ -1981,13 +1549,12 @@ function renderCharGrid(){
   const grid = document.getElementById('charGrid');
   grid.innerHTML = '';
   grid.className = 'char-grid';
-  const matrix = getMatrix(gameState.scenarioId);
   const rm = roleMetaFor(gameState.scenarioId);
   // Se muestran todas las funciones del escenario (las 6 estándar, o las propias si el
   // escenario las trae). Solo quedan activas las que participan y fueron marcadas en la
   // configuración.
   const todas = rm.keys.map(k => participants.find(p => p.roleKey === k)).filter(Boolean);
-  const available = todas.filter(p => p.checked && matrix[p.roleKey]);
+  const available = todas.filter(p => isRoleActive(p.roleKey, gameState.scenarioId));
   grid.classList.add(`count-${Math.min(todas.length, 6)}`);
   if(available.length === 0){
     grid.innerHTML = `<div class="empty-state">
@@ -2000,7 +1567,7 @@ function renderCharGrid(){
     return;
   }
   todas.forEach(p => {
-    const activo = p.checked && !!matrix[p.roleKey];
+    const activo = isRoleActive(p.roleKey, gameState.scenarioId);
     const el = document.createElement('div');
     el.className = 'char-card' + (activo ? '' : ' char-off');
     el.dataset.roleKey = p.roleKey; // usado por MP.attachVotingPhase (Fase 2) para pintar el tally
@@ -2024,7 +1591,7 @@ function renderCharGrid(){
         <span class="c-name">${escapeHtml(rm.names[p.roleKey])}</span>
       </div>
       <div class="c-desc">${escapeHtml(rm.desc[p.roleKey] || '')}</div>
-      <div class="c-foot"><span class="c-foot-label">${activo ? 'Ejecuta' : 'No participa'}</span><span class="c-foot-value">${activo ? escapeHtml(p.empresa || rm.org[p.roleKey]) : '—'}</span></div>`;
+      <div class="c-foot"><span class="c-foot-label">${activo ? 'Ejecuta' : 'No participa'}</span><span class="c-foot-value">${activo ? escapeHtml(roleCompanyFor(p.roleKey, gameState.scenarioId)) : '—'}</span></div>`;
     if(activo){
       el.addEventListener('click', () => onCharacterPick(p, el));
       el.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); onCharacterPick(p, el); } });
@@ -2059,6 +1626,7 @@ function onCharacterPick(participant, el){
     gameState.wrongCharacterCount++;
     gameState.stageStats[gameState.stages[gameState.stepIndex].stage].wrongCharacters++;
     gameState.characterMistakes.push({stage: gameState.stages[gameState.stepIndex].stage, chosenRole: participant.roleKey, targetRole: q.target});
+    if(gameState.currentAct) gameState.currentAct.wrongRoles.push(participant.roleKey);
     el.classList.remove('wrong-flash'); void el.offsetWidth; el.classList.add('wrong-flash');
     setTimeout(() => el.classList.remove('wrong-flash'), 350);
     renderWrongCharacterExplanation(participant, q);
@@ -2096,7 +1664,7 @@ function onCharacterPick(participant, el){
     const askQ = document.getElementById('askQuestion');
     if(askQ) askQ.textContent = '¿Qué decisión debe tomar?';
 
-    document.getElementById('answeringAs').textContent = `${rmPick.names[participant.roleKey]} · ${participant.empresa || rmPick.org[participant.roleKey]}`;
+    document.getElementById('answeringAs').textContent = `${rmPick.names[participant.roleKey]} · ${roleCompanyFor(participant.roleKey, gameState.scenarioId)}`;
     hideExplain();
     renderAnswerOptions(q, answerOrder);
     document.getElementById('answerBlock').classList.remove('hidden');
@@ -2163,6 +1731,7 @@ function onAnswerPick(idx, btn, q){
     gameState.wrongAnswerCount++;
     gameState.stageStats[gameState.stages[gameState.stepIndex].stage].wrongAnswers++;
     gameState.currentAnswerAttempts++;
+    if(gameState.currentAct) gameState.currentAct.wrongOptions.push(q.options[idx]);
     // se puede reintentar: no se bloquean los botones, solo se marca el error elegido, sin revelar la correcta
     document.querySelectorAll('#answerOptions .answer-btn').forEach(b => b.classList.remove('chosen-wrong'));
     btn.classList.add('chosen-wrong');
@@ -2201,6 +1770,12 @@ function onAnswerPick(idx, btn, q){
   if(multiplayerEnabled && mpRoomCode && window.MP) window.MP.closeAnswering(mpRoomCode);
   renderExplanation(idx, true, q);
   gameState.answerAttemptLog.push({stage: gameState.stages[gameState.stepIndex].stage, attempts: gameState.currentAnswerAttempts + 1});
+  const act = gameState.currentAct || {wrongRoles: [], wrongOptions: []};
+  gameState.actLog.push({
+    stage: gameState.stages[gameState.stepIndex].stage, title: q.title || '', target: q.target,
+    wrongRoles: act.wrongRoles.slice(), wrongOptions: act.wrongOptions.slice(),
+    correctOption: q.options[idx], explanation: q.explanations[idx] || ''
+  });
 
   const questions = stageQuestions(gameState.stages[gameState.stepIndex]);
   const isLastSub = gameState.subIndex === questions.length - 1;
@@ -2229,7 +1804,7 @@ function renderExplanation(chosenIdx, correct, q){
   const cls = correct ? 'is-correct' : 'is-wrong';
   let html = `<div class="explanation-item ${cls}">
     <div class="ex-head">${roleExplainIconHtml(rm, p.roleKey)}<div class="ex-head-text"><span class="ex-tag">${tag}</span><div class="ex-opt">${escapeHtml(q.options[chosenIdx])}</div></div></div>
-    <div class="ex-respondio">Respondió <b>${escapeHtml(rm.names[p.roleKey])}</b> · ${escapeHtml(p.empresa || rm.org[p.roleKey])}</div>
+    <div class="ex-respondio">Respondió <b>${escapeHtml(rm.names[p.roleKey])}</b> · ${escapeHtml(roleCompanyFor(p.roleKey, gameState.scenarioId))}</div>
     <div class="ex-why">${escapeHtml(q.explanations[chosenIdx])}</div>
   </div>`;
   if(!correct){
@@ -2244,397 +1819,22 @@ document.getElementById('restartGameBtn').addEventListener('click', () => {
 });
 document.getElementById('backToSetupBtn').addEventListener('click', backToSetup);
 
-// ---------------- informe ejecutivo narrativo ----------------
-function roleLabelWithName(roleKey){
-  return roleMetaFor(gameState.scenarioId).names[roleKey];
-}
-
-function buildExecutiveReport(){
-  const mistakes = gameState.characterMistakes;
-  const attempts = gameState.answerAttemptLog;
-
-  // --- análisis de confusiones de personaje ---
-  const confusionCounts = {};
-  mistakes.forEach(m => {
-    const key = m.chosenRole + '→' + m.targetRole;
-    if(!confusionCounts[key]) confusionCounts[key] = {chosenRole:m.chosenRole, targetRole:m.targetRole, count:0, stages:new Set()};
-    confusionCounts[key].count++;
-    confusionCounts[key].stages.add(m.stage);
-  });
-  const confusionList = Object.values(confusionCounts).sort((a,b) => b.count - a.count);
-
-  const mistakesByStage = {};
-  mistakes.forEach(m => { mistakesByStage[m.stage] = (mistakesByStage[m.stage]||0) + 1; });
-
-  // --- análisis de intentos por pregunta (¿acertaron a la primera?) ---
-  const attemptsByStage = {};
-  attempts.forEach(a => {
-    if(!attemptsByStage[a.stage]) attemptsByStage[a.stage] = {total:0, firstTry:0, sumAttempts:0, maxAttempts:0};
-    const d = attemptsByStage[a.stage];
-    d.total++; d.sumAttempts += a.attempts; d.maxAttempts = Math.max(d.maxAttempts, a.attempts);
-    if(a.attempts === 1) d.firstTry++;
-  });
-  const totalAnswered = attempts.length;
-  const firstTryTotal = attempts.filter(a => a.attempts === 1).length;
-  const firstTryPct = totalAnswered ? Math.round((firstTryTotal / totalAnswered) * 100) : 100;
-
-  let worstStage = null, worstRate = 101;
-  Object.entries(attemptsByStage).forEach(([stage, d]) => {
-    const rate = (d.firstTry / d.total) * 100;
-    if(rate < worstRate){ worstRate = rate; worstStage = stage; }
-  });
-
-  // --- fortalezas: etapas sin ningún error, de ningún tipo ---
-  const scenarioStages = stagesFor(gameState.scenarioId);
-  const strengths = scenarioStages.filter(s => {
-    const noCharMistakes = !mistakesByStage[s];
-    const noRetries = !attemptsByStage[s] || attemptsByStage[s].firstTry === attemptsByStage[s].total;
-    return noCharMistakes && noRetries;
-  });
-
-  const parts = [];
-
-  // 1. Resumen ejecutivo
-  const totalIssues = mistakes.length + attempts.reduce((s,a) => s + (a.attempts - 1), 0);
-  let resumen;
-  if(totalIssues === 0){
-    resumen = `El ejercicio se completó sin un solo tropiezo: cada función identificó correctamente su rol y acertó la acción esperada al primer intento en las ${gameState.totalQuestions} preguntas. Es el mejor escenario posible antes de una auditoría o un incidente real.`;
-  } else if(firstTryPct >= 85 && mistakes.length <= 1){
-    resumen = `El desempeño general fue sólido. El equipo identificó con claridad quién debía actuar en cada momento, con solo puntos aislados de duda que no comprometen la lectura global del ejercicio.`;
-  } else if(firstTryPct >= 60){
-    resumen = `El ejercicio mostró un desempeño mixto: hubo tramos resueltos con seguridad y otros donde el grupo necesitó más de un intento o dudó sobre quién debía tomar la acción. Es un resultado normal para una primera corrida, pero identifica puntos concretos a reforzar antes de la próxima.`;
-  } else {
-    resumen = `El ejercicio evidenció dificultades recurrentes tanto en identificar quién debía responder como en dar con la acción correcta a la primera. Esto no es necesariamente un mal resultado — es exactamente el tipo de brecha que un tabletop está diseñado para sacar a la luz antes de que ocurra un incidente real.`;
-  }
-  parts.push({title:'Resumen ejecutivo', html:`<p>${resumen}</p>`});
-
-  // 2. Patrones de asignación de responsables
-  let asignacionHtml = '';
-  if(mistakes.length === 0){
-    asignacionHtml = `<p>No se registró ninguna confusión de responsables durante el ejercicio: cada vez que se necesitó una acción, el grupo identificó de inmediato a la función correcta.</p>`;
-  } else {
-    const top = confusionList[0];
-    // Nombres de función/etapa escapados: en un escenario importado desde Word pueden venir
-    // de "FUNCIÓN DEL ESCENARIO"/"ETAPA" tal cual las escribió quien armó el documento —
-    // mismo criterio de escape que el resto de la pantalla del juego (renderStage, etc.),
-    // que este informe no venía aplicando.
-    const chosenName = escapeHtml(roleLabelWithName(top.chosenRole));
-    const targetName = escapeHtml(roleLabelWithName(top.targetRole));
-    const stageWord = top.stages.size > 1
-      ? `las etapas de ${[...top.stages].map(escapeHtml).join(', ')}`
-      : `la etapa de ${escapeHtml([...top.stages][0])}`;
-    let topSentence;
-    if(top.count >= 3){
-      topSentence = `El patrón más marcado fue confundir a <b>${chosenName}</b> con <b>${targetName}</b> — ocurrió ${top.count} veces, principalmente en ${stageWord}. Vale la pena revisar con el grupo la diferencia entre ambas funciones antes del próximo ejercicio.`;
-    } else if(top.count === 2){
-      topSentence = `Se repitió al menos dos veces la confusión entre <b>${chosenName}</b> y <b>${targetName}</b> (en ${stageWord}), lo que sugiere que el límite entre ambas funciones no está del todo interiorizado.`;
-    } else {
-      topSentence = `Se registró una confusión puntual entre <b>${chosenName}</b> y <b>${targetName}</b> en ${stageWord} — aislada, no parece ser un patrón sistemático.`;
-    }
-    asignacionHtml = `<p>${topSentence}</p>`;
-    if(confusionList.length > 1){
-      const others = confusionList.slice(1, 3).map(c => `${escapeHtml(roleLabelWithName(c.chosenRole))} → ${escapeHtml(roleLabelWithName(c.targetRole))} (${c.count}×)`).join(', ');
-      asignacionHtml += `<p>Otras confusiones registradas, con menor frecuencia: ${others}.</p>`;
-    }
-  }
-  parts.push({title:'Patrones al asignar responsables', html:asignacionHtml});
-
-  // 3. Primera respuesta correcta
-  let primerIntentoHtml;
-  if(totalAnswered === 0){
-    primerIntentoHtml = `<p>No hay datos suficientes de respuestas para analizar.</p>`;
-  } else if(firstTryPct >= 90){
-    primerIntentoHtml = `<p>El <b>${firstTryPct}%</b> de las preguntas se resolvieron a la primera, sin necesidad de reintentar. Es un indicador fuerte de que el equipo no solo sabe quién actúa, sino también qué acción corresponde en cada momento.</p>`;
-  } else if(firstTryPct >= 65){
-    primerIntentoHtml = `<p>El <b>${firstTryPct}%</b> de las preguntas se resolvieron al primer intento. La etapa donde más costó dar con la acción correcta fue <b>${escapeHtml(worstStage)}</b>, con un ${Math.round(worstRate)}% de aciertos inmediatos — conviene revisarla con el grupo en la revisión posterior (hot-wash).</p>`;
-  } else {
-    primerIntentoHtml = `<p>Solo el <b>${firstTryPct}%</b> de las preguntas se resolvieron al primer intento, lo que indica que buena parte del ejercicio se resolvió por descarte más que por certeza. <b>${escapeHtml(worstStage)}</b> fue la etapa más costosa, con apenas ${Math.round(worstRate)}% de aciertos inmediatos.</p>`;
-  }
-  parts.push({title:'Primera respuesta correcta', html:primerIntentoHtml});
-
-  // 4. Fortalezas
-  let fortalezasHtml;
-  if(strengths.length === scenarioStages.length){
-    fortalezasHtml = `<p>Todas las etapas del ejercicio se resolvieron sin errores de ningún tipo — un resultado excelente y poco común en una primera corrida.</p>`;
-  } else if(strengths.length > 0){
-    fortalezasHtml = `<p>${strengths.length === 1 ? 'La etapa' : 'Las etapas'} de <b>${strengths.map(escapeHtml).join(', ')}</b> se resolvieron sin errores de personaje ni reintentos — un buen punto de partida que vale la pena reconocer con el equipo.</p>`;
-  } else {
-    fortalezasHtml = `<p>Ninguna etapa quedó completamente libre de errores o reintentos, aunque eso es información igual de valiosa: señala que el refuerzo debe ser transversal, no puntual.</p>`;
-  }
-  parts.push({title:'Fortalezas identificadas', html:fortalezasHtml});
-
-  // 5. Recomendaciones
-  const recs = [];
-  const planAccion = [];
-  if(confusionList.length > 0){
-    const top = confusionList[0];
-    // recs[] se inserta como <li> sin re-escapar (ver más abajo), así que acá también hay
-    // que escapar los nombres antes de interpolarlos. planAccion en cambio SÍ se escapa al
-    // volcarse en la tabla (más abajo), así que ahí puede ir el texto plano.
-    recs.push(`Reforzar con ${escapeHtml(roleLabelWithName(top.chosenRole))} y ${escapeHtml(roleLabelWithName(top.targetRole))} la diferencia entre sus responsabilidades, idealmente con ejemplos concretos del propio incidente simulado.`);
-    planAccion.push({accion:`Reforzar la diferencia de responsabilidades entre ${roleLabelWithName(top.chosenRole)} y ${roleLabelWithName(top.targetRole)} con ejemplos del propio ejercicio`, responsable:`${roleLabelWithName(top.chosenRole)} y ${roleLabelWithName(top.targetRole)}`, plazo:'15 días'});
-  }
-  if(worstStage && worstRate < 85){
-    recs.push(`Revisar el procedimiento de la etapa de <b>${escapeHtml(worstStage)}</b> con el equipo — fue donde más costó identificar la acción correcta a la primera.`);
-    planAccion.push({accion:`Revisar el procedimiento y las decisiones de la etapa de ${worstStage} con todo el equipo`, responsable:'Equipo completo', plazo:'15 días'});
-  }
-  if(totalIssues === 0){
-    recs.push(`Con este resultado, el equipo está en condiciones de intentar un escenario más exigente o un ejercicio operacional real como siguiente paso.`);
-    planAccion.push({accion:'Programar un escenario más exigente o un ejercicio operacional real como siguiente paso', responsable: facilitatorName || 'Facilitador', plazo:'30 días'});
-  } else if(recs.length === 0){
-    recs.push(`Repetir este mismo escenario en unas semanas para confirmar que los puntos de duda se resolvieron con la práctica.`);
-    planAccion.push({accion:'Repetir este mismo escenario para confirmar que los puntos de duda se resolvieron con la práctica', responsable: facilitatorName || 'Facilitador', plazo:'30 días'});
-  }
-  recs.push(`Documentar este resultado como línea base — el valor real de repetir el ejercicio está en comparar contra esta primera corrida.`);
-  planAccion.push({accion:'Documentar este resultado como línea base para comparar contra la próxima corrida', responsable: facilitatorName || 'Facilitador', plazo:'7 días'});
-  parts.push({title:'Recomendaciones', html:`<ul class="report-recs">${recs.map(r => `<li>${r}</li>`).join('')}</ul>`});
-
-  const planHtml = `<div class="table-wrap"><table class="ptable plan-table">
-    <thead><tr><th>Acción</th><th>Responsable sugerido</th><th>Plazo</th></tr></thead>
-    <tbody>${planAccion.map(p => `<tr><td>${escapeHtml(p.accion)}</td><td>${escapeHtml(p.responsable)}</td><td><span class="plazo-chip">${escapeHtml(p.plazo)}</span></td></tr>`).join('')}</tbody>
-  </table></div>`;
-  parts.push({title:'Plan de acción', html:planHtml});
-
-  return {parts, plain: {
-    resumen, firstTryPct, worstStage, worstRate: worstStage ? Math.round(worstRate) : null,
-    confusionTop: confusionList[0] || null, strengths, recomendaciones: recs.map(r => r.replace(/<\/?b>/g,'')),
-    planAccion
-  }};
-}
-
+// ---------------- resultados e informe (js/report.js) ----------------
 function showResults(){
   hideExplain();
   if(gameState.timerInterval) clearInterval(gameState.timerInterval);
-  document.getElementById('screen-game').classList.add('hidden');
-  document.body.classList.remove('game-mode');
   document.getElementById('roomInfoBtn').classList.add('hidden');
   if(window.MP) window.MP.closeRoomPanel();
-  document.getElementById('screen-report').classList.add('hidden');
-  document.getElementById('screen-results').classList.remove('hidden');
-  document.getElementById('statusLabel').textContent = 'FINALIZADO';
-
-  // animación de entrada escalonada (respeta prefers-reduced-motion vía la regla global)
-  const enterEls = document.querySelectorAll('#screen-results .results-enter');
-  enterEls.forEach(el => { el.style.animation = 'none'; void el.offsetWidth; el.style.animation = ''; });
-
-  const scenarioMeta = SCENARIOS.find(s => s.id === gameState.scenarioId);
-  const resultsRoleMeta = roleMetaFor(gameState.scenarioId);
-  const resultsStages = stagesFor(gameState.scenarioId);
-  const duration = gameState.startTime ? fmtElapsed(new Date() - gameState.startTime) : '00:00';
-  const total = gameState.totalQuestions;
-  const wrongA = gameState.wrongAnswerCount;
-  const wrongC = gameState.wrongCharacterCount;
-  // La nota debe reflejar ambos tipos de error: elegir mal el personaje (quien responde)
-  // es tan relevante para un tabletop como elegir mal la alternativa de respuesta.
-  const precision = total > 0 ? Math.round((total / (total + wrongA + wrongC)) * 100) : 0;
-  const elapsedSeconds = gameState.startTime ? Math.max(0, Math.round((new Date() - gameState.startTime) / 1000)) : 0;
-  // El tiempo aporta una penalización moderada: 1 punto por cada 2 minutos, con un máximo de 10.
-  const timePenalty = Math.min(10, Math.floor(elapsedSeconds / 120));
-  const accuracy = Math.max(0, precision - timePenalty);
-
-  let gradeClass, gradeLabel, message;
-  if(accuracy >= 90){
-    gradeClass = 'grade-excelente'; gradeLabel = 'Excelente';
-    message = 'El grupo respondió con muy pocos errores. El ejercicio validó que el equipo conoce bien su rol en este escenario.';
-  } else if(accuracy >= 75){
-    gradeClass = 'grade-bueno'; gradeLabel = 'Bueno';
-    message = 'Buen desempeño general, con algunos puntos de duda. Conviene revisar en la revisión posterior (hot-wash) las preguntas donde hubo más de un intento y observar el efecto del tiempo sobre el resultado.';
-  } else if(accuracy >= 50){
-    gradeClass = 'grade-regular'; gradeLabel = 'Regular';
-    message = 'Hubo varias dudas durante el ejercicio. Esto es útil — señala en qué partes del procedimiento el equipo necesita más claridad antes de un incidente real.';
-  } else {
-    gradeClass = 'grade-refuerzo'; gradeLabel = 'Necesita refuerzo';
-    message = 'El número de errores sugiere que el procedimiento no está suficientemente interiorizado por el equipo. Recomendable repetir el ejercicio después de reforzar los roles y el plan.';
-  }
-
-  document.getElementById('reportScenarioName').textContent = `Informe · ${scenarioMeta.name}${clientName ? ' · ' + clientName : ''}`;
-  document.getElementById('gradeBadge').className = `kpi-card kpi-card-score ${gradeClass}`;
-  document.getElementById('gradePct').textContent = accuracy + '%';
-  document.getElementById('gradeLabel').textContent = gradeLabel;
-  document.getElementById('gradeMeta').textContent = `Precisión ${precision}% · −${timePenalty} pts por tiempo`;
-  document.getElementById('resDuration').textContent = duration;
-  document.getElementById('resTotal').textContent = total;
-  document.getElementById('resWrongAnswers').textContent = wrongA;
-  document.getElementById('resWrongChars').textContent = wrongC;
-  document.getElementById('resDonutPct').textContent = accuracy + '%';
-  // KPI superiores (mismos valores que ya se muestran más abajo en la dona/leyenda, solo
-  // repetidos arriba a simple vista en el panel ejecutivo).
-  document.getElementById('kpiPrecisionPct').textContent = precision + '%';
-  document.getElementById('kpiDuration').textContent = duration;
-  document.getElementById('kpiWrongChars').textContent = wrongC;
-  document.getElementById('kpiWrongAnswers').textContent = wrongA;
-
-  // Dona de 3 colores proporcional a preguntas respondidas / errores de alternativa / errores de
-  // personaje (misma base que el % de la nota final), armada con 3 círculos SVG superpuestos.
-  const donutTotal = total + wrongA + wrongC;
-  const circumference = 339.3; // 2 * PI * 54, coincide con el radio del círculo del SVG
-  const correctLen = (total / donutTotal) * circumference;
-  const altLen = (wrongA / donutTotal) * circumference;
-  const charLen = (wrongC / donutTotal) * circumference;
-  document.getElementById('resDonutCorrect').setAttribute('stroke-dasharray', `${correctLen} ${circumference}`);
-  document.getElementById('resDonutAlt').setAttribute('stroke-dasharray', `${altLen} ${circumference}`);
-  document.getElementById('resDonutAlt').setAttribute('transform', `rotate(${-90 + (correctLen / circumference) * 360} 66 66)`);
-  document.getElementById('resDonutChar').setAttribute('stroke-dasharray', `${charLen} ${circumference}`);
-  document.getElementById('resDonutChar').setAttribute('transform', `rotate(${-90 + ((correctLen + altLen) / circumference) * 360} 66 66)`);
-
-  const stageChartEl = document.getElementById('resStageChart');
-  const stageBarMax = Math.max(1, ...resultsStages.map(s => {
-    const st = gameState.stageStats[s];
-    return st ? Math.max(st.wrongAnswers, st.wrongCharacters) : 0;
-  }));
-  stageChartEl.innerHTML = resultsStages.map((stageName, idx) => {
-    const stat = gameState.stageStats[stageName];
-    if(!stat) return '';
-    return `
-      <div class="stage-chart-block results-enter" style="animation-delay:${0.24 + idx * 0.06}s;">
-        <div class="stage-chart-label">${escapeHtml(stageName)} <span>(${stat.questions} pregunta${stat.questions === 1 ? '' : 's'})</span></div>
-        <div class="mini-bar-row">
-          <span class="mini-bar-label">Alternativa</span>
-          <div class="mini-bar-track"><div class="mini-bar-fill is-response" style="width:${Math.min(100, (stat.wrongAnswers / stageBarMax) * 100)}%;"></div></div>
-          <span class="mini-bar-val">${stat.wrongAnswers}</span>
-        </div>
-        <div class="mini-bar-row">
-          <span class="mini-bar-label">Personaje</span>
-          <div class="mini-bar-track"><div class="mini-bar-fill is-function" style="width:${Math.min(100, (stat.wrongCharacters / stageBarMax) * 100)}%;"></div></div>
-          <span class="mini-bar-val">${stat.wrongCharacters}</span>
-        </div>
-      </div>`;
-  }).join('');
-  document.getElementById('resultsMessage').textContent = message;
-
-  const report = buildExecutiveReport();
-  const reportEl = document.getElementById('executiveReport');
-  reportEl.innerHTML = report.parts.map(p => `
-    <div class="report-section">
-      <div class="report-section-title">${escapeHtml(p.title)}</div>
-      ${p.html}
-    </div>`).join('');
-
-  const activeParticipants = participants.filter(p => p.checked);
-  const nowDate = new Date();
-  const fechaLegible = nowDate.toLocaleDateString('es-CL', {day:'2-digit', month:'long', year:'numeric'});
-
-  // ---- llenar el bloque de acta ----
-  document.getElementById('actaFecha').textContent = fechaLegible;
-  document.getElementById('actaFacilitador').textContent = facilitatorName || 'Sin registrar';
-  document.getElementById('actaCliente').textContent = clientName || 'Sin registrar';
-  document.getElementById('actaParticipantes').textContent = `${activeParticipants.length} de ${resultsRoleMeta.keys.length} funciones`;
-  document.getElementById('actaNotes').value = '';
-
-  function buildResultsExport(){
-    return {
-      tipo: 'tabletop-resultados', version: 1,
-      cliente: clientName || null,
-      facilitador: facilitatorName || null,
-      escenario: scenarioMeta.name,
-      fecha: nowDate.toISOString(),
-      fecha_legible: fechaLegible,
-      duracion: duration,
-      calificacion: { porcentaje: accuracy, etiqueta: gradeLabel, precision, penalizacion_tiempo: timePenalty, segundos: elapsedSeconds },
-      total_preguntas: total,
-      errores_alternativas: wrongA,
-      errores_personaje: wrongC,
-      desglose_por_etapa: resultsStages.map(stageName => ({
-        etapa: stageName, ...gameState.stageStats[stageName]
-      })),
-      informe_ejecutivo: {
-        resumen: report.plain.resumen,
-        porcentaje_primer_intento: report.plain.firstTryPct,
-        etapa_mas_dificil: report.plain.worstStage,
-        confusion_principal: report.plain.confusionTop ? {
-          se_eligio: roleLabelWithName(report.plain.confusionTop.chosenRole),
-          correspondia_a: roleLabelWithName(report.plain.confusionTop.targetRole),
-          veces: report.plain.confusionTop.count
-        } : null,
-        fortalezas: report.plain.strengths,
-        recomendaciones: report.plain.recomendaciones,
-        plan_de_accion: report.plain.planAccion
-      },
-      acta: {
-        participantes_confirmados: activeParticipants.length,
-        notas_facilitador: document.getElementById('actaNotes').value || null
-      },
-      participantes: activeParticipants.map(p => ({
-        funcion: resultsRoleMeta.names[p.roleKey], empresa: p.empresa || null
-      }))
-    };
-  }
-
-  function downloadResults(){
-    const jsonStr = JSON.stringify(buildResultsExport(), null, 2);
-    const blob = new Blob([jsonStr], {type:'application/json'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = `tabletop-resultado_${(clientName || 'cliente').toLowerCase().replace(/[^a-z0-9]+/g,'_')}_${scenarioMeta.id}.json`;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
-
-  document.getElementById('downloadResultsBtn').onclick = downloadResults;
-  document.getElementById('downloadResultsBtnBottom').onclick = downloadResults;
-  document.getElementById('copyResultsBtn').onclick = () => {
-    const btn = document.getElementById('copyResultsBtn'); const orig = btn.textContent;
-    if(!navigator.clipboard || !navigator.clipboard.writeText){
-      btn.textContent = 'No disponible en este navegador'; setTimeout(() => btn.textContent = orig, 2000);
-      return;
-    }
-    navigator.clipboard.writeText(JSON.stringify(buildResultsExport(), null, 2)).then(() => {
-      btn.textContent = 'Copiado ✓'; setTimeout(() => btn.textContent = orig, 1500);
-    }).catch(() => {
-      btn.textContent = 'No se pudo copiar'; setTimeout(() => btn.textContent = orig, 2000);
-    });
-  };
-
-  // «Guardar ejercicio»: persiste el resultado en localStorage (no depende de que el facilitador
-  // recuerde descargar el JSON) y con eso da por cerrado el ejercicio, volviendo a la configuración.
-  document.getElementById('saveExerciseBtn').onclick = () => {
-    const record = buildResultsExport();
-    record.id = `exercise_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-    record.guardado_en = new Date().toISOString();
-    const list = loadSavedExercises();
-    list.push(record);
-    saveExercisesList(list);
-    showConfirmModal({
-      title: 'Ejercicio guardado',
-      message: `El resultado de <b>${escapeHtml(scenarioMeta.name)}</b>${clientName ? ` para <b>${escapeHtml(clientName)}</b>` : ''} quedó guardado en este navegador (${list.length} ejercicio${list.length === 1 ? '' : 's'} guardado${list.length === 1 ? '' : 's'} en total).`,
-      confirmText: 'Cerrar y volver a la configuración', cancelText: null
-    }).then(closeExerciseToSetup);
-  };
+  TabletopReport.show({gameState, participants, clientName, facilitatorName});
 }
-
-document.getElementById('goToReportBtn').addEventListener('click', () => {
-  document.getElementById('screen-results').classList.add('hidden');
-  document.getElementById('screen-report').classList.remove('hidden');
-  window.scrollTo({top: 0, behavior: 'smooth'});
-});
-
-document.getElementById('backToResultsBtn').addEventListener('click', () => {
-  document.getElementById('screen-report').classList.add('hidden');
-  document.getElementById('screen-results').classList.remove('hidden');
-  window.scrollTo({top: 0, behavior: 'smooth'});
-});
-
-function closeExerciseToSetup(){
-  document.getElementById('screen-report').classList.add('hidden');
-  document.getElementById('screen-setup').classList.remove('hidden');
-  document.getElementById('continueBtn').classList.remove('hidden');
-  document.getElementById('statusLabel').textContent = 'CONFIGURACIÓN';
-  document.body.classList.add('setup-mode');
-  updateBottomState();
-}
-document.getElementById('backFromResultsBtn').addEventListener('click', closeExerciseToSetup);
 
 function backToSetup(){
   hideExplain();
   if(gameState.timerInterval) clearInterval(gameState.timerInterval);
-  document.getElementById('screen-game').classList.add('hidden');
-  document.body.classList.remove('game-mode');
   document.getElementById('roomInfoBtn').classList.add('hidden');
   if(window.MP) window.MP.closeRoomPanel();
-  document.getElementById('screen-setup').classList.remove('hidden');
+  TabletopScreens.show('setup', {scroll: false});
   document.getElementById('continueBtn').classList.remove('hidden');
-  document.getElementById('statusLabel').textContent = 'CONFIGURACIÓN';
-  document.body.classList.add('setup-mode');
   updateBottomState();
 }
 
@@ -2651,4 +1851,29 @@ if(topbarEl && window.ResizeObserver){
   new ResizeObserver(syncTopbarHeight).observe(topbarEl);
   syncTopbarHeight();
 }
+// Constructor de escenarios (js/builder.js): lo que necesita de esta pantalla de configuración.
+TabletopBuilder.init({
+  escapeHtml,
+  checkIcon: CHECK_ICON,
+  useScenario: data => {
+    const id = registerCustomScenario(data);
+    applyScenarioSelection(id);
+    renderParticipants();
+    renderScenarioCards();
+    profileSaved = false;
+    TabletopScreens.show('setup', {scroll: false});
+    goToStep(2);
+  }
+});
+
+// Resultados e informe (js/report.js): funciones de esta pantalla que el informe necesita.
+TabletopReport.init({
+  escapeHtml, fmtElapsed, roleMetaFor, stagesFor, sessionRoleKeys, roleCompanyFor,
+  showConfirmModal, loadSavedExercises, saveExercisesList,
+  onClose: () => {
+    document.getElementById('continueBtn').classList.remove('hidden');
+    updateBottomState();
+  }
+});
+
 })();
