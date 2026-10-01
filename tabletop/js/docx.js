@@ -15,6 +15,7 @@ const TibDocx = (function(){
     OBJ: 'OBJETIVO (ACTIVO AFECTADO)',
     EXTRA_ROLES: 'FUNCIONES ADICIONALES QUE PARTICIPAN',
     FUNCION_ESCENARIO: 'FUNCION DEL ESCENARIO',
+    INTRO: 'INTRODUCCION',
     ETAPA: 'ETAPA',
     FUNCION: 'FUNCION QUE RESPONDE',
     TITULO: 'TITULO DEL ACTO',
@@ -106,6 +107,11 @@ const TibDocx = (function(){
       out.push(pLabelValue(LABELS.EXTRA_ROLES, extraNames));
       out.push(p('Seguridad y TI participan siempre en todo escenario; escribe aquí solo funciones adicionales, separadas por coma, eligiendo entre: Legal, Comunicaciones, RRHH, Dirección. Si ninguna otra función participa, deja la línea de arriba en blanco. (Si en cambio tu ejercicio necesita funciones completamente distintas a estas 6 — otros cargos, otro organigrama — bórrala y usa líneas "FUNCIÓN DEL ESCENARIO:" en su lugar, una por función.)', {spacingAfter:280}));
     }
+    out.push(pBlank());
+    // Introducción: se muestra en pantalla antes de la primera etapa. Va justo antes de la
+    // primera ETAPA porque toma todos los párrafos que siguen a la etiqueta hasta la próxima.
+    out.push(pLabelValue(LABELS.INTRO, ''));
+    String(scenario.intro || '').split('\n\n').filter(par => par.trim()).forEach(par => out.push(p(par)));
     out.push(pBlank());
 
     scenario.stages.forEach(stageEntry => {
@@ -215,6 +221,7 @@ const TibDocx = (function(){
       name: '[Nombre del nuevo escenario, ej: Ataque al proveedor de nómina]',
       blurb: '[Una frase corta que resuma el ataque — se muestra en la tarjeta de selección]',
       target: '[Activo principal afectado, ej: Servidor de nómina]',
+      intro: '[Introducción que se muestra en pantalla antes de empezar: en 2 o 3 párrafos, presenta la organización, el momento en que ocurre el ejercicio y qué se busca practicar, sin adelantar lo que va a pasar. Escríbela justo debajo de "INTRODUCCIÓN:", antes de la primera "ETAPA:".]\n\n[Segundo párrafo, opcional. Deja una línea en blanco entre párrafos, tal como aquí.]',
       extraRoleKeys: [], // si tu ejercicio tiene un organigrama propio (no Seguridad/TI/Legal/Comunicaciones/RRHH/Dirección), reemplaza esto por líneas "FUNCIÓN DEL ESCENARIO:" — ver docx.js
       stages: STAGE_LABELS.map((stage, i) => ({
         stage,
@@ -298,6 +305,10 @@ const TibDocx = (function(){
     let currentStage = null;
     let currentQ = null;
     let situationActive = false;
+    // INTRODUCCIÓN: puede traer texto en la misma línea y/o en los párrafos siguientes; toma
+    // todo hasta la próxima etiqueta reconocida (normalmente la primera "ETAPA:").
+    const introParts = [];
+    let introActive = false;
     const optLabelSet = {}; LETTERS.forEach(l => { optLabelSet['ALTERNATIVA ' + l] = l; });
     const expLabelSet = {}; LETTERS.forEach(l => { expLabelSet['EXPLICACION ' + l] = l; });
 
@@ -353,6 +364,16 @@ const TibDocx = (function(){
       const label = parts ? parts.label : null;
       const value = parts ? parts.value : raw;
 
+      // Cualquier etiqueta del encabezado o una ETAPA cierra la introducción.
+      if(label === LABELS.NOMBRE || label === LABELS.DESC || label === LABELS.OBJ ||
+         label === LABELS.EXTRA_ROLES || label === LABELS.FUNCION_ESCENARIO || label === LABELS.ETAPA){
+        introActive = false;
+      }
+      if(label === LABELS.INTRO){
+        if(value) introParts.push(value);
+        introActive = true; situationActive = false;
+        continue;
+      }
       if(label === LABELS.NOMBRE){ name = value; situationActive = false; continue; }
       if(label === LABELS.DESC){ desc = value; situationActive = false; continue; }
       if(label === LABELS.OBJ){ objetivo = value; situationActive = false; continue; }
@@ -372,6 +393,7 @@ const TibDocx = (function(){
         situationActive = false;
         continue;
       }
+      if(introActive){ introParts.push(raw); continue; }
       if(!currentStage) continue; // texto suelto antes de la primera ETAPA (instrucciones)
 
       if(label === LABELS.FUNCION){
@@ -429,6 +451,7 @@ const TibDocx = (function(){
 
     return {
       name: name.trim(), blurb: desc.trim(), target: objetivo.trim(),
+      intro: introParts.join('\n\n'),
       extraRoleKeys,
       customRoles: customRoleList.length ? customRoleList : null,
       customStages: stages.map(s => s.stage),

@@ -295,6 +295,27 @@
     </div>
   </div>
 
+  <!-- Introducción del escenario: después de configurar (y de la sala de espera, con celulares)
+       y antes de la primera etapa. El texto viene de SCENARIO_INTROS (catalogo.js) o de la
+       etiqueta "INTRODUCCIÓN:" del Word importado; ver showBriefing en app.js. -->
+  <div id="screen-briefing" class="hidden">
+    <div class="panel section-block briefing-panel">
+      <div class="eyebrow">Introducción al ejercicio</div>
+      <h2 class="section-title" id="briefingTitle"></h2>
+      <p class="section-sub" id="briefingBlurb"></p>
+      <div class="briefing-facts">
+        <div class="briefing-fact"><span class="briefing-fact-label">Objetivo</span><span class="briefing-fact-value" id="briefingTarget"></span></div>
+        <div class="briefing-fact"><span class="briefing-fact-label">Etapas</span><span class="briefing-fact-value" id="briefingStages"></span></div>
+        <div class="briefing-fact"><span class="briefing-fact-label">Funciones que participan</span><span class="briefing-fact-value" id="briefingRoles"></span></div>
+      </div>
+      <div class="briefing-text" id="briefingText"></div>
+      <div class="lobby-actions">
+        <button class="btn" id="briefingBackBtn" type="button">← Volver a la configuración</button>
+        <button class="btn-cta" id="briefingStartBtn" type="button">Comenzar ejercicio →</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Popout "Sala": disponible durante el ejercicio en modo "Con celulares" (ver #roomInfoBtn
        en la barra superior). Muestra de nuevo el código/QR/link y el roster en vivo, para que
        el facilitador se lo pueda mostrar a alguien que salió de la sala sin querer y necesita

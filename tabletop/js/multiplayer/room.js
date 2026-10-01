@@ -131,6 +131,13 @@ export async function startRoom(code){
   await setDoc(doc(db, 'rooms', code), {status: 'in_progress'}, {merge: true});
 }
 
+// Introducción del escenario ({title, intro}): la publica el facilitador al mostrar
+// #screen-briefing, para que los celulares la lean mientras tanto (ver participant-app.js).
+export async function publishBriefing(code, briefing){
+  const {db} = await firebaseReady();
+  await updateDoc(doc(db, 'rooms', code), {briefing});
+}
+
 // ---------------- Fase 2: votación ----------------
 
 // Publica el acto vigente (reemplaza currentAct entero — no queda ningún campo del acto

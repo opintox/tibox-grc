@@ -112,3 +112,10 @@ body.lobby-mode .topbar-right{display:none;}
 .join-status.is-error{color:var(--red);}
 .join-status.is-ok{color:var(--green);}
 .join-submit-btn{width:100%; justify-content:center;}
+
+/* Introducción del escenario en el celular (ver renderBriefing en participant-app.js) */
+.join-briefing{margin-top:18px; padding-top:16px; border-top:1px solid var(--border);}
+.join-briefing-title{font-size:var(--fs-lg); font-weight:700; margin:0 0 10px; color:var(--text);}
+.join-briefing-text{font-size:var(--fs-sm); line-height:1.6; color:var(--text);}
+.join-briefing-text p{margin:0 0 12px;}
+.join-briefing-text p:last-child{margin-bottom:0;}

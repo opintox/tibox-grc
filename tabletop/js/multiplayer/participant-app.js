@@ -21,6 +21,9 @@ const voteGrid = document.getElementById('joinVoteGrid');
 const answerPanel = document.getElementById('joinAnswerPanel');
 const answerStatusEl = document.getElementById('joinAnswerStatus');
 const answerGrid = document.getElementById('joinAnswerGrid');
+const joinBriefing = document.getElementById('joinBriefing');
+const joinBriefingTitle = document.getElementById('joinBriefingTitle');
+const joinBriefingText = document.getElementById('joinBriefingText');
 
 let unsubscribeParticipants = null;
 let unsubscribeRoom = null;
@@ -176,14 +179,19 @@ submitBtn.addEventListener('click', async () => {
 // snapshot de la sala volvería a pintar el formulario y perdería "ya voté"/"ya respondí").
 function handleActUpdate(room, roleRoster){
   const act = room.currentAct;
+  // Introducción del escenario: solo entre que el facilitador inicia y publica el primer acto.
+  const showBriefing = room.status === 'in_progress' && !act && !!room.briefing;
+  renderBriefing(showBriefing ? room.briefing : null);
 
   if(room.status !== 'in_progress' || !act || (act.phase !== 'voting' && act.phase !== 'answering')){
     votePanel.classList.add('hidden');
     answerPanel.classList.add('hidden');
     waitingPanel.classList.remove('hidden');
-    joinWaitingText.textContent = room.status === 'in_progress'
-      ? 'Esperando a que el facilitador continúe…'
-      : 'El ejercicio todavía no comienza.';
+    joinWaitingText.textContent = showBriefing
+      ? 'El facilitador está presentando el escenario. Cuando empiece la primera etapa, aquí vas a poder votar.'
+      : room.status === 'in_progress'
+        ? 'Esperando a que el facilitador continúe…'
+        : 'El ejercicio todavía no comienza.';
     return;
   }
 
@@ -209,6 +217,17 @@ function handleActUpdate(room, roleRoster){
     const role = roleRoster.find(r => r.roleKey === act.target);
     joinWaitingText.textContent = `Turno de ${role ? role.name : (act.target || 'otra función')} — está respondiendo…`;
   }
+}
+
+// briefing: {title, intro} publicado por el facilitador (ver publishBriefing en room.js), o
+// null para ocultarlo. Texto plano: cada párrafo se escapa (lo escribe el facilitador, pero
+// viene de un Word importado).
+function renderBriefing(briefing){
+  joinBriefing.classList.toggle('hidden', !briefing);
+  if(!briefing) return;
+  joinBriefingTitle.textContent = briefing.title || '';
+  joinBriefingText.innerHTML = String(briefing.intro || '').split(/\n\s*\n/).filter(t => t.trim())
+    .map(t => `<p>${escapeHtmlLocal(t.trim())}</p>`).join('');
 }
 
 function renderVoteGrid(act, roleRoster){

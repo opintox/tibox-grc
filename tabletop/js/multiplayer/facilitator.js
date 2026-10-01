@@ -2,7 +2,7 @@
 // el lobby en vivo, iniciar el ejercicio existente sin tocarlo) + Fase 2 (votación: publicar
 // el acto vigente, tally en vivo sobre las mismas .char-card, resolver por timeout/empate).
 // Expone window.MP para que app.js (script clásico, no módulo) lo llame sin imports.
-import { createRoom, listenParticipants, startRoom, publishAct, setActPhase, openAnswering } from './room.js';
+import { createRoom, listenParticipants, startRoom, publishAct, setActPhase, openAnswering, publishBriefing } from './room.js';
 
 let unsubscribeParticipants = null;
 
@@ -135,6 +135,12 @@ async function openLobby({scenarioId, roleRoster, onStart, onCancel}){
     if(statusLabel) statusLabel.textContent = 'CONFIGURACIÓN';
     if(onCancel) onCancel();
   };
+}
+
+function mpPublishBriefing(roomCode, briefing){
+  publishBriefing(roomCode, briefing).catch(err => {
+    console.error('[multiplayer] No se pudo publicar la introducción:', err);
+  });
 }
 
 // ---------------- Fase 2: votación ----------------
@@ -350,7 +356,7 @@ function closeRoomPanel(){
 }
 
 window.MP = {
-  openLobby, publishAct: mpPublishAct, attachVotingPhase, closeVoting,
+  openLobby, publishBriefing: mpPublishBriefing, publishAct: mpPublishAct, attachVotingPhase, closeVoting,
   attachAnsweringPhase, closeAnswering, retryAnswer: mpRetryAnswer,
   openRoomPanel, closeRoomPanel
 };
