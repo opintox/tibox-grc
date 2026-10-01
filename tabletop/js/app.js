@@ -1825,7 +1825,21 @@ function showResults(){
   if(gameState.timerInterval) clearInterval(gameState.timerInterval);
   document.getElementById('roomInfoBtn').classList.add('hidden');
   if(window.MP) window.MP.closeRoomPanel();
+  // Con celulares: foto final de quién tomó cada función (incluye a quien se admitió durante el
+  // ejercicio) y después se cierra la sala, lo que desconecta a todos los participantes.
+  if(multiplayerEnabled && mpRoomCode && window.MP){
+    gameState.personByRole = window.MP.getPersonByRole();
+    closeMultiplayerRoom();
+  }
   TabletopReport.show({gameState, participants, clientName, facilitatorName});
+}
+
+// Cierra la sala del modo "Con celulares" (si hay una abierta): borra participantes y
+// funciones reservadas y cada celular se desconecta solo (ver closeRoom en room.js).
+function closeMultiplayerRoom(){
+  if(!mpRoomCode || !window.MP) return;
+  window.MP.closeRoom(mpRoomCode);
+  mpRoomCode = null;
 }
 
 function backToSetup(){
@@ -1833,6 +1847,7 @@ function backToSetup(){
   if(gameState.timerInterval) clearInterval(gameState.timerInterval);
   document.getElementById('roomInfoBtn').classList.add('hidden');
   if(window.MP) window.MP.closeRoomPanel();
+  closeMultiplayerRoom(); // salir del ejercicio también lo cierra para los celulares
   TabletopScreens.show('setup', {scroll: false});
   document.getElementById('continueBtn').classList.remove('hidden');
   updateBottomState();

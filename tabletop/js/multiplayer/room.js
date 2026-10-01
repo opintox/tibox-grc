@@ -4,14 +4,24 @@
 // No lee window.TIBOX_MP_FIREBASE al cargar el módulo (evita depender del orden exacto de
 // <script type="module">): lo hace recién dentro de cada función, cuando ya se necesita.
 import {
-  doc, setDoc, updateDoc, getDoc, collection, onSnapshot, serverTimestamp, Timestamp, writeBatch
+  doc, setDoc, updateDoc, getDoc, getDocs, collection, onSnapshot, serverTimestamp, Timestamp, writeBatch
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 // Estado de cada participante (admisión): al unirse queda 'pending' y solo el facilitador que
 // creó la sala puede pasarlo a 'admitted' o 'rejected' (lo exige firestore.rules). Solo un
 // participante 'admitted' puede votar o responder, y solo esos cuentan en el tally.
+//
+// Admisión por código: el facilitador genera un código de 6 dígitos para cada pendiente y se lo
+// dice en persona. El código NUNCA se escribe en Firestore: vive solo en el navegador del
+// facilitador. El celular escribe lo que la persona tecleó (codeAttempt: {value, n}) y el
+// navegador del facilitador lo compara: si coincide lo admite; si no, marca ese intento como
+// revisado (codeChecked = n). Las reglas limitan a MAX_CODE_ATTEMPTS intentos por código
+// (n - attemptBase); "Nuevo código" sube attemptBase y vuelve a habilitar los intentos.
 export const PARTICIPANT_STATUS = {PENDING: 'pending', ADMITTED: 'admitted', REJECTED: 'rejected'};
 export const isAdmitted = p => !!p && p.status === PARTICIPANT_STATUS.ADMITTED;
+export const MAX_CODE_ATTEMPTS = 5; // mismo tope que firestore.rules
+// Intentos usados con el código vigente (los anteriores a "Nuevo código" no cuentan).
+export const codeAttemptsUsed = p => ((p && p.codeAttempt && p.codeAttempt.n) || 0) - ((p && p.attemptBase) || 0);
 
 const ROOM_CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // sin 0/O ni 1/I/L: se confunden al leerlos en voz alta o a distancia
 const ROOM_TTL_MS = 12 * 60 * 60 * 1000; // 12h — sesión corta, no hace falta más
@@ -150,10 +160,27 @@ export async function joinRoom(code, {displayName, roleKey}){
   return uid;
 }
 
+// El celular envía el código que tecleó la persona. n: número de intento (siempre creciente;
+// las reglas exigen que sea el anterior + 1 y que no pase el tope).
+export async function submitAccessCode(code, value, n){
+  const {db, uid} = await firebaseReady();
+  await updateDoc(doc(db, 'rooms', code, 'participants', uid), {codeAttempt: {value: String(value), n}});
+}
+
 // ---------------- admisión (solo el facilitador de la sala; ver firestore.rules) ----------------
-export async function admitParticipant(code, uid){
+// Resultado de revisar el intento n en el navegador del facilitador: admitido, o solo revisado
+// (incorrecto) para que el celular muestre "código incorrecto".
+export async function resolveCodeAttempt(code, uid, n, correct){
   const {db} = await firebaseReady();
-  await updateDoc(doc(db, 'rooms', code, 'participants', uid), {status: PARTICIPANT_STATUS.ADMITTED});
+  const patch = {codeChecked: n};
+  if(correct) patch.status = PARTICIPANT_STATUS.ADMITTED;
+  await updateDoc(doc(db, 'rooms', code, 'participants', uid), patch);
+}
+
+// "Nuevo código": los intentos ya usados dejan de contar para el tope.
+export async function resetCodeAttempts(code, uid, attemptBase){
+  const {db} = await firebaseReady();
+  await updateDoc(doc(db, 'rooms', code, 'participants', uid), {attemptBase});
 }
 
 // Rechaza y libera la función que había reservado, para que otra persona la pueda tomar. El
@@ -163,6 +190,22 @@ export async function rejectParticipant(code, uid, roleKey){
   const batch = writeBatch(db);
   batch.update(doc(db, 'rooms', code, 'participants', uid), {status: PARTICIPANT_STATUS.REJECTED});
   if(roleKey) batch.delete(doc(db, 'rooms', code, 'roleClaims', roleKey));
+  await batch.commit();
+}
+
+// Cierre del ejercicio: la sala queda 'closed' y se borran todos los participantes y las
+// funciones reservadas. Cada celular lo detecta (sala cerrada o su documento borrado), corta
+// sus escuchas y cierra su sesión anónima (ver participant-app.js).
+export async function closeRoom(code){
+  const {db} = await firebaseReady();
+  const [parts, claims] = await Promise.all([
+    getDocs(collection(db, 'rooms', code, 'participants')),
+    getDocs(collection(db, 'rooms', code, 'roleClaims'))
+  ]);
+  const batch = writeBatch(db);
+  batch.update(doc(db, 'rooms', code), {status: 'closed'});
+  parts.forEach(d => batch.delete(d.ref));
+  claims.forEach(d => batch.delete(d.ref));
   await batch.commit();
 }
 

@@ -14,17 +14,18 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Facilitador autorizado: correo+contraseña, segundo factor TOTP, correo verificado y del
-    // dominio de TIBOX. Firebase firma estos datos en el token, no se pueden falsificar desde
-    // el navegador. Sin el chequeo de dominio, cualquiera que se registre por la API REST de
-    // Firebase Auth (con la apiKey pública) y active su propio TOTP pasaría como facilitador.
-    // Mantener alineado con isAuthorizedFacilitator() en auth/auth-core.js.
+    // Facilitador autorizado: correo+contraseña, segundo factor TOTP, correo verificado y en la
+    // lista exacta de facilitadores. Firebase firma estos datos en el token, no se pueden
+    // falsificar desde el navegador. Es una lista y no "cualquier @tibox.cl" porque el registro
+    // está abierto (lo necesitan las sesiones anónimas de los celulares): alguien podría crear
+    // una cuenta a nombre de un colega sin cuenta y, si este confirma la verificación, pasaría
+    // como facilitador. Mantener alineado con ALLOWED_FACILITATORS en auth/auth-core.js.
     function isFacilitator() {
       return request.auth != null
         && request.auth.token.firebase.sign_in_provider == 'password'
         && request.auth.token.firebase.sign_in_second_factor == 'totp'
         && request.auth.token.email_verified == true
-        && request.auth.token.email.lower().matches('^[^@]+@tibox[.]cl$');
+        && request.auth.token.email.lower() in ['opinto@tibox.cl'];
     }
 
     function roomData(roomCode) {
@@ -114,22 +115,44 @@ service cloud.firestore {
           && request.resource.data.answer == null
           && roomData(roomCode).status == 'lobby';
 
-        // Dos casos, y solo esos:
-        // (1) Admisión: el facilitador de la sala cambia `status` a 'admitted' o 'rejected' (y
-        //     nada más). Ningún participante puede admitirse a sí mismo.
-        // (2) El propio participante, YA ADMITIDO, escribe solo `vote` y `answer` — nunca la
-        //     función que reclamó (si pudiera, cualquiera podría "convertirse" en quien ganó la
-        //     votación justo antes de responder). `vote`/`answer` (Fases 2/3) quedan acotados:
-        //     solo se pueden escribir en la fase que corresponde, con la forma que espera
-        //     facilitator.js, y `answer` solo si el uid reclamó la función a la que le toca
-        //     responder.
+        // Tres casos, y solo esos:
+        // (1) Admisión: el facilitador de la sala escribe `status` ('admitted'/'rejected'),
+        //     `codeChecked` (último intento de código revisado) y `attemptBase` ("Nuevo código").
+        //     Ningún participante puede admitirse a sí mismo: el código lo compara el navegador
+        //     del facilitador y nunca se guarda en Firestore (ver room.js).
+        // (2) El propio participante, PENDIENTE, envía un intento de código (`codeAttempt`):
+        //     número de intento consecutivo y como máximo 5 por código vigente, para que no se
+        //     pueda probar códigos al azar.
+        // (3) El propio participante, YA ADMITIDO y con el ejercicio en curso, escribe solo
+        //     `vote` y `answer` — nunca la función que reclamó (si pudiera, cualquiera podría
+        //     "convertirse" en quien ganó la votación justo antes de responder). `vote`/`answer`
+        //     (Fases 2/3) quedan acotados: solo se pueden escribir en la fase que corresponde,
+        //     con la forma que espera facilitator.js, y `answer` solo si el uid reclamó la
+        //     función a la que le toca responder.
         allow update: if (
           isRoomFacilitator(roomCode)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
-          && request.resource.data.status in ['admitted', 'rejected']
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'codeChecked', 'attemptBase'])
+          && (!('status' in request.resource.data.diff(resource.data).affectedKeys())
+              || request.resource.data.status in ['admitted', 'rejected'])
+          && (!('codeChecked' in request.resource.data.diff(resource.data).affectedKeys())
+              || request.resource.data.codeChecked is int)
+          && (!('attemptBase' in request.resource.data.diff(resource.data).affectedKeys())
+              || request.resource.data.attemptBase is int)
+        ) || (
+          request.auth != null && request.auth.uid == uid
+          && resource.data.status == 'pending'
+          && roomData(roomCode).status in ['lobby', 'in_progress']
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['codeAttempt'])
+          && request.resource.data.codeAttempt.keys().hasOnly(['value', 'n'])
+          && request.resource.data.codeAttempt.value is string
+          && request.resource.data.codeAttempt.value.size() == 6
+          && request.resource.data.codeAttempt.n is int
+          && request.resource.data.codeAttempt.n == resource.data.get('codeAttempt', {'n': 0}).get('n', 0) + 1
+          && request.resource.data.codeAttempt.n - resource.data.get('attemptBase', 0) <= 5
         ) || (
           request.auth != null && request.auth.uid == uid
           && resource.data.status == 'admitted'
+          && roomData(roomCode).status == 'in_progress'
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['vote', 'answer'])
           && (
             !('vote' in request.resource.data.diff(resource.data).affectedKeys())
@@ -153,7 +176,8 @@ service cloud.firestore {
           )
         );
 
-        allow delete: if false;
+        // Al cerrar el ejercicio el facilitador borra a todos los participantes (ver closeRoom).
+        allow delete: if isRoomFacilitator(roomCode);
       }
     }
   }

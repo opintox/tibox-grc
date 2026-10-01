@@ -62,14 +62,14 @@ archivo con doble clic) y una cuenta autorizada para pasar el login:
 
 1. Abre la carpeta en VS Code e instala **Live Server** (`ritwickdey.LiveServer`).
 2. Clic derecho sobre `index.html` (el de la raíz) → *Open with Live Server*.
-3. Inicia sesión con una cuenta `@tibox.cl` con TOTP (ver "Acceso").
+3. Inicia sesión con una cuenta de facilitador autorizada con TOTP (ver "Acceso").
 
 Al publicar en GitHub Pages, los cambios en `main` quedan en línea en 1–2 minutos.
 
 ## Acceso
 
 - Login con Firebase Auth: correo + contraseña + código de app autenticadora (TOTP).
-- Solo cuentas **@tibox.cl** con el correo verificado. Las cuentas se crean a mano en Firebase
+- Solo los correos de la lista de facilitadores (ver "Modo Con celulares"), con el correo verificado. Las cuentas se crean a mano en Firebase
   Console → Authentication → Users (no hay registro abierto en el sitio).
 - La primera vez el login pide verificar el correo (el link abre `login.html` y se confirma
   con un botón, para que los filtros de correo no gasten el link) y luego registrar el
@@ -139,11 +139,23 @@ El facilitador crea una sala (código + QR); cada participante entra desde `join
 elige su función, vota quién debe actuar y, si le toca, responde desde el celular. La sala
 vive en Firestore y se borra sola por TTL (`expiresAt`).
 
-**Admisión:** al unirse, cada participante queda *por autorizar* y su función reservada. Solo
-el facilitador que creó la sala puede **Admitir**, **Rechazar** (libera la función y esa sesión
-no puede volver a pedir ingreso) o **Quitar** a alguien ya admitido, desde la sala de espera o
-el botón "Sala" durante el ejercicio. Solo los admitidos pueden votar y responder; lo exigen
-las reglas de Firestore, no solo la pantalla.
+**Admisión por código personal:** al unirse, cada participante queda *por autorizar* con su
+función reservada. El facilitador presiona **Dar código** junto a su nombre, le dicta en
+persona el código de 6 dígitos y la persona lo escribe en su celular: si coincide, entra
+sola. El código nunca se guarda en Firestore (vive solo en el navegador del facilitador) y se
+muestra oculto (•••) con un botón **Ver**, porque la pantalla suele estar proyectada. Hay 5
+intentos por código; **Nuevo código** los rehabilita. **Rechazar** libera la función y esa
+sesión no puede volver a pedir ingreso; **Quitar** saca a alguien ya admitido. Solo los
+admitidos pueden votar y responder; lo exigen las reglas de Firestore, no solo la pantalla.
+Si el facilitador recarga la página, los códigos dados se pierden: se da uno nuevo.
+
+**Cierre:** al terminar el ejercicio (o salir con ✕, o volver desde la sala de espera) la
+sala queda cerrada, se borran todos los participantes y sus funciones, y cada celular muestra
+"Ejercicio finalizado" y cierra su sesión.
+
+**Facilitadores:** solo los correos de la lista `ALLOWED_FACILITATORS` (`auth/auth-core.js`) y
+de `isFacilitator()` (`tabletop/firestore.rules`) pueden entrar al sitio y crear salas. Para
+agregar a alguien, editar ambas listas y crearle la cuenta en Firebase Console.
 
 - Las reglas de `tabletop/firestore.rules` se publican a mano en Firebase Console →
   Firestore → Reglas.

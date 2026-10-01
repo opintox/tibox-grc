@@ -141,3 +141,24 @@ body.lobby-mode .topbar-right{display:none;}
   font-size:var(--fs-3xs); font-weight:700; letter-spacing:0.04em; text-transform:uppercase;
   color:var(--amber); background:var(--amber-dim);
 }
+
+/* Admisión por código: código oculto/visible e intentos en el roster del facilitador */
+.lobby-access-code{
+  font-family:var(--mono); font-weight:800; font-size:var(--fs-sm); letter-spacing:0.12em;
+  padding:3px 8px; border-radius:7px; background:var(--panel-2); border:1px solid var(--border); color:var(--muted);
+}
+.lobby-access-code.is-shown{color:#fff; border-color:rgba(255,138,61,0.6); box-shadow:0 0 14px -6px rgba(255,138,61,0.7);}
+.lobby-attempts{font-size:var(--fs-3xs); color:var(--muted); align-self:center;}
+.lobby-attempts.is-out{color:var(--red); font-weight:700;}
+.lobby-give-btn{border-color:rgba(255,138,61,0.55); color:var(--amber);}
+.lobby-roster-actions{flex-wrap:wrap; justify-content:flex-end; align-items:center;}
+
+/* Código en el celular (join.html) */
+.join-code-form{display:flex; flex-direction:column; gap:10px; margin-top:16px;}
+.join-code-form label{font-size:var(--fs-2xs); letter-spacing:0.08em; text-transform:uppercase; color:var(--muted);}
+.join-access-input{
+  text-align:center; font-family:var(--mono); font-size:1.6rem; font-weight:800; letter-spacing:0.4em;
+  padding:12px; border-radius:12px; background:var(--panel-2); border:1px solid var(--border); color:var(--text);
+}
+.join-code-msg{min-height:1.2em; margin:0; font-size:var(--fs-sm); color:var(--muted);}
+.join-code-msg.is-error{color:var(--red);}
