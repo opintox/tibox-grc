@@ -1,6 +1,6 @@
 // Núcleo compartido del login con MFA (Firebase Auth: correo/contraseña + TOTP). Módulo ES sin
 // bundler, mismo criterio que tabletop/js/multiplayer/firebase-init.js. Requiere que
-// tabletop/js/multiplayer/firebase-config.js ya haya corrido (define window.TIBOX_FIREBASE_CONFIG).
+// shared/firebase-config.js ya haya corrido (define window.TIBOX_FIREBASE_CONFIG).
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 

@@ -5,6 +5,9 @@
 import { createRoom, listenParticipants, startRoom, publishAct, setActPhase, openAnswering, publishBriefing } from './room.js';
 
 let unsubscribeParticipants = null;
+// Último roster visto (sala de espera o popout "Sala"): app.js lo usa para el informe final
+// (quién tomó cada función), ver getPersonByRole.
+let lastParticipants = [];
 
 function joinUrlFor(code){
   return new URL('join.html?room=' + encodeURIComponent(code), location.href).href;
@@ -14,6 +17,27 @@ function joinUrlFor(code){
 // expone — este módulo no depende del orden de carga respecto a app.js.
 function escapeHtmlLocal(s){
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// Aviso visible cuando falla una escritura en Firestore: antes solo quedaba en la consola y el
+// facilitador seguía sin saber que los celulares se habían desincronizado. `what` describe
+// qué no se pudo hacer ("publicar el acto vigente"); el aviso se va solo a los pocos segundos
+// y uno nuevo reemplaza al anterior.
+let syncAlertTimer = null;
+function reportSyncError(what, err){
+  console.error(`[multiplayer] No se pudo ${what}:`, err);
+  let el = document.getElementById('mpSyncAlert');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'mpSyncAlert';
+    el.className = 'mp-sync-alert';
+    el.setAttribute('role', 'alert');
+    document.body.appendChild(el);
+  }
+  el.textContent = `No se pudo ${what} en los celulares. Revisa la conexión a internet; mientras tanto puedes seguir el ejercicio con clic en esta pantalla.`;
+  el.classList.add('is-visible');
+  clearTimeout(syncAlertTimer);
+  syncAlertTimer = setTimeout(() => el.classList.remove('is-visible'), 9000);
 }
 
 // targetEl: el contenedor del QR — parametrizado porque tanto la sala de espera
@@ -61,8 +85,6 @@ function renderRoster(participantList, roleRoster, listEl, countEl){
 // startGame() existente de app.js, sin modificarla. onCancel: opcional, si el facilitador
 // vuelve atrás sin iniciar.
 async function openLobby({scenarioId, roleRoster, onStart, onCancel}){
-  const screenSetup = document.getElementById('screen-setup');
-  const screenLobby = document.getElementById('screen-lobby');
   const codeEl = document.getElementById('lobbyRoomCode');
   const urlInput = document.getElementById('lobbyJoinUrl');
   const qrEl = document.getElementById('lobbyQr');
@@ -71,21 +93,17 @@ async function openLobby({scenarioId, roleRoster, onStart, onCancel}){
   const startBtn = document.getElementById('lobbyStartBtn');
   const cancelBtn = document.getElementById('lobbyCancelBtn');
   const copyBtn = document.getElementById('lobbyCopyBtn');
-  const statusLabel = document.getElementById('statusLabel');
 
-  screenSetup.classList.add('hidden');
-  screenLobby.classList.remove('hidden');
-  document.body.classList.add('lobby-mode');
-  if(statusLabel) statusLabel.textContent = 'SALA DE ESPERA';
+  window.TabletopScreens.show('lobby', {scroll: false});
   codeEl.textContent = 'Creando sala…';
   qrEl.innerHTML = '';
   renderRoster([], roleRoster, listEl, countEl);
   startBtn.disabled = true;
 
+  // La pantalla siguiente (introducción o configuración) la muestra quien sigue: acá solo se
+  // cortan la escucha y los botones de la sala.
   const exitLobby = () => {
     if(unsubscribeParticipants){ unsubscribeParticipants(); unsubscribeParticipants = null; }
-    document.body.classList.remove('lobby-mode');
-    screenLobby.classList.add('hidden');
     startBtn.onclick = null;
     cancelBtn.onclick = null;
     copyBtn.onclick = null;
@@ -98,7 +116,7 @@ async function openLobby({scenarioId, roleRoster, onStart, onCancel}){
     codeEl.textContent = 'Error';
     listEl.innerHTML =
       `<p class="lobby-roster-empty">No se pudo crear la sala: ${escapeHtmlLocal(err.message || err)}</p>`;
-    cancelBtn.onclick = () => { exitLobby(); screenSetup.classList.remove('hidden'); if(statusLabel) statusLabel.textContent = 'CONFIGURACIÓN'; if(onCancel) onCancel(); };
+    cancelBtn.onclick = () => { exitLobby(); window.TabletopScreens.show('setup', {scroll: false}); if(onCancel) onCancel(); };
     return;
   }
 
@@ -109,7 +127,7 @@ async function openLobby({scenarioId, roleRoster, onStart, onCancel}){
   startBtn.disabled = false;
 
   if(unsubscribeParticipants) unsubscribeParticipants();
-  unsubscribeParticipants = listenParticipants(code, list => renderRoster(list, roleRoster, listEl, countEl));
+  unsubscribeParticipants = listenParticipants(code, list => { lastParticipants = list; renderRoster(list, roleRoster, listEl, countEl); });
 
   copyBtn.onclick = async () => {
     try{
@@ -124,22 +142,21 @@ async function openLobby({scenarioId, roleRoster, onStart, onCancel}){
   startBtn.onclick = async () => {
     startBtn.disabled = true;
     try{ await startRoom(code); }
-    catch(err){ console.error('[multiplayer] No se pudo marcar la sala como iniciada:', err); }
+    catch(err){ reportSyncError('marcar la sala como iniciada', err); }
     exitLobby();
     onStart(code);
   };
 
   cancelBtn.onclick = () => {
     exitLobby();
-    screenSetup.classList.remove('hidden');
-    if(statusLabel) statusLabel.textContent = 'CONFIGURACIÓN';
+    window.TabletopScreens.show('setup', {scroll: false});
     if(onCancel) onCancel();
   };
 }
 
 function mpPublishBriefing(roomCode, briefing){
   publishBriefing(roomCode, briefing).catch(err => {
-    console.error('[multiplayer] No se pudo publicar la introducción:', err);
+    reportSyncError('publicar la introducción', err);
   });
 }
 
@@ -189,7 +206,7 @@ function pickWinner(tally, roleKeys){
 // renderStage(). No hace nada más: la UI de la votación la arma attachVotingPhase.
 function mpPublishAct(roomCode, act){
   publishAct(roomCode, {...act, phase: 'voting'}).catch(err => {
-    console.error('[multiplayer] No se pudo publicar el acto vigente:', err);
+    reportSyncError('publicar el acto vigente', err);
   });
 }
 
@@ -234,7 +251,7 @@ function closeVoting(roomCode, answer){
   clearVotingWatch();
   answerOrder = answer.order;
   openAnswering(roomCode, answer.target, answerOrder.map(i => answer.options[i])).catch(err => {
-    console.error('[multiplayer] No se pudo cerrar la fase de votación:', err);
+    reportSyncError('cerrar la votación', err);
   });
 }
 
@@ -284,7 +301,7 @@ function attachAnsweringPhase(roomCode, actKey, targetRoleKey, onResolve){
 function closeAnswering(roomCode){
   clearAnsweringWatch();
   setActPhase(roomCode, 'resolved').catch(err => {
-    console.error('[multiplayer] No se pudo cerrar la fase de respuesta:', err);
+    reportSyncError('cerrar la fase de respuesta', err);
   });
 }
 
@@ -297,7 +314,7 @@ function closeAnswering(roomCode){
 function mpRetryAnswer(roomCode, {order, ...act}){
   answerOrder = order;
   publishAct(roomCode, {...act, options: order.map(i => act.options[i]), phase: 'answering'}).catch(err => {
-    console.error('[multiplayer] No se pudo republicar el acto para reintentar la respuesta:', err);
+    reportSyncError('habilitar el reintento de la respuesta', err);
   });
 }
 
@@ -326,7 +343,7 @@ function openRoomPanel(roomCode, roleRoster){
   renderRoster([], roleRoster, listEl, countEl);
 
   if(roomPanelUnsub) roomPanelUnsub();
-  roomPanelUnsub = listenParticipants(roomCode, list => renderRoster(list, roleRoster, listEl, countEl));
+  roomPanelUnsub = listenParticipants(roomCode, list => { lastParticipants = list; renderRoster(list, roleRoster, listEl, countEl); });
 
   copyBtn.onclick = async () => {
     try{
@@ -358,5 +375,7 @@ function closeRoomPanel(){
 window.MP = {
   openLobby, publishBriefing: mpPublishBriefing, publishAct: mpPublishAct, attachVotingPhase, closeVoting,
   attachAnsweringPhase, closeAnswering, retryAnswer: mpRetryAnswer,
-  openRoomPanel, closeRoomPanel
+  openRoomPanel, closeRoomPanel,
+  // {roleKey: nombre de la persona} según el último roster visto.
+  getPersonByRole: () => Object.fromEntries(lastParticipants.filter(p => p.claimedRoleKey).map(p => [p.claimedRoleKey, p.displayName || '']))
 };

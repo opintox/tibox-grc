@@ -9,6 +9,12 @@ import { signOut } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-aut
 
 const loginUrl = new URL('../login.html', import.meta.url);
 
+// Solo estético: si se entró por ".../index.html" (marcador antiguo o link compartido), la barra
+// muestra la carpeta (".../tabletop/"), que GitHub Pages sirve igual. No recarga la página.
+if(location.pathname.endsWith('/index.html')){
+  history.replaceState(history.state, '', location.pathname.slice(0, -'index.html'.length) + location.search + location.hash);
+}
+
 async function run(){
   try{
     await auth.authStateReady();

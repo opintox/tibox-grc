@@ -14,7 +14,7 @@
 
 <div class="topbar">
   <div class="brand">
-    <a class="logo-home" href="../index.html" aria-label="Ir al inicio"><img class="tibox-logo" src="assets/logo-tibox-ok.png" alt="TIBOX" style="height:22px;"></a>
+    <a class="logo-home" href="../" aria-label="Ir al inicio"><img class="tibox-logo" src="assets/logo-tibox-ok.png" alt="TIBOX" style="height:22px;"></a>
     <span class="divider"></span>
     <h1>Configuración del ejercicio</h1>
   </div>
@@ -186,7 +186,7 @@
             <div class="wizard-col-body">
               <div class="field-row">
                 <label>Nombre del cliente</label>
-                <input type="text" id="clientNameInput" placeholder="Ej: Quintero Energía">
+                <input type="text" id="clientNameInput" placeholder="Ej: Empresa Cliente S.A.">
               </div>
               <div class="field-row" style="margin-bottom:0;">
                 <label>Facilitador</label>
@@ -468,8 +468,11 @@
       <div class="field-row" style="margin-top:16px; margin-bottom:0;">
         <label>Notas del facilitador (opcional)</label>
         <textarea id="actaNotes" placeholder="Observaciones adicionales, contexto de la sesión, acuerdos verbales..." style="min-height:80px;"></textarea>
+        <div class="print-only acta-notes-print hidden" id="actaNotesPrint"></div>
       </div>
       <div class="results-actions" style="margin-top:14px;">
+        <button class="btn" id="downloadReportDocxBtn" type="button">Descargar informe (Word)</button>
+        <button class="btn" id="printReportBtn" type="button">Imprimir / guardar PDF</button>
         <button class="btn btn-primary" id="saveExerciseBtn">Guardar ejercicio →</button>
         <button class="btn" id="downloadResultsBtnBottom">Descargar resultados (JSON)</button>
         <button class="btn" id="backFromResultsBtn">Volver sin guardar</button>
@@ -504,6 +507,9 @@
 <script src="js/data/escenarios.js"></script>
 <script src="js/lib/jszip.min.js"></script>
 <script src="js/docx.js"></script>
+<script src="js/screens.js"></script>
+<script src="js/builder.js"></script>
+<script src="js/report.js"></script>
 <script src="js/app.js"></script>
 
 <!-- Modo "Con celulares" (opcional, ver plan de multijugador): módulos aparte, cargados al
@@ -512,7 +518,7 @@
      (clásico) antes que firebase-init.js (módulo), y ese antes que facilitator.js (módulo,
      importa room.js internamente). -->
 <script src="js/lib/qrcode.js"></script>
-<script src="js/multiplayer/firebase-config.js"></script>
+<script src="../shared/firebase-config.js"></script>
 <script type="module" src="../auth/guard.js"></script>
 <script type="module" src="js/multiplayer/firebase-init.js"></script>
 <script type="module" src="js/multiplayer/facilitator.js"></script>
