@@ -20,8 +20,8 @@
    (grid con align-items:stretch, el default), así la sala se ve compuesta de entrada aunque
    todavía no se haya unido nadie. */
 body.lobby-mode .topbar-right{display:none;}
-.lobby-panel{max-width:900px;}
-.lobby-grid{display:grid; grid-template-columns:280px 1fr; gap:20px; margin-top:8px;}
+.lobby-panel{max-width:980px;}
+.lobby-grid{display:grid; grid-template-columns:340px 1fr; gap:20px; margin-top:8px;}
 @media (max-width:720px){.lobby-grid{grid-template-columns:1fr;}}
 .lobby-join-card, .lobby-roster-card{
   border:1px solid var(--border); border-radius:14px; background:rgba(255,255,255,0.025);
@@ -37,7 +37,7 @@ body.lobby-mode .topbar-right{display:none;}
   box-shadow:0 0 22px -10px rgba(255,138,61,0.55), inset 0 1px 0 0 rgba(255,255,255,0.04);
 }
 .lobby-qr{
-  width:168px; height:168px; background:#fff; border-radius:10px; padding:8px;
+  width:260px; height:260px; background:#fff; border-radius:12px; padding:10px;
   display:flex; align-items:center; justify-content:center;
   box-shadow:0 14px 28px -14px rgba(0,0,0,0.65);
 }
@@ -67,7 +67,7 @@ body.lobby-mode .topbar-right{display:none;}
 /* ---------- popout "Sala" durante el ejercicio (index.html, #roomInfoBtn) ----------
    Reusa .lobby-grid/.lobby-join-card/.lobby-roster-card de #screen-lobby dentro de un
    .modal-box más ancho que el default (440px), mismo patrón que .builder-act-modal. */
-.room-panel-box{max-width:700px;}
+.room-panel-box{max-width:780px;}
 .room-panel-box .lobby-grid{margin-top:16px;}
 
 /* ---------- tally de votación en vivo sobre .char-card (Fase 2, index.html) ---------- */
