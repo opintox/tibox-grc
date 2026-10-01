@@ -495,6 +495,7 @@ function renderScenarioCard(s, container){
     const matrix = PARTICIPATION_MATRIX[s.id] || {};
     TibDocx.downloadScenarioDocx({
       name: s.name, blurb: SCENARIO_BLURBS[s.id] || '', target: SCENARIO_TARGETS[s.id] || '',
+      intro: SCENARIO_INTROS[s.id] || '',
       roleNames: rm.names,
       customRoleList: isCustomRoles ? rm.keys.map(k => ({key:k, name: rm.names[k]})) : null,
       extraRoleKeys: isCustomRoles ? [] : ROLE_KEYS.filter(k => k !== 'ti' && k !== 'seguridad' && matrix[k]),
@@ -558,6 +559,7 @@ function registerCustomScenario(data){
   entry.roleMeta = (data.customRoles && data.customRoles.length) ? buildCustomRoleMeta(data.customRoles) : null;
   SCENARIO_BLURBS[id] = data.blurb || '';
   SCENARIO_TARGETS[id] = data.target || '';
+  SCENARIO_INTROS[id] = data.intro || '';
   SCENARIO_ACCENTS[id] = CUSTOM_SCENARIO_ACCENT;
   SCENARIO_ICONS[id] = CUSTOM_SCENARIO_ICON;
   const clientBg = customScenarioClientBg(data);
@@ -592,7 +594,7 @@ let builderState = null;
 let builderStep = 1;
 
 function freshBuilderState(){
-  return {name:'', blurb:'', target:'', roleMode:'standard', extraRoleKeys:[], customRoles:[], stages:[]};
+  return {name:'', blurb:'', target:'', intro:'', roleMode:'standard', extraRoleKeys:[], customRoles:[], stages:[]};
 }
 function newRoleKey(){ return 'rol_' + Math.random().toString(36).slice(2, 8); }
 function freshBuilderQuestion(){
@@ -637,7 +639,7 @@ function builderToDocxScenario(){
   const roleNames = {};
   if(isCustom) s.customRoles.forEach(r => { roleNames[r.key] = r.name; });
   return {
-    name: s.name.trim(), blurb: s.blurb.trim(), target: s.target.trim(),
+    name: s.name.trim(), blurb: s.blurb.trim(), target: s.target.trim(), intro: s.intro.trim(),
     roleNames: isCustom ? roleNames : undefined,
     customRoleList: isCustom ? s.customRoles : null,
     extraRoleKeys: isCustom ? [] : s.extraRoleKeys,
@@ -648,7 +650,7 @@ function builderToRegisterData(){
   const s = builderState;
   const isCustom = builderIsCustomRoles();
   return {
-    name: s.name.trim(), blurb: s.blurb.trim(), target: s.target.trim(),
+    name: s.name.trim(), blurb: s.blurb.trim(), target: s.target.trim(), intro: s.intro.trim(),
     customStages: s.stages.map(st => st.stage),
     customRoles: isCustom ? s.customRoles : null,
     extraRoleKeys: isCustom ? [] : s.extraRoleKeys,
@@ -697,9 +699,13 @@ function builderStep1Html(){
         <label>Descripción corta (se muestra en la tarjeta de selección)</label>
         <input type="text" id="bldBlurb" value="${escapeHtml(s.blurb)}" placeholder="Una frase que resuma el ataque">
       </div>
-      <div class="field-row" style="margin-bottom:0;">
+      <div class="field-row">
         <label>Activo u objetivo principal afectado</label>
         <input type="text" id="bldTarget" value="${escapeHtml(s.target)}" placeholder="Ej: Servidor de nómina">
+      </div>
+      <div class="field-row" style="margin-bottom:0;">
+        <label>Introducción (se muestra en pantalla antes de la primera etapa)</label>
+        <textarea id="bldIntro" style="min-height:120px;" placeholder="Presenta la organización, el momento en que ocurre el ejercicio y qué se busca practicar, sin adelantar lo que va a pasar. Deja una línea en blanco entre párrafos.">${escapeHtml(s.intro)}</textarea>
       </div>
     </div>`;
 }
@@ -707,6 +713,7 @@ function wireBuilderStep1(){
   document.getElementById('bldName').addEventListener('input', e => { builderState.name = e.target.value; });
   document.getElementById('bldBlurb').addEventListener('input', e => { builderState.blurb = e.target.value; });
   document.getElementById('bldTarget').addEventListener('input', e => { builderState.target = e.target.value; });
+  document.getElementById('bldIntro').addEventListener('input', e => { builderState.intro = e.target.value; });
 }
 
 function builderStep2Html(){
@@ -1245,12 +1252,12 @@ function enterSetup(){
 function goHome(){
   hideExplain();
   if(gameState.timerInterval) clearInterval(gameState.timerInterval);
-  ['screen-setup', 'screen-lobby', 'screen-game', 'screen-results', 'screen-report'].forEach(id => {
+  ['screen-setup', 'screen-lobby', 'screen-briefing', 'screen-game', 'screen-results', 'screen-report'].forEach(id => {
     const screen = document.getElementById(id);
     if(screen) screen.classList.add('hidden');
   });
   document.getElementById('screen-intro').classList.remove('hidden');
-  document.body.classList.remove('setup-mode', 'game-mode', 'lobby-mode');
+  document.body.classList.remove('setup-mode', 'game-mode', 'lobby-mode', 'briefing-mode');
   document.body.classList.add('intro-mode');
   document.getElementById('statusLabel').textContent = 'CONFIGURACIÓN';
   updateBottomState();
@@ -1479,8 +1486,61 @@ function currentActKey(){
 }
 document.getElementById('mpEnabledInput').addEventListener('change', e => { multiplayerEnabled = e.target.checked; });
 
+// Introducción del escenario (#screen-briefing): se muestra entre la configuración (o la sala
+// de espera) y la primera etapa. roomCode: solo en modo "Con celulares" — publica la misma
+// introducción en la sala para que los celulares la muestren mientras tanto, y oculta "Volver"
+// porque la sala ya quedó iniciada (volver a configurar dejaría a los celulares colgados).
+function showBriefing(onStart, roomCode){
+  const id = selectedScenarioId;
+  const scenario = SCENARIOS.find(s => s.id === id);
+  const rm = roleMetaFor(id);
+  const matrix = getMatrix(id);
+  const roleNames = rm.keys
+    .filter(k => { const p = participants.find(x => x.roleKey === k); return p && p.checked && matrix[k]; })
+    .map(k => rm.names[k]);
+  const stages = stagesFor(id);
+  const intro = (SCENARIO_INTROS[id] || '').trim();
+
+  document.getElementById('briefingTitle').textContent = scenario ? scenario.name : '';
+  document.getElementById('briefingBlurb').textContent = SCENARIO_BLURBS[id] || '';
+  document.getElementById('briefingTarget').textContent = SCENARIO_TARGETS[id] || '—';
+  document.getElementById('briefingStages').textContent = `${stages.length} · ${stages.join(' → ')}`;
+  document.getElementById('briefingRoles').textContent = roleNames.join(', ') || '—';
+  const textEl = document.getElementById('briefingText');
+  textEl.innerHTML = intro.split(/\n\s*\n/).filter(t => t.trim()).map(t => `<p>${escapeHtml(t.trim())}</p>`).join('');
+  textEl.classList.toggle('hidden', !intro);
+
+  const screenBriefing = document.getElementById('screen-briefing');
+  const backBtn = document.getElementById('briefingBackBtn');
+  const startBtn = document.getElementById('briefingStartBtn');
+  document.getElementById('screen-setup').classList.add('hidden');
+  screenBriefing.classList.remove('hidden');
+  document.body.classList.remove('setup-mode');
+  document.body.classList.add('briefing-mode');
+  document.getElementById('statusLabel').textContent = 'INTRODUCCIÓN';
+  backBtn.classList.toggle('hidden', !!roomCode);
+  window.scrollTo({top: 0, behavior: 'smooth'});
+
+  if(roomCode && window.MP) window.MP.publishBriefing(roomCode, {title: scenario ? scenario.name : '', intro});
+
+  const leave = () => {
+    screenBriefing.classList.add('hidden');
+    document.body.classList.remove('briefing-mode');
+    startBtn.onclick = null;
+    backBtn.onclick = null;
+  };
+  startBtn.onclick = () => { leave(); onStart(); };
+  backBtn.onclick = () => {
+    leave();
+    document.getElementById('screen-setup').classList.remove('hidden');
+    document.body.classList.add('setup-mode');
+    document.getElementById('statusLabel').textContent = 'CONFIGURACIÓN';
+    updateBottomState();
+  };
+}
+
 function startGameOrLobby(){
-  if(!multiplayerEnabled){ startGame(); return; }
+  if(!multiplayerEnabled){ showBriefing(startGame); return; }
   if(!window.MP){
     alert('El modo "Con celulares" no terminó de cargar (revisa tu conexión) — desactiva el toggle o recarga la página.');
     return;
@@ -1497,7 +1557,7 @@ function startGameOrLobby(){
       accent: rm.accents[p.roleKey] || ['#5AD1E8','#0B8FD6']
     }));
   mpRoleRoster = roleRoster; // se reusa en el popout "Sala" (#roomInfoBtn) durante el ejercicio
-  window.MP.openLobby({scenarioId: selectedScenarioId, roleRoster, onStart: code => { mpRoomCode = code; startGame(); }});
+  window.MP.openLobby({scenarioId: selectedScenarioId, roleRoster, onStart: code => { mpRoomCode = code; showBriefing(startGame, code); }});
 }
 
 document.getElementById('roomInfoBtn').addEventListener('click', () => {

@@ -35,6 +35,7 @@ caché al iterar.
 | Agregar o editar un tipo de ataque | `js/data/catalogo.js` → `SCENARIOS`, `SCENARIO_BLURBS`, `SCENARIO_TARGETS`, `SCENARIO_ACCENTS`, `SCENARIO_ICONS` |
 | Cambiar quién participa en un escenario | `js/data/catalogo.js` → `PARTICIPATION_MATRIX` |
 | Escribir o corregir el relato de un escenario | `js/data/escenarios.js` |
+| Cambiar la introducción que se muestra antes de la primera etapa | `js/data/catalogo.js` → `SCENARIO_INTROS` (en un Word: etiqueta `INTRODUCCIÓN:`, justo antes de la primera `ETAPA:`) |
 | Cambiar el comportamiento del ejercicio | `js/app.js` |
 
 ## Formato de un escenario

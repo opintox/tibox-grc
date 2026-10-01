@@ -47,7 +47,7 @@
      Una capa oscura semitransparente encima mantiene la legibilidad donde sí se muestra. */
   body::before{ content:''; position:fixed; inset:0; z-index:-2; pointer-events:none; }
   @media (min-width:721px){
-    body.intro-mode::before, body.lobby-mode::before{
+    body.intro-mode::before, body.lobby-mode::before, body.briefing-mode::before{
       background:
         linear-gradient(rgba(7,12,26,.72),rgba(7,12,26,.72)),
         url('../../img/fondo.png');
@@ -1567,3 +1567,18 @@
     display:flex; align-items:center; gap:8px; padding:11px 14px; border-radius:10px;
     background:var(--green-dim); border:1px solid rgba(34,211,166,0.4); color:#9FF3DC; font-size:var(--fs-sm);
   }
+
+/* ---------- #screen-briefing: introducción del escenario (ver showBriefing en app.js) ---------- */
+body.briefing-mode .topbar-right{display:none;}
+.briefing-panel{max-width:900px; margin:0 auto;}
+.briefing-facts{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:12px; margin:18px 0 6px;}
+.briefing-fact{
+  display:flex; flex-direction:column; gap:4px; min-width:0;
+  background:var(--panel-2); border:1px solid var(--border); border-radius:10px; padding:12px 14px;
+}
+.briefing-fact-label{font-size:var(--fs-2xs); letter-spacing:.08em; text-transform:uppercase; color:var(--muted);}
+.briefing-fact-value{font-size:var(--fs-sm); font-weight:600; color:var(--text); line-height:1.4;}
+.briefing-text{margin-top:18px; font-size:var(--fs-md); line-height:1.65; color:var(--text);}
+.briefing-text p{margin:0 0 14px;}
+.briefing-text p:last-child{margin-bottom:0;}
+@media (max-width:720px){ .briefing-facts{grid-template-columns:1fr;} }
