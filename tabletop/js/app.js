@@ -129,6 +129,7 @@ function applyScenarioSelection(id){
   if(!sameKeys) participants = defaultParticipantsFor(id);
   selectedScenarioId = id;
   enforceMandatoryRoles();
+  autoAssignCompanies(id);
 }
 
 let selectedScenarioId = null;
@@ -522,14 +523,42 @@ const CUSTOM_SCENARIO_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" fill-
 // del documento menciona al cliente (sin importar en qué etiqueta cae), su tarjeta usa el logo
 // del cliente en vez de quedar sin imagen. Buscar por texto (no por id de escenario) porque el
 // id se genera desde "NOMBRE DEL ESCENARIO", que puede variar entre documentos del mismo cliente.
+// roleCompany: cómo se reparte la empresa de cada función propia del escenario (ver
+// ROLE_COMPANY_RULES), para que el paso de participantes la complete sola.
 const CUSTOM_SCENARIO_CLIENT_BG = [
-  {match: /quintero\s*energ/i, image: 'assets/scenario-bg/quintero_energia.jpg'}
+  {match: /quintero\s*energ|empresa\s*electrica\s*ventanas/i, image: 'assets/scenario-bg/quintero_energia.jpg', roleCompany: 'eev'}
 ];
-function customScenarioClientBg(data){
+function customScenarioClient(data){
   const text = [data.rawText, data.name, data.blurb, data.target].filter(Boolean).join(' ')
     .normalize('NFD').replace(/\p{M}/gu, '');
-  const hit = CUSTOM_SCENARIO_CLIENT_BG.find(c => c.match.test(text));
+  return CUSTOM_SCENARIO_CLIENT_BG.find(c => c.match.test(text)) || null;
+}
+function customScenarioClientBg(data){
+  const hit = customScenarioClient(data);
   return hit ? hit.image : null;
+}
+
+// Empresa de cada función según el catálogo de roles del cliente: devuelve 'TIBOX' o
+// 'cliente' a partir del nombre de la función. Catálogo EEV (skill /roles): de TIBOX son los
+// Ingenieros de Soporte N1/N2 y el TeamLeader; todos los demás cargos son de EEV. Operador de
+// Sala de Control y Jefe de Turno no están en el catálogo y se asumen de EEV.
+const ROLE_COMPANY_RULES = {
+  eev: name => {
+    const n = String(name || '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+    return /\bn[12]\b|team\s*leader|tibox|mesa de ayuda/.test(n) ? 'TIBOX' : 'cliente';
+  }
+};
+// Completa la empresa de las funciones que todavía no la tienen asignada (no pisa una
+// elección manual). El "cliente" es el nombre registrado en el paso 1, igual que en el modal.
+function autoAssignCompanies(scenarioId){
+  const entry = SCENARIOS.find(s => s.id === scenarioId);
+  const rule = entry && ROLE_COMPANY_RULES[entry.roleCompany];
+  if(!rule) return;
+  const rm = roleMetaFor(scenarioId);
+  participants.forEach(p => {
+    if(p.empresa) return;
+    p.empresa = rule(rm.names[p.roleKey]) === 'TIBOX' ? 'TIBOX' : (clientName.trim() || 'Cliente');
+  });
 }
 
 function slugifyScenarioId(name){
@@ -562,8 +591,13 @@ function registerCustomScenario(data){
   SCENARIO_INTROS[id] = data.intro || '';
   SCENARIO_ACCENTS[id] = CUSTOM_SCENARIO_ACCENT;
   SCENARIO_ICONS[id] = CUSTOM_SCENARIO_ICON;
-  const clientBg = customScenarioClientBg(data);
-  if(clientBg) SCENARIO_BG_IMAGES[id] = clientBg;
+  const client = customScenarioClient(data);
+  if(client) SCENARIO_BG_IMAGES[id] = client.image;
+  entry.roleCompany = (client && entry.roleMeta) ? client.roleCompany : null;
+  if(entry.roleCompany){
+    const rule = ROLE_COMPANY_RULES[entry.roleCompany];
+    entry.roleMeta.keys.forEach(k => { entry.roleMeta.org[k] = rule(entry.roleMeta.names[k]) === 'TIBOX' ? 'TIBOX' : 'Cliente'; });
+  }
   if(entry.roleMeta){
     // Escenario con organigrama propio: todas sus funciones participan siempre (son las únicas
     // que existen para este escenario; no hay concepto de "función que no aplica" aquí).
