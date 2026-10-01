@@ -31,6 +31,11 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/rooms/$(roomCode)).data;
     }
 
+    // Quien creó la sala: el único que puede admitir/rechazar participantes y liberar funciones.
+    function isRoomFacilitator(roomCode) {
+      return request.auth != null && request.auth.uid == roomData(roomCode).facilitatorUid;
+    }
+
     match /rooms/{roomCode} {
       allow get: if request.auth != null;
       allow list: if false; // sin esto, alguien podría listar/enumerar salas ajenas
@@ -72,7 +77,10 @@ service cloud.firestore {
           && roleKeyId.size() <= 100
           && request.resource.data.keys().hasOnly(['uid', 'claimedAt', 'expiresAt'])
           && request.resource.data.uid == request.auth.uid
-          && roomData(roomCode).status == 'lobby';
+          && roomData(roomCode).status == 'lobby'
+          // una sola función por sesión: quien ya tiene su documento de participante (pendiente,
+          // admitido o rechazado) no puede reservar otra
+          && !exists(/databases/$(database)/documents/rooms/$(roomCode)/participants/$(request.auth.uid));
         // Solo quien ya tenía este reclamo puede "actualizarlo" (en la práctica, solo pasa si
         // vuelve a intentar tras una falla de red a mitad del join) — cualquier otro uid que
         // llegue después de que el documento ya existe queda bloqueado acá.
@@ -80,7 +88,8 @@ service cloud.firestore {
           && request.auth.uid == resource.data.uid
           && request.resource.data.uid == resource.data.uid
           && request.resource.data.keys().hasOnly(['uid', 'claimedAt', 'expiresAt']);
-        allow delete: if false; // se limpia sola por TTL, igual que participants
+        // El facilitador la libera al rechazar a quien la había reservado (ver rejectParticipant).
+        allow delete: if isRoomFacilitator(roomCode);
       }
 
       match /participants/{uid} {
@@ -93,7 +102,8 @@ service cloud.firestore {
         // la función de otro y responder por él (la unicidad de roleClaims no serviría de nada).
         allow create: if request.auth != null
           && request.auth.uid == uid
-          && request.resource.data.keys().hasOnly(['uid', 'displayName', 'claimedRoleKey', 'joinedAt', 'lastSeen', 'expiresAt', 'vote', 'answer'])
+          && request.resource.data.keys().hasOnly(['uid', 'displayName', 'claimedRoleKey', 'joinedAt', 'lastSeen', 'expiresAt', 'status', 'vote', 'answer'])
+          && request.resource.data.status == 'pending'
           && request.resource.data.uid == uid
           && request.resource.data.displayName is string
           && request.resource.data.displayName.size() > 0
@@ -104,13 +114,22 @@ service cloud.firestore {
           && request.resource.data.answer == null
           && roomData(roomCode).status == 'lobby';
 
-        // Cada participante solo puede tocar su propio documento, y solo los campos `vote` y
-        // `answer` — nunca la función que reclamó (si pudiera, cualquiera podría "convertirse"
-        // en quien ganó la votación justo antes de responder). `vote`/`answer` (Fases 2/3)
-        // quedan acotados: solo se pueden escribir en la fase que corresponde, con la forma
-        // que espera facilitator.js, y `answer` solo si el uid reclamó la función a la que le
-        // toca responder.
-        allow update: if request.auth != null && request.auth.uid == uid
+        // Dos casos, y solo esos:
+        // (1) Admisión: el facilitador de la sala cambia `status` a 'admitted' o 'rejected' (y
+        //     nada más). Ningún participante puede admitirse a sí mismo.
+        // (2) El propio participante, YA ADMITIDO, escribe solo `vote` y `answer` — nunca la
+        //     función que reclamó (si pudiera, cualquiera podría "convertirse" en quien ganó la
+        //     votación justo antes de responder). `vote`/`answer` (Fases 2/3) quedan acotados:
+        //     solo se pueden escribir en la fase que corresponde, con la forma que espera
+        //     facilitator.js, y `answer` solo si el uid reclamó la función a la que le toca
+        //     responder.
+        allow update: if (
+          isRoomFacilitator(roomCode)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+          && request.resource.data.status in ['admitted', 'rejected']
+        ) || (
+          request.auth != null && request.auth.uid == uid
+          && resource.data.status == 'admitted'
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['vote', 'answer'])
           && (
             !('vote' in request.resource.data.diff(resource.data).affectedKeys())
@@ -131,7 +150,8 @@ service cloud.firestore {
               && request.resource.data.answer.optionIndex >= 0
               && request.resource.data.answer.optionIndex < 10
             )
-          );
+          )
+        );
 
         allow delete: if false;
       }
