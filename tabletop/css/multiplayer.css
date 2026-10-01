@@ -129,3 +129,15 @@ body.lobby-mode .topbar-right{display:none;}
   opacity:0; pointer-events:none; transition:opacity .2s ease, transform .2s ease;
 }
 .mp-sync-alert.is-visible{opacity:1; transform:translate(-50%, 0); pointer-events:auto;}
+
+/* Admisión en la sala de espera y en el popout "Sala" (ver renderRoster en facilitator.js) */
+.lobby-roster-actions{display:flex; gap:6px; flex-shrink:0;}
+.lobby-roster-actions .btn{padding:4px 10px; font-size:var(--fs-2xs);}
+.lobby-admit-btn{border-color:rgba(34,211,166,0.55); color:var(--green);}
+.lobby-reject-btn{color:var(--muted);}
+.lobby-roster-item.is-pending{border-style:dashed; border-color:rgba(255,138,0,0.45);}
+.lobby-roster-pending{
+  display:inline-block; margin-left:6px; padding:1px 7px; border-radius:999px; vertical-align:middle;
+  font-size:var(--fs-3xs); font-weight:700; letter-spacing:0.04em; text-transform:uppercase;
+  color:var(--amber); background:var(--amber-dim);
+}

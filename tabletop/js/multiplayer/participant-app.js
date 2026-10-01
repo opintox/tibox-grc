@@ -1,7 +1,10 @@
 // Lógica de join.html (celular del participante): entrar con código de sala, nombre y función
 // (Fase 1), votar quién debe actuar (Fase 2) y, si le tocó a la función que reclamó este
 // celular, responder la alternativa (Fase 3).
-import { getRoom, getMyParticipant, listenRoom, listenParticipants, joinRoom, castVote, submitAnswer } from './room.js';
+import {
+  getRoom, getMyParticipant, listenRoom, listenParticipants, listenMyParticipant, joinRoom, castVote, submitAnswer,
+  PARTICIPANT_STATUS
+} from './room.js';
 
 const codeInput = document.getElementById('joinCodeInput');
 const nameInput = document.getElementById('joinNameInput');
@@ -13,6 +16,7 @@ const formPanel = document.getElementById('joinFormPanel');
 const waitingPanel = document.getElementById('joinWaitingPanel');
 const joinedRoleName = document.getElementById('joinedRoleName');
 const joinWaitingText = document.getElementById('joinWaitingText');
+const joinWaitingEyebrow = document.getElementById('joinWaitingEyebrow');
 const votePanel = document.getElementById('joinVotePanel');
 const voteStageEl = document.getElementById('joinVoteStage');
 const voteTitleEl = document.getElementById('joinVoteTitle');
@@ -34,6 +38,11 @@ let selectedRoleKey = null;
 let myRoleKey = null; // función que este celular reclamó (ya unido) — usado en la Fase 3
 let lastVotedActKey = null; // evita re-mostrar los botones de voto ya emitido para el mismo acto
 let lastAnsweredActKey = null; // evita re-mostrar las alternativas ya enviadas para el mismo acto
+// Admisión: estado de este celular en la sala ('pending' | 'admitted' | 'rejected'). Hasta que
+// el facilitador lo admite solo ve la espera (las reglas tampoco le dejan votar ni responder).
+let myStatus = null;
+let unsubscribeMine = null;
+let lastRoom = null;
 
 function setStatus(text, kind){
   statusEl.textContent = text || '';
@@ -96,11 +105,15 @@ async function loadRoom(code){
   let mine = null;
   try{ mine = await getMyParticipant(code); }catch(err){ /* si falla, se sigue como unión nueva */ }
   if(code !== codeInput.value.trim().toUpperCase()) return;
+  if(mine && mine.status === PARTICIPANT_STATUS.REJECTED){
+    setStatus('El facilitador no autorizó tu ingreso a esta sala.', 'error');
+    return;
+  }
   if(mine){
     currentRoom = room;
     currentCode = code;
     setStatus('');
-    enterWaitingMode(code, mine.claimedRoleKey, room.roleRoster || [], room);
+    enterWaitingMode(code, mine.claimedRoleKey, room.roleRoster || [], room, mine.status);
     return;
   }
 
@@ -114,7 +127,7 @@ async function loadRoom(code){
   updateSubmitEnabled();
 
   unsubscribeParticipants = listenParticipants(code, list => {
-    takenRoleKeys = new Set(list.map(p => p.claimedRoleKey).filter(Boolean));
+    takenRoleKeys = new Set(list.filter(p => p.status !== PARTICIPANT_STATUS.REJECTED).map(p => p.claimedRoleKey).filter(Boolean));
     renderRoleGrid();
   });
   unsubscribeRoom = listenRoom(code, updatedRoom => {
@@ -141,8 +154,9 @@ nameInput.addEventListener('input', updateSubmitEnabled);
 // ejercicio y reaccionar al acto vigente (Fase 2: votar quién debe actuar; Fase 3: responder
 // si le tocó a la función de este celular). `room`: si ya se tiene el snapshot a mano (caso
 // reingreso), se pinta el estado vigente de inmediato en vez de esperar el próximo cambio.
-function enterWaitingMode(code, roleKey, roleRoster, room){
+function enterWaitingMode(code, roleKey, roleRoster, room, status){
   myRoleKey = roleKey;
+  myStatus = status || PARTICIPANT_STATUS.PENDING;
   const role = roleRoster.find(r => r.roleKey === roleKey);
   joinedRoleName.textContent = role ? role.name : roleKey;
   roleSection.classList.add('hidden');
@@ -153,11 +167,34 @@ function enterWaitingMode(code, roleKey, roleRoster, room){
 
   if(unsubscribeParticipants){ unsubscribeParticipants(); unsubscribeParticipants = null; }
   if(unsubscribeRoom) unsubscribeRoom();
+  if(unsubscribeMine) unsubscribeMine();
+  lastRoom = room || null;
   if(room) handleActUpdate(room, roleRoster);
+  else renderAdmissionWait();
   unsubscribeRoom = listenRoom(code, updatedRoom => {
     if(!updatedRoom) return;
     handleActUpdate(updatedRoom, roleRoster);
   });
+  // Cuando el facilitador admite o rechaza, se vuelve a pintar con la última sala conocida.
+  unsubscribeMine = listenMyParticipant(code, me => {
+    if(!me) return;
+    myStatus = me.status;
+    if(lastRoom) handleActUpdate(lastRoom, roleRoster);
+    else renderAdmissionWait();
+  });
+}
+
+// Pantalla de espera mientras este celular no está admitido (pendiente o rechazado).
+function renderAdmissionWait(){
+  votePanel.classList.add('hidden');
+  answerPanel.classList.add('hidden');
+  waitingPanel.classList.remove('hidden');
+  renderBriefing(null);
+  const rejected = myStatus === PARTICIPANT_STATUS.REJECTED;
+  joinWaitingEyebrow.textContent = rejected ? 'Ingreso no autorizado' : 'Solicitud enviada';
+  joinWaitingText.textContent = rejected
+    ? 'El facilitador no autorizó tu ingreso a esta sala. Si crees que es un error, avísale.'
+    : 'Esperando que el facilitador autorice tu ingreso. Cuando lo haga, esta pantalla se actualiza sola.';
 }
 
 submitBtn.addEventListener('click', async () => {
@@ -171,13 +208,16 @@ submitBtn.addEventListener('click', async () => {
     submitBtn.disabled = false;
     return;
   }
-  enterWaitingMode(currentCode, selectedRoleKey, currentRoom.roleRoster || [], null);
+  enterWaitingMode(currentCode, selectedRoleKey, currentRoom.roleRoster || [], null, PARTICIPANT_STATUS.PENDING);
 });
 
 // Alterna entre "esperando", la vista de voto (Fase 2) y la vista de respuesta (Fase 3) según
 // room.status/currentAct.phase. Solo redibuja cada vista cuando cambia el actKey (si no, cada
 // snapshot de la sala volvería a pintar el formulario y perdería "ya voté"/"ya respondí").
 function handleActUpdate(room, roleRoster){
+  lastRoom = room;
+  if(myStatus !== PARTICIPANT_STATUS.ADMITTED){ renderAdmissionWait(); return; }
+  joinWaitingEyebrow.textContent = 'Listo';
   const act = room.currentAct;
   // Introducción del escenario: solo entre que el facilitador inicia y publica el primer acto.
   const showBriefing = room.status === 'in_progress' && !act && !!room.briefing;

@@ -2,7 +2,10 @@
 // el lobby en vivo, iniciar el ejercicio existente sin tocarlo) + Fase 2 (votación: publicar
 // el acto vigente, tally en vivo sobre las mismas .char-card, resolver por timeout/empate).
 // Expone window.MP para que app.js (script clásico, no módulo) lo llame sin imports.
-import { createRoom, listenParticipants, startRoom, publishAct, setActPhase, openAnswering, publishBriefing } from './room.js';
+import {
+  createRoom, listenParticipants, startRoom, publishAct, setActPhase, openAnswering, publishBriefing,
+  admitParticipant, rejectParticipant, PARTICIPANT_STATUS, isAdmitted
+} from './room.js';
 
 let unsubscribeParticipants = null;
 // Último roster visto (sala de espera o popout "Sala"): app.js lo usa para el informe final
@@ -59,9 +62,15 @@ const LOBBY_EMPTY_ICON = '<svg viewBox="0 0 24 24" width="26" height="26" fill="
 
 // listEl/countEl: mismo motivo que renderQr — la sala de espera y el popout "Sala" comparten
 // esta función con sus propios contenedores.
-function renderRoster(participantList, roleRoster, listEl, countEl){
-  if(countEl) countEl.textContent = String(participantList.length);
-  if(participantList.length === 0){
+// Roster con admisión: los pendientes aparecen primero con "Admitir"/"Rechazar"; los
+// admitidos, con "Quitar" por si se admitió a alguien por error; los rechazados no se
+// muestran. roomCode: la sala sobre la que actúan los botones (lobby o popout "Sala").
+function renderRoster(participantList, roleRoster, listEl, countEl, roomCode){
+  const visibles = participantList.filter(p => p.status !== PARTICIPANT_STATUS.REJECTED);
+  const pending = visibles.filter(p => p.status === PARTICIPANT_STATUS.PENDING);
+  const admitted = visibles.filter(isAdmitted);
+  if(countEl) countEl.textContent = pending.length ? `${admitted.length} · ${pending.length} por autorizar` : String(admitted.length);
+  if(visibles.length === 0){
     listEl.innerHTML = `<div class="empty-state">
       <div class="empty-state-icon">${LOBBY_EMPTY_ICON}</div>
       <p class="empty-state-title">Esperando participantes</p>
@@ -69,15 +78,36 @@ function renderRoster(participantList, roleRoster, listEl, countEl){
     </div>`;
     return;
   }
-  listEl.innerHTML = participantList.map(p => {
+  listEl.innerHTML = pending.concat(admitted).map(p => {
     const role = roleRoster.find(r => r.roleKey === p.claimedRoleKey);
     const [a] = (role && role.accent) || ['#8592AE'];
-    return `<div class="lobby-roster-item" style="--a:${a};">
+    const isPending = p.status === PARTICIPANT_STATUS.PENDING;
+    const actions = isPending
+      ? `<button type="button" class="btn btn-sm lobby-admit-btn" data-admit="${escapeHtmlLocal(p.uid)}">Admitir</button>
+         <button type="button" class="btn btn-sm lobby-reject-btn" data-reject="${escapeHtmlLocal(p.uid)}" data-role="${escapeHtmlLocal(p.claimedRoleKey || '')}">Rechazar</button>`
+      : `<button type="button" class="btn btn-sm lobby-reject-btn" data-reject="${escapeHtmlLocal(p.uid)}" data-role="${escapeHtmlLocal(p.claimedRoleKey || '')}" title="Quitar de la sala y liberar la función">Quitar</button>`;
+    return `<div class="lobby-roster-item${isPending ? ' is-pending' : ''}" style="--a:${a};">
       <span class="lobby-roster-dot"></span>
-      <span class="lobby-roster-name">${escapeHtmlLocal(p.displayName || 'Sin nombre')}</span>
+      <span class="lobby-roster-name">${escapeHtmlLocal(p.displayName || 'Sin nombre')}${isPending ? ' <span class="lobby-roster-pending">Por autorizar</span>' : ''}</span>
       <span class="lobby-roster-role">${escapeHtmlLocal(role ? role.name : (p.claimedRoleKey || '—'))}</span>
+      <span class="lobby-roster-actions">${actions}</span>
     </div>`;
   }).join('');
+  if(!roomCode) return;
+  listEl.onclick = async e => {
+    const admitBtn = e.target.closest('[data-admit]');
+    const rejectBtn = e.target.closest('[data-reject]');
+    const btn = admitBtn || rejectBtn;
+    if(!btn) return;
+    btn.disabled = true;
+    try{
+      if(admitBtn) await admitParticipant(roomCode, admitBtn.dataset.admit);
+      else await rejectParticipant(roomCode, rejectBtn.dataset.reject, rejectBtn.dataset.role);
+    }catch(err){
+      btn.disabled = false;
+      reportSyncError(admitBtn ? 'admitir al participante' : 'rechazar al participante', err);
+    }
+  };
 }
 
 // scenarioId/roleRoster: ver room.js (createRoom). onStart: la función a llamar (sin
@@ -127,7 +157,7 @@ async function openLobby({scenarioId, roleRoster, onStart, onCancel}){
   startBtn.disabled = false;
 
   if(unsubscribeParticipants) unsubscribeParticipants();
-  unsubscribeParticipants = listenParticipants(code, list => { lastParticipants = list; renderRoster(list, roleRoster, listEl, countEl); });
+  unsubscribeParticipants = listenParticipants(code, list => { lastParticipants = list; renderRoster(list, roleRoster, listEl, countEl, code); });
 
   copyBtn.onclick = async () => {
     try{
@@ -230,7 +260,8 @@ function attachVotingPhase(roomCode, actKey, roleKeys, onResolve){
 
   voteUnsub = listenParticipants(roomCode, list => {
     const tally = {};
-    list.forEach(p => {
+    // Solo votan los admitidos (las reglas ya lo impiden; esto además ignora datos viejos).
+    list.filter(isAdmitted).forEach(p => {
       if(p.vote && p.vote.actKey === actKey && roleKeys.includes(p.vote.roleKey)){
         tally[p.vote.roleKey] = (tally[p.vote.roleKey] || 0) + 1;
       }
@@ -284,7 +315,7 @@ function attachAnsweringPhase(roomCode, actKey, targetRoleKey, onResolve){
   clearAnsweringWatch();
   let seenKey = null;
   answerUnsub = listenParticipants(roomCode, list => {
-    const p = list.find(x => x.claimedRoleKey === targetRoleKey);
+    const p = list.find(x => isAdmitted(x) && x.claimedRoleKey === targetRoleKey);
     if(!p || !p.answer || p.answer.actKey !== actKey) return;
     const pos = p.answer.optionIndex;
     if(!Number.isInteger(pos) || pos < 0 || pos >= answerOrder.length) return; // dato ajeno a la UI: se ignora
@@ -343,7 +374,7 @@ function openRoomPanel(roomCode, roleRoster){
   renderRoster([], roleRoster, listEl, countEl);
 
   if(roomPanelUnsub) roomPanelUnsub();
-  roomPanelUnsub = listenParticipants(roomCode, list => { lastParticipants = list; renderRoster(list, roleRoster, listEl, countEl); });
+  roomPanelUnsub = listenParticipants(roomCode, list => { lastParticipants = list; renderRoster(list, roleRoster, listEl, countEl, roomCode); });
 
   copyBtn.onclick = async () => {
     try{
@@ -377,5 +408,5 @@ window.MP = {
   attachAnsweringPhase, closeAnswering, retryAnswer: mpRetryAnswer,
   openRoomPanel, closeRoomPanel,
   // {roleKey: nombre de la persona} según el último roster visto.
-  getPersonByRole: () => Object.fromEntries(lastParticipants.filter(p => p.claimedRoleKey).map(p => [p.claimedRoleKey, p.displayName || '']))
+  getPersonByRole: () => Object.fromEntries(lastParticipants.filter(p => isAdmitted(p) && p.claimedRoleKey).map(p => [p.claimedRoleKey, p.displayName || '']))
 };

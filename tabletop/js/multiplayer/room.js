@@ -4,8 +4,14 @@
 // No lee window.TIBOX_MP_FIREBASE al cargar el módulo (evita depender del orden exacto de
 // <script type="module">): lo hace recién dentro de cada función, cuando ya se necesita.
 import {
-  doc, setDoc, updateDoc, getDoc, collection, onSnapshot, serverTimestamp, Timestamp
+  doc, setDoc, updateDoc, getDoc, collection, onSnapshot, serverTimestamp, Timestamp, writeBatch
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+// Estado de cada participante (admisión): al unirse queda 'pending' y solo el facilitador que
+// creó la sala puede pasarlo a 'admitted' o 'rejected' (lo exige firestore.rules). Solo un
+// participante 'admitted' puede votar o responder, y solo esos cuentan en el tally.
+export const PARTICIPANT_STATUS = {PENDING: 'pending', ADMITTED: 'admitted', REJECTED: 'rejected'};
+export const isAdmitted = p => !!p && p.status === PARTICIPANT_STATUS.ADMITTED;
 
 const ROOM_CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // sin 0/O ni 1/I/L: se confunden al leerlos en voz alta o a distancia
 const ROOM_TTL_MS = 12 * 60 * 60 * 1000; // 12h — sesión corta, no hace falta más
@@ -77,6 +83,20 @@ export function listenRoom(code, cb){
   return onSnapshot(doc(fb.db, 'rooms', code), snap => cb(snap.exists() ? snap.data() : null));
 }
 
+// Escucha el documento de participante de esta misma sesión (para que el celular se entere
+// cuando el facilitador lo admite o lo rechaza). cb(null) si todavía no existe.
+export function listenMyParticipant(code, cb){
+  const fb = window.TIBOX_MP_FIREBASE;
+  if(!fb) throw new Error('Firebase no está inicializado (falta firebase-init.js).');
+  let unsub = () => {};
+  let cancelled = false;
+  fb.ready.then(uid => {
+    if(cancelled) return;
+    unsub = onSnapshot(doc(fb.db, 'rooms', code, 'participants', uid), snap => cb(snap.exists() ? {uid, ...snap.data()} : null));
+  });
+  return () => { cancelled = true; unsub(); };
+}
+
 export function listenParticipants(code, cb){
   const fb = window.TIBOX_MP_FIREBASE;
   if(!fb) throw new Error('Firebase no está inicializado (falta firebase-init.js).');
@@ -94,7 +114,8 @@ export function listenParticipants(code, cb){
 // el documento ya existe con otro uid. Este chequeo local (roleRoster.some) sigue sirviendo
 // para dar un mensaje temprano sin round-trip cuando la función ni siquiera existe.
 // Lanza Error con mensaje legible si: la sala no existe, ya empezó el ejercicio, la función
-// no existe en este escenario, o ya la tomó otro participante.
+// no existe en este escenario, ya la tomó otro participante, o esta sesión ya fue rechazada.
+// El participante queda 'pending' hasta que el facilitador lo admita (admitParticipant).
 export async function joinRoom(code, {displayName, roleKey}){
   const {db, uid} = await firebaseReady();
   const roomRef = doc(db, 'rooms', code);
@@ -103,6 +124,10 @@ export async function joinRoom(code, {displayName, roleKey}){
   const room = roomSnap.data();
   if(room.status !== 'lobby') throw new Error('Esta sala ya inició el ejercicio; no se pueden sumar nuevos participantes.');
   if(!room.roleRoster.some(r => r.roleKey === roleKey)) throw new Error('Esa función no existe en este escenario.');
+  const mineSnap = await getDoc(doc(db, 'rooms', code, 'participants', uid));
+  if(mineSnap.exists() && mineSnap.data().status === PARTICIPANT_STATUS.REJECTED){
+    throw new Error('El facilitador no autorizó tu ingreso a esta sala.');
+  }
 
   const now = Date.now();
   const expiresAt = Timestamp.fromMillis(now + ROOM_TTL_MS);
@@ -119,9 +144,26 @@ export async function joinRoom(code, {displayName, roleKey}){
     uid, displayName: displayName.trim().slice(0, 60), claimedRoleKey: roleKey, // 60: tope de firestore.rules
     joinedAt: serverTimestamp(), lastSeen: serverTimestamp(),
     expiresAt,
+    status: PARTICIPANT_STATUS.PENDING,
     vote: null, answer: null
   });
   return uid;
+}
+
+// ---------------- admisión (solo el facilitador de la sala; ver firestore.rules) ----------------
+export async function admitParticipant(code, uid){
+  const {db} = await firebaseReady();
+  await updateDoc(doc(db, 'rooms', code, 'participants', uid), {status: PARTICIPANT_STATUS.ADMITTED});
+}
+
+// Rechaza y libera la función que había reservado, para que otra persona la pueda tomar. El
+// documento queda como 'rejected' (no se borra): así esa sesión no puede volver a pedir ingreso.
+export async function rejectParticipant(code, uid, roleKey){
+  const {db} = await firebaseReady();
+  const batch = writeBatch(db);
+  batch.update(doc(db, 'rooms', code, 'participants', uid), {status: PARTICIPANT_STATUS.REJECTED});
+  if(roleKey) batch.delete(doc(db, 'rooms', code, 'roleClaims', roleKey));
+  await batch.commit();
 }
 
 // El facilitador cierra el lobby y arranca el ejercicio (status -> 'in_progress'). A partir

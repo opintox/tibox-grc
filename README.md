@@ -139,6 +139,12 @@ El facilitador crea una sala (código + QR); cada participante entra desde `join
 elige su función, vota quién debe actuar y, si le toca, responde desde el celular. La sala
 vive en Firestore y se borra sola por TTL (`expiresAt`).
 
+**Admisión:** al unirse, cada participante queda *por autorizar* y su función reservada. Solo
+el facilitador que creó la sala puede **Admitir**, **Rechazar** (libera la función y esa sesión
+no puede volver a pedir ingreso) o **Quitar** a alguien ya admitido, desde la sala de espera o
+el botón "Sala" durante el ejercicio. Solo los admitidos pueden votar y responder; lo exigen
+las reglas de Firestore, no solo la pantalla.
+
 - Las reglas de `tabletop/firestore.rules` se publican a mano en Firebase Console →
   Firestore → Reglas.
 - Los celulares entran con sesión anónima de Firebase: en Authentication debe estar activo el
