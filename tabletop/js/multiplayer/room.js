@@ -118,14 +118,14 @@ export function listenParticipants(code, cb){
 // Une al participante actual (uid de su propia sesión anónima) a la sala, reclamando una
 // función libre. La unicidad de la función ya NO depende de este chequeo (antes era
 // lectura-antes-de-escribir, no atómico: dos toques en el mismo milisegundo podían ganar
-// los dos) — ahora se reclama primero un documento rooms/{code}/roleClaims/{roleKey}, cuya
-// creación es atómica en Firestore: si dos participantes intentan la misma función a la vez,
-// el segundo choca con la regla de seguridad (ver firestore.rules) porque para su escritura
-// el documento ya existe con otro uid. Este chequeo local (roleRoster.some) sigue sirviendo
-// para dar un mensaje temprano sin round-trip cuando la función ni siquiera existe.
+// los dos) — la reserva rooms/{code}/roleClaims/{roleKey} y el participante se crean en un
+// mismo batch: si dos participantes intentan la misma función a la vez, el segundo choca con
+// la regla de seguridad (ver firestore.rules) porque para su escritura la reserva ya existe con
+// otro uid, y no se crea nada. Este chequeo local (roleRoster.some) sigue sirviendo para dar
+// un mensaje temprano sin round-trip cuando la función ni siquiera existe.
 // Lanza Error con mensaje legible si: la sala no existe, ya empezó el ejercicio, la función
 // no existe en este escenario, ya la tomó otro participante, o esta sesión ya fue rechazada.
-// El participante queda 'pending' hasta que el facilitador lo admita (admitParticipant).
+// El participante queda 'pending' hasta que entre con el código que le da el facilitador.
 export async function joinRoom(code, {displayName, roleKey}){
   const {db, uid} = await firebaseReady();
   const roomRef = doc(db, 'rooms', code);
@@ -142,21 +142,26 @@ export async function joinRoom(code, {displayName, roleKey}){
   const now = Date.now();
   const expiresAt = Timestamp.fromMillis(now + ROOM_TTL_MS);
 
-  try{
-    await setDoc(doc(db, 'rooms', code, 'roleClaims', roleKey), {uid, claimedAt: serverTimestamp(), expiresAt});
-  }catch(err){
-    // La regla de seguridad rechaza la escritura si el documento ya existe con otro uid —
-    // esto es lo que hace atómica la unicidad, no una condición que revisemos nosotros.
-    throw new Error('Esa función ya la tomó otro participante. Elige otra.');
-  }
-
-  await setDoc(doc(db, 'rooms', code, 'participants', uid), {
+  // Reserva de la función + participante en una sola operación: o se crean ambos o ninguno
+  // (las reglas lo exigen, para que no queden reservas sin participante).
+  const batch = writeBatch(db);
+  batch.set(doc(db, 'rooms', code, 'roleClaims', roleKey), {uid, claimedAt: serverTimestamp(), expiresAt});
+  batch.set(doc(db, 'rooms', code, 'participants', uid), {
     uid, displayName: displayName.trim().slice(0, 60), claimedRoleKey: roleKey, // 60: tope de firestore.rules
     joinedAt: serverTimestamp(), lastSeen: serverTimestamp(),
     expiresAt,
     status: PARTICIPANT_STATUS.PENDING,
     vote: null, answer: null
   });
+  try{
+    await batch.commit();
+  }catch(err){
+    // Lo más común: la reserva ya existe a nombre de otro (las reglas la rechazan; eso es lo
+    // que hace atómica la unicidad). Si no es eso, se informa como falla de conexión.
+    const claim = await getDoc(doc(db, 'rooms', code, 'roleClaims', roleKey)).catch(() => null);
+    if(claim && claim.exists() && claim.data().uid !== uid) throw new Error('Esa función ya la tomó otro participante. Elige otra.');
+    throw new Error('No se pudo unir a la sala. Revisa tu conexión e intenta de nuevo.');
+  }
   return uid;
 }
 
