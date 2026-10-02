@@ -88,7 +88,7 @@ Al publicar en GitHub Pages, los cambios en `main` quedan en línea en 1–2 min
 | Escribir o corregir el relato de un escenario | `js/data/escenarios.js` |
 | Cambiar la introducción previa a la primera etapa | `js/data/catalogo.js` → `SCENARIO_INTROS` |
 | Agregar o cambiar una pantalla | `tabletop/index.html` (marcado) + `js/screens.js` (registrarla) |
-| Cambiar el informe final o sus descargas | `js/report.js` (y `docx.js` → `downloadReportDocx` para el Word) |
+| Cambiar el informe final o sus descargas | `js/report.js` (y `docx.js` → `downloadReportDocx` para el Word, con formato SGSI: Carta, portada, control de cambios, títulos I./1.1, tablas azul marino) |
 | Cambiar el constructor de escenarios | `js/builder.js` |
 | Cambiar el modo con celulares | `js/multiplayer/` y `tabletop/firestore.rules` |
 | Cambiar el comportamiento del ejercicio | `js/app.js` |

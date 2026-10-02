@@ -7,6 +7,9 @@ window.TabletopReport = (function(){
   // deps: {escapeHtml, fmtElapsed, roleMetaFor, stagesFor, sessionRoleKeys, roleCompanyFor,
   //   showConfirmModal, loadSavedExercises, saveExercisesList, onClose}
   let deps = null;
+  // Código del informe en el encabezado del Word (formato SGSI). Cambiar acá si el sistema de
+  // gestión le asigna uno definitivo.
+  const REPORT_DOC_CODE = 'INF-TT';
   // Foto de la sesión que se está informando (ver show).
   let gameState = null, participants = [], clientName = '', facilitatorName = '';
   const escapeHtml = s => deps.escapeHtml(s);
@@ -232,7 +235,7 @@ window.TabletopReport = (function(){
   function buildPerformancePart(){
     const {rows, hasPeople} = buildPerformanceByRole();
     const head = ['Función', 'Empresa'].concat(hasPeople ? ['Persona'] : [],
-      ['Actos que le tocaron', 'Identificada a la primera', 'Decisión correcta a la primera', 'Respuestas incorrectas', 'Veces elegida sin corresponderle']);
+      ['Actos', 'Función a la primera', 'Decisión a la primera', 'Respuestas incorrectas', 'Elegida por error']);
     const tableRows = rows.map(r => [r.name, r.company].concat(hasPeople ? [r.person || '—'] : [],
       [String(r.acts), r.acts ? `${r.roleFirst} de ${r.acts}` : '—', r.acts ? `${r.decisionFirst} de ${r.acts}` : '—',
        String(r.wrongAnswers), String(r.chosenByMistake)]));
@@ -243,6 +246,9 @@ window.TabletopReport = (function(){
       : `<p>Ninguna función eligió una respuesta incorrecta en los actos que le correspondían.</p>`;
     return {title: 'Desempeño por función', html: note + reportTable(head, tableRows)};
   }
+
+  // Muchos escenarios ya titulan sus actos "Acto 1 · …": se quita ese prefijo para no repetirlo.
+  const actTitle = t => String(t || '').replace(/^\s*acto\s+\d+\s*[·:\-–—]\s*/i, '').trim();
 
   function buildActsPart(){
     const rm = roleMetaFor(gameState.scenarioId);
@@ -255,7 +261,7 @@ window.TabletopReport = (function(){
         ? `✕ ${a.wrongOptions.length} respuesta${a.wrongOptions.length === 1 ? '' : 's'} incorrecta${a.wrongOptions.length === 1 ? '' : 's'} antes de la correcta:`
         : '✓ Correcta a la primera';
       return `<div class="report-act">
-        <h4>Acto ${i + 1} · ${escapeHtml(a.stage)}${a.title ? ` · ${escapeHtml(a.title)}` : ''}</h4>
+        <h4>Acto ${i + 1} · ${escapeHtml(a.stage)}${actTitle(a.title) ? ` · ${escapeHtml(actTitle(a.title))}` : ''}</h4>
         <p><b>Debía actuar:</b> ${escapeHtml(target)}</p>
         <p><b>Función:</b> ${escapeHtml(roleLine)}</p>
         <p><b>Decisión:</b> ${escapeHtml(decisionLine)}</p>
@@ -492,9 +498,21 @@ window.TabletopReport = (function(){
       });
       const notes = document.getElementById('actaNotes').value.trim();
       if(notes) sections.push({title: 'Notas del facilitador', blocks: notes.split(/\n\s*\n|\n/).filter(t => t.trim()).map(t => ({type: 'p', runs: [{text: t.trim()}]}))});
+      // Formato SGSI (ver docx.js): encabezado, portada, control de cambios y aprobación.
+      const mmaaaa = `${String(nowDate.getMonth() + 1).padStart(2, '0')}/${nowDate.getFullYear()}`;
       TibDocx.downloadReportDocx({
-        title: `Informe de ejercicio tabletop`,
-        subtitle: `${scenarioMeta.name}${clientName ? ' · ' + clientName : ''} · ${fechaLegible}`,
+        meta: {
+          docName: 'Informe de ejercicio tabletop',
+          coverTitle: 'Informe de ejercicio tabletop',
+          coverSubtitle: `${scenarioMeta.name}${clientName ? ' · ' + clientName : ''} · ${fechaLegible}`,
+          version: '001',
+          code: REPORT_DOC_CODE,
+          issueDate: mmaaaa,
+          company: clientName || 'TIBOX',
+          authorRole: 'Facilitador del ejercicio (TIBOX)',
+          approverRole: 'Facilitador del ejercicio',
+          approverCompany: 'TIBOX'
+        },
         sections,
         filename: `informe_tabletop_${(clientName || 'cliente').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^a-z0-9]+/g,'_')}_${scenarioMeta.id}.docx`
       }).catch(err => { console.error(err); alert('No se pudo generar el Word del informe.'); });

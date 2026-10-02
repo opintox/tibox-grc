@@ -258,64 +258,290 @@ const TibDocx = (function(){
   }
 
   // ================================================================
-  // INFORME DEL EJERCICIO (resultado -> .docx)
+  // INFORME DEL EJERCICIO (resultado -> .docx con formato SGSI)
   // ================================================================
-  // report: {title, subtitle, sections:[{title, blocks}], filename}. Bloques (los arma
-  // reportElementToDocBlocks en app.js): {type:'p'|'bullet', runs:[{text,bold}]},
-  // {type:'heading', level, text}, {type:'table', rows:[[texto]], header:bool}.
-  const REPORT_NAVY = '1F3A5F';
-  const PAGE_TEXT_WIDTH = 9072; // A4 (11906) menos márgenes de 1417 a cada lado, en twips
+  // Formato de los documentos del sistema de gestión (referencia: D-25, skill formato-sgsi):
+  // Carta, encabezado con nombre/versión/código/fecha y razón social, pie "Página X de Y",
+  // portada, Control de cambios + bloque de aprobación en la página 2, títulos numerados en
+  // romanos (I., II.) y subtítulos 5.1, cuerpo Aptos Light 12 justificado y tablas azul marino.
+  // El formato vive en los estilos de Word (styles.xml + numbering.xml), no párrafo a párrafo.
+  //
+  // report: {sections:[{title, blocks}], filename, meta}. Bloques (los arma
+  // reportElementToDocBlocks en report.js): {type:'p'|'bullet', runs:[{text,bold}]},
+  // {type:'heading', text}, {type:'table', rows:[[texto]], header:bool}.
+  // meta: {docName, coverTitle, coverSubtitle, version, code, issueDate (MM/AAAA), company,
+  //   authorRole, approverRole, approverCompany}.
+  const SG = {
+    navy: '000E3D', navyText: 'F1F5F9', zebra: 'F1F5F9', title: '0D0D0D', body: '171717',
+    subtitle: '808080', cellText: '1E293B', footer: '3A3A3A',
+    pageW: 12240, pageH: 15840,                      // Carta
+    margin: {top: 1418, bottom: 851, left: 1701, right: 1750, header: 340, footer: 454},
+    textW: 12240 - 1701 - 1750                       // 8789 twips
+  };
+  const SG_FONT_TITLE = 'Cambria';
+  const SG_FONT_BODY = 'Aptos Light';
 
-  function reportRunsXml(runs, extra){
-    return (runs || []).map(r => runXml(r.text, Object.assign({bold: !!r.bold}, extra || {}))).join('');
+  function sgRun(text, o){
+    o = o || {};
+    const props = [];
+    if(o.font) props.push(`<w:rFonts w:ascii="${o.font}" w:hAnsi="${o.font}" w:cs="${o.font}"/>`);
+    if(o.bold) props.push('<w:b/>');
+    if(o.caps) props.push('<w:caps/>');
+    if(o.color) props.push(`<w:color w:val="${o.color}"/>`);
+    if(o.size) props.push(`<w:sz w:val="${o.size}"/><w:szCs w:val="${o.size}"/>`);
+    const rPr = props.length ? `<w:rPr>${props.join('')}</w:rPr>` : '';
+    return `<w:r>${rPr}<w:t xml:space="preserve">${xmlEscape(text)}</w:t></w:r>`;
   }
-  function reportParagraph(runsXml, opts){
-    opts = opts || {};
-    // Orden exigido por el esquema de Word dentro de <w:pPr>: keepNext, spacing, ind.
+  function sgPara(runs, o){
+    o = o || {};
     const ppr = [];
-    if(opts.keepNext) ppr.push('<w:keepNext/>');
-    ppr.push(`<w:spacing w:after="${opts.after == null ? 120 : opts.after}"/>`);
-    if(opts.indent) ppr.push(`<w:ind w:left="${opts.indent}" w:hanging="240"/>`);
-    return `<w:p><w:pPr>${ppr.join('')}</w:pPr>${runsXml}</w:p>`;
+    if(o.style) ppr.push(`<w:pStyle w:val="${o.style}"/>`);
+    if(o.spacing) ppr.push(o.spacing);
+    if(o.jc) ppr.push(`<w:jc w:val="${o.jc}"/>`);
+    if(o.vAlignSect) ppr.push(o.vAlignSect);
+    return `<w:p>${ppr.length ? `<w:pPr>${ppr.join('')}</w:pPr>` : ''}${runs || ''}</w:p>`;
   }
-  function reportTableXml(rows, header){
+  const sgBodyRuns = runs => (runs || []).map(r => sgRun(r.text, {bold: !!r.bold})).join('');
+  const sgBlank = () => '<w:p/>';
+  const sgPageBreak = () => '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
+
+  // Tabla del formato: encabezado azul marino (Cambria 10, mayúsculas, centrado, se repite en
+  // cada página), cuerpo Aptos Light 10 (#1E293B; 1.ª columna #000E3D), filas alternas
+  // #F1F5F9, sin bordes, ancho completo y celdas centradas verticalmente.
+  function sgTable(rows, opts){
+    opts = opts || {};
+    const header = opts.header !== false;
     const cols = Math.max(1, ...rows.map(r => r.length));
-    const colW = Math.floor(PAGE_TEXT_WIDTH / cols);
-    const border = '<w:top w:val="single" w:sz="4" w:color="BFBFBF"/><w:left w:val="single" w:sz="4" w:color="BFBFBF"/><w:bottom w:val="single" w:sz="4" w:color="BFBFBF"/><w:right w:val="single" w:sz="4" w:color="BFBFBF"/><w:insideH w:val="single" w:sz="4" w:color="BFBFBF"/><w:insideV w:val="single" w:sz="4" w:color="BFBFBF"/>';
-    const grid = Array.from({length: cols}, () => `<w:gridCol w:w="${colW}"/>`).join('');
+    const widths = opts.widths || sgAutoWidths(rows, cols, header);
+    const centerCols = opts.centerCols || [];
+    const grid = widths.map(w => `<w:gridCol w:w="${w}"/>`).join('');
     const body = rows.map((row, ri) => {
       const isHead = header && ri === 0;
-      const cells = Array.from({length: cols}, (_, ci) => {
-        const shade = isHead ? `<w:shd w:val="clear" w:color="auto" w:fill="${REPORT_NAVY}"/>` : '';
-        const text = runXml(row[ci] || '', isHead ? {bold: true, size: 20, color: 'FFFFFF'} : {size: 20});
-        return `<w:tc><w:tcPr><w:tcW w:w="${colW}" w:type="dxa"/>${shade}</w:tcPr><w:p><w:pPr><w:spacing w:after="0"/></w:pPr>${text}</w:p></w:tc>`;
+      const dataIdx = header ? ri - 1 : ri;
+      const fill = isHead ? SG.navy : (dataIdx % 2 === 1 ? SG.zebra : null);
+      const cells = widths.map((w, ci) => {
+        const text = row[ci] == null ? '' : String(row[ci]);
+        const run = isHead
+          ? sgRun(text, {font: SG_FONT_TITLE, size: 20, caps: true, color: SG.navyText})
+          : sgRun(text, {font: SG_FONT_BODY, size: 20, color: ci === 0 ? SG.navy : SG.cellText});
+        const jc = isHead || centerCols.includes(ci) ? 'center' : 'left';
+        return `<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${fill ? `<w:shd w:val="clear" w:color="auto" w:fill="${fill}"/>` : ''}<w:vAlign w:val="center"/></w:tcPr>` +
+          `<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/><w:jc w:val="${jc}"/></w:pPr>${run}</w:p></w:tc>`;
       }).join('');
-      return `<w:tr>${isHead ? '<w:trPr><w:tblHeader/></w:trPr>' : ''}${cells}</w:tr>`;
+      return `<w:tr><w:trPr><w:cantSplit/>${isHead ? '<w:tblHeader/>' : ''}</w:trPr>${cells}</w:tr>`;
     }).join('');
-    return `<w:tbl><w:tblPr><w:tblW w:w="${PAGE_TEXT_WIDTH}" w:type="dxa"/><w:tblBorders>${border}</w:tblBorders>` +
-      `<w:tblCellMar><w:top w:w="60" w:type="dxa"/><w:left w:w="100" w:type="dxa"/><w:bottom w:w="60" w:type="dxa"/><w:right w:w="100" w:type="dxa"/></w:tblCellMar></w:tblPr>` +
-      `<w:tblGrid>${grid}</w:tblGrid>${body}</w:tbl>` + reportParagraph('', {after: 120});
+    return `<w:tbl><w:tblPr><w:tblW w:w="${SG.textW}" w:type="dxa"/>` +
+      '<w:tblBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/></w:tblBorders>' +
+      '<w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="70" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="70" w:type="dxa"/></w:tblCellMar>' +
+      `<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr><w:tblGrid>${grid}</w:tblGrid>${body}</w:tbl>`;
   }
 
-  function buildReportXml(report){
-    const out = [];
-    out.push(reportParagraph(runXml(report.title || 'Informe', {bold: true, size: 36, color: REPORT_NAVY}), {after: 60}));
-    if(report.subtitle) out.push(reportParagraph(runXml(report.subtitle, {size: 24, color: '555555'}), {after: 360}));
-    (report.sections || []).forEach(sec => {
-      out.push(reportParagraph(runXml(sec.title, {bold: true, size: 28, color: REPORT_NAVY}), {after: 120, keepNext: true}));
-      (sec.blocks || []).forEach(b => {
-        if(b.type === 'heading') out.push(reportParagraph(runXml(b.text, {bold: true, size: 23}), {after: 80, keepNext: true}));
-        else if(b.type === 'bullet') out.push(reportParagraph(runXml('•  ') + reportRunsXml(b.runs), {indent: 480}));
-        else if(b.type === 'table') out.push(reportTableXml(b.rows, b.header));
-        else out.push(reportParagraph(reportRunsXml(b.runs)));
+  // Anchos de columna según el contenido, en dos pasos: (1) cada columna recibe el mínimo para
+  // que su palabra más larga no se parta (en el encabezado en mayúsculas y en el cuerpo); (2) el
+  // espacio que sobra se reparte según la cantidad de texto de cada columna (con tope, para que
+  // una celda muy larga no se coma la tabla). Anchos aproximados por carácter, en twips.
+  const SG_CHAR_HEAD = 118;  // Cambria 10 en mayúsculas
+  const SG_CHAR_BODY = 104;  // Aptos Light 10
+  const SG_CELL_PAD = 200;   // márgenes de celda + holgura
+  function sgAutoWidths(rows, cols, header){
+    const mins = [], wants = [];
+    for(let ci = 0; ci < cols; ci++){
+      let min = 0, want = 0;
+      rows.forEach((row, ri) => {
+        const text = row[ci] == null ? '' : String(row[ci]);
+        const longestWord = Math.max(0, ...text.split(/\s+/).map(x => x.length));
+        const perChar = header && ri === 0 ? SG_CHAR_HEAD : SG_CHAR_BODY;
+        min = Math.max(min, longestWord * perChar + SG_CELL_PAD);
+        if(!(header && ri === 0)) want = Math.max(want, Math.min(text.length, 45) * SG_CHAR_BODY + SG_CELL_PAD);
       });
-      out.push(reportParagraph('', {after: 120}));
+      mins.push(min);
+      wants.push(Math.max(want, min));
+    }
+    const minTotal = mins.reduce((a, b) => a + b, 0);
+    let widths;
+    if(minTotal >= SG.textW){
+      widths = mins.map(m => Math.floor(SG.textW * m / minTotal)); // no alcanza: se achica parejo
+    } else {
+      const extra = wants.map((w, i) => w - mins[i]);
+      const extraTotal = extra.reduce((a, b) => a + b, 0);
+      const spare = SG.textW - minTotal;
+      widths = mins.map((m, i) => Math.floor(m + (extraTotal ? spare * extra[i] / extraTotal : spare / cols)));
+    }
+    widths[widths.length - 1] += SG.textW - widths.reduce((a, b) => a + b, 0);
+    return widths;
+  }
+
+  // Bloque de aprobación: tabla flotante anclada al pie de la página 2, sin bordes.
+  function sgApprovalBlock(meta){
+    const w = [3900, 989, 3900];
+    const cell = (text, width, size) => `<w:tc><w:tcPr><w:tcW w:w="${width}" w:type="dxa"/></w:tcPr>` +
+      `<w:p><w:pPr><w:spacing w:before="0" w:after="60"/><w:jc w:val="center"/></w:pPr>${text ? sgRun(text, {font: SG_FONT_BODY, size, color: '000000'}) : ''}</w:p></w:tc>`;
+    const row = (a, c, size) => `<w:tr>${cell(a, w[0], size)}${cell('', w[1], size)}${cell(c, w[2], size)}</w:tr>`;
+    return '<w:tbl><w:tblPr><w:tblpPr w:leftFromText="0" w:rightFromText="0" w:vertAnchor="margin" w:horzAnchor="margin" w:tblpXSpec="center" w:tblpYSpec="bottom"/>' +
+      `<w:tblW w:w="${w[0] + w[1] + w[2]}" w:type="dxa"/>` +
+      '<w:tblBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/></w:tblBorders>' +
+      `<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>${w.map(x => `<w:gridCol w:w="${x}"/>`).join('')}</w:tblGrid>` +
+      row('Aprobado por:', 'Fecha de aprobación:', 24) +
+      row('__________________________', '____ / ____ / ______', 24) +
+      row(`${meta.approverRole} — ${meta.approverCompany}`, '', 20) +
+      '</w:tbl>';
+  }
+
+  function sgSectPr(extra){
+    const m = SG.margin;
+    return '<w:sectPr><w:headerReference w:type="default" r:id="rIdHeader1"/><w:footerReference w:type="default" r:id="rIdFooter1"/>' +
+      `<w:type w:val="nextPage"/><w:pgSz w:w="${SG.pageW}" w:h="${SG.pageH}"/>` +
+      `<w:pgMar w:top="${m.top}" w:right="${m.right}" w:bottom="${m.bottom}" w:left="${m.left}" w:header="${m.header}" w:footer="${m.footer}" w:gutter="0"/>` +
+      `${extra || ''}</w:sectPr>`;
+  }
+
+  function buildSgsiBodyXml(report){
+    const meta = report.meta;
+    const out = [];
+    // Página 1: portada centrada verticalmente (sección propia con vAlign=center).
+    out.push(sgPara(sgRun(meta.coverTitle), {style: 'CoverTitle'}));
+    out.push(`<w:p><w:pPr><w:pStyle w:val="CoverSubtitle"/>${sgSectPr('<w:vAlign w:val="center"/>')}</w:pPr>${sgRun(meta.coverSubtitle)}</w:p>`);
+    // Página 2: Control de cambios + bloque de aprobación al pie.
+    out.push(sgPara(sgRun('Control de cambios'), {style: 'ChangesTitle'}));
+    out.push(sgPara(sgRun(`Toda modificación a este documento debe ser aprobada por el ${meta.approverRole} de ${meta.approverCompany} antes de su distribución.`)));
+    out.push(sgTable([
+      ['VERSIÓN', 'FECHA', 'DESCRIPCIÓN', 'ELABORADO POR', 'APROBADO POR'],
+      [meta.version, meta.issueDate.replace('/', ' / '), 'Creación del documento.', meta.authorRole, meta.approverRole]
+    ], {widths: [983, 1258, 2654, 2222, 1672], centerCols: [0, 1]}));
+    out.push(sgBlank());
+    out.push(sgApprovalBlock(meta));
+    out.push(sgPageBreak());
+    // Página 3 en adelante: cada sección es un Título 1 (I., II., ...) y sus subtítulos Título 2.
+    (report.sections || []).forEach(sec => {
+      out.push(sgPara(sgRun(String(sec.title || '').replace(/\.\s*$/, '')), {style: 'Heading1'}));
+      (sec.blocks || []).forEach(b => {
+        if(b.type === 'heading') out.push(sgPara(sgRun(String(b.text || '').replace(/\.\s*$/, '')), {style: 'Heading2'}));
+        else if(b.type === 'bullet') out.push(sgPara(sgBodyRuns(b.runs), {style: 'ListBullet'}));
+        else if(b.type === 'table'){ out.push(sgTable(b.rows, {header: b.header})); out.push(sgBlank()); }
+        else out.push(sgPara(sgBodyRuns(b.runs)));
+      });
     });
     return out.join('');
   }
 
+  function sgHeaderXml(meta){
+    const w = [2000, 5260, 3800];
+    const total = w[0] + w[1] + w[2];
+    const p = (runs, jc) => `<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/><w:jc w:val="${jc}"/></w:pPr>${runs}</w:p>`;
+    const small = t => p(sgRun(t, {font: SG_FONT_TITLE, size: 20, color: '000000'}), 'left');
+    const tc = (width, content, extra) => `<w:tc><w:tcPr><w:tcW w:w="${width}" w:type="dxa"/>${extra || ''}<w:vAlign w:val="center"/></w:tcPr>${content}</w:tc>`;
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
+      '<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+      `<w:tbl><w:tblPr><w:tblW w:w="${total}" w:type="dxa"/><w:tblInd w:w="${-Math.round((total - SG.textW) / 2)}" w:type="dxa"/>` +
+      '<w:tblBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/></w:tblBorders>' +
+      `<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>${w.map(x => `<w:gridCol w:w="${x}"/>`).join('')}</w:tblGrid>` +
+      '<w:tr>' +
+        tc(w[0], p('', 'left')) +
+        tc(w[1], p(sgRun(meta.docName, {font: SG_FONT_TITLE, size: 22, bold: true, color: '000000'}), 'center')) +
+        tc(w[2], small(`Versión: ${meta.version}`) + small(`Código: ${meta.code}`) + small(`Fecha Emisión: ${meta.issueDate}`)) +
+      '</w:tr><w:tr>' +
+        tc(total, p(sgRun(meta.company, {font: SG_FONT_TITLE, size: 22, color: '000000'}), 'center'), '<w:gridSpan w:val="3"/>') +
+      '</w:tr></w:tbl><w:p><w:pPr><w:spacing w:before="0" w:after="0"/></w:pPr></w:p></w:hdr>';
+  }
+
+  function sgFooterXml(){
+    const rpr = `<w:rPr><w:rFonts w:ascii="${SG_FONT_TITLE}" w:hAnsi="${SG_FONT_TITLE}" w:cs="${SG_FONT_TITLE}"/><w:color w:val="${SG.footer}"/><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr>`;
+    const r = t => sgRun(t, {font: SG_FONT_TITLE, size: 20, color: SG.footer});
+    // Campo complejo (no fldSimple) con el formato en cada parte: al recalcular el número,
+    // Word conserva Cambria 10 #3A3A3A en vez de aplicar la fuente por defecto.
+    const field = instr => `<w:r>${rpr}<w:fldChar w:fldCharType="begin"/></w:r><w:r>${rpr}<w:instrText xml:space="preserve"> ${instr} \\* MERGEFORMAT </w:instrText></w:r>` +
+      `<w:r>${rpr}<w:fldChar w:fldCharType="separate"/></w:r><w:r>${rpr}<w:t>1</w:t></w:r><w:r>${rpr}<w:fldChar w:fldCharType="end"/></w:r>`;
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
+      '<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+      `<w:p><w:pPr><w:jc w:val="right"/></w:pPr>${r('Página ')}${field('PAGE')}${r(' de ')}${field('NUMPAGES')}</w:p></w:ftr>`;
+  }
+
+  // Estilos del formato: Normal (Aptos Light 12, #171717, justificado, 1,15), Título 1/2
+  // (Cambria 14/12 negrita #0D0D0D, numerados), Lista con viñetas y los de portada.
+  function sgStylesXml(){
+    const font = f => `<w:rFonts w:ascii="${f}" w:hAnsi="${f}" w:eastAsia="${f}" w:cs="${f}"/>`;
+    const sz = v => `<w:sz w:val="${v}"/><w:szCs w:val="${v}"/>`;
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
+      '<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+      `<w:docDefaults><w:rPrDefault><w:rPr>${font(SG_FONT_BODY)}<w:color w:val="${SG.body}"/>${sz(24)}<w:lang w:val="es-CL"/></w:rPr></w:rPrDefault>` +
+      '<w:pPrDefault><w:pPr><w:spacing w:before="0" w:after="100" w:line="276" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>' +
+      `<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/>` +
+        `<w:pPr><w:spacing w:before="0" w:after="100" w:line="276" w:lineRule="auto"/><w:jc w:val="both"/></w:pPr>` +
+        `<w:rPr>${font(SG_FONT_BODY)}<w:color w:val="${SG.body}"/>${sz(24)}</w:rPr></w:style>` +
+      `<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/>` +
+        `<w:pPr><w:keepNext/><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr><w:spacing w:before="0" w:after="80"/><w:ind w:left="426" w:hanging="142"/><w:jc w:val="left"/><w:outlineLvl w:val="0"/></w:pPr>` +
+        `<w:rPr>${font(SG_FONT_TITLE)}<w:b/><w:bCs/><w:color w:val="${SG.title}"/>${sz(28)}</w:rPr></w:style>` +
+      `<w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="heading 2"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/>` +
+        `<w:pPr><w:keepNext/><w:numPr><w:ilvl w:val="1"/><w:numId w:val="1"/></w:numPr><w:spacing w:before="0" w:after="80"/><w:ind w:left="851" w:hanging="425"/><w:jc w:val="left"/><w:outlineLvl w:val="1"/></w:pPr>` +
+        `<w:rPr>${font(SG_FONT_TITLE)}<w:b/><w:bCs/><w:color w:val="${SG.title}"/>${sz(24)}</w:rPr></w:style>` +
+      `<w:style w:type="paragraph" w:styleId="ListBullet"><w:name w:val="List Bullet"/><w:basedOn w:val="Normal"/><w:qFormat/>` +
+        `<w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="2"/></w:numPr><w:spacing w:after="160"/><w:ind w:left="360" w:hanging="360"/><w:jc w:val="both"/></w:pPr></w:style>` +
+      `<w:style w:type="paragraph" w:customStyle="1" w:styleId="CoverTitle"><w:name w:val="Título de portada"/><w:basedOn w:val="Normal"/>` +
+        `<w:pPr><w:spacing w:after="60"/><w:jc w:val="center"/></w:pPr><w:rPr>${font(SG_FONT_TITLE)}<w:b/><w:caps/><w:color w:val="${SG.title}"/>${sz(32)}</w:rPr></w:style>` +
+      `<w:style w:type="paragraph" w:customStyle="1" w:styleId="CoverSubtitle"><w:name w:val="Subtítulo de portada"/><w:basedOn w:val="Normal"/>` +
+        `<w:pPr><w:spacing w:after="60"/><w:jc w:val="center"/></w:pPr><w:rPr>${font(SG_FONT_TITLE)}<w:color w:val="${SG.subtitle}"/>${sz(24)}</w:rPr></w:style>` +
+      `<w:style w:type="paragraph" w:customStyle="1" w:styleId="ChangesTitle"><w:name w:val="Título control de cambios"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/>` +
+        `<w:pPr><w:keepNext/><w:spacing w:before="0" w:after="160"/><w:jc w:val="left"/></w:pPr><w:rPr>${font(SG_FONT_TITLE)}<w:b/><w:color w:val="${SG.title}"/>${sz(28)}</w:rPr></w:style>` +
+      '<w:style w:type="table" w:default="1" w:styleId="TableNormal"><w:name w:val="Normal Table"/><w:tblPr><w:tblInd w:w="0" w:type="dxa"/>' +
+        '<w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="70" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="70" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style>' +
+      '</w:styles>';
+  }
+
+  // Numeración multinivel ligada a los títulos (I., II. / 5.1, 5.2 con isLgl) y viñetas.
+  function sgNumberingXml(){
+    const titleRun = `<w:rPr><w:rFonts w:ascii="${SG_FONT_TITLE}" w:hAnsi="${SG_FONT_TITLE}" w:cs="${SG_FONT_TITLE}"/><w:b/><w:color w:val="${SG.title}"/></w:rPr>`;
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
+      '<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+      '<w:abstractNum w:abstractNumId="0"><w:multiLevelType w:val="multilevel"/>' +
+        `<w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="upperRoman"/><w:pStyle w:val="Heading1"/><w:suff w:val="space"/><w:lvlText w:val="%1."/><w:lvlJc w:val="left"/><w:pPr><w:ind w:left="426" w:hanging="142"/></w:pPr>${titleRun}</w:lvl>` +
+        `<w:lvl w:ilvl="1"><w:start w:val="1"/><w:numFmt w:val="decimal"/><w:pStyle w:val="Heading2"/><w:isLgl/><w:suff w:val="space"/><w:lvlText w:val="%1.%2"/><w:lvlJc w:val="left"/><w:pPr><w:ind w:left="851" w:hanging="425"/></w:pPr>${titleRun}</w:lvl>` +
+      '</w:abstractNum>' +
+      '<w:abstractNum w:abstractNumId="1"><w:multiLevelType w:val="singleLevel"/>' +
+        `<w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="bullet"/><w:lvlText w:val="•"/><w:lvlJc w:val="left"/><w:pPr><w:ind w:left="360" w:hanging="360"/></w:pPr><w:rPr><w:rFonts w:ascii="${SG_FONT_BODY}" w:hAnsi="${SG_FONT_BODY}"/></w:rPr></w:lvl>` +
+      '</w:abstractNum>' +
+      '<w:num w:numId="1"><w:abstractNumId w:val="0"/></w:num><w:num w:numId="2"><w:abstractNumId w:val="1"/></w:num>' +
+      '</w:numbering>';
+  }
+
+  async function buildSgsiDocxBlob(report){
+    const W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
+    const documentXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
+      `<w:document ${W}><w:body>${buildSgsiBodyXml(report)}${sgSectPr()}</w:body></w:document>`;
+    const contentTypes = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
+      '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+      '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+      '<Default Extension="xml" ContentType="application/xml"/>' +
+      '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
+      '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>' +
+      '<Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>' +
+      '<Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>' +
+      '<Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>' +
+      '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>' +
+      '<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>' +
+      '</Types>';
+    const docRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' +
+      '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/>' +
+      '<Relationship Id="rIdHeader1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>' +
+      '<Relationship Id="rIdFooter1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>' +
+      '</Relationships>';
+    const zip = new JSZip();
+    zip.file('[Content_Types].xml', contentTypes);
+    zip.file('_rels/.rels', RELS_XML);
+    zip.file('word/document.xml', documentXml);
+    zip.file('word/_rels/document.xml.rels', docRels);
+    zip.file('word/styles.xml', sgStylesXml());
+    zip.file('word/numbering.xml', sgNumberingXml());
+    zip.file('word/header1.xml', sgHeaderXml(report.meta));
+    zip.file('word/footer1.xml', sgFooterXml());
+    zip.file('docProps/core.xml', coreXml(report.meta.docName));
+    zip.file('docProps/app.xml', APP_XML);
+    return zip.generateAsync({type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+  }
+
   async function downloadReportDocx(report){
-    const blob = await paragraphsXmlToDocxBlob(buildReportXml(report), report.title || 'Informe');
+    const blob = await buildSgsiDocxBlob(report);
     downloadBlob(blob, report.filename || 'informe_tabletop.docx');
   }
 
