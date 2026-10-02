@@ -65,9 +65,9 @@ service cloud.firestore {
       // evalúa la existencia del documento y el permiso de la escritura como una sola
       // operación server-side, así que dos reclamos simultáneos de la misma función no pueden
       // ganar los dos — el segundo choca con "allow update" (ver abajo) porque para ese
-      // momento el documento ya existe con otro uid. room.js confirma esto intentando crear
-      // este documento ANTES de crear el de participants/{uid}; si falla, la función ya está
-      // tomada. No se valida acá que roleKey pertenezca al roleRoster real del escenario
+      // momento el documento ya existe con otro uid. joinRoom (room.js) crea esta reserva y el
+      // participante en un mismo batch; si falla, la función ya está tomada y no se crea
+      // ninguno de los dos. No se valida acá que roleKey pertenezca al roleRoster real del escenario
       // (las reglas no pueden recorrer fácilmente un arreglo de mapas) — esa parte sigue
       // siendo un chequeo del lado del cliente en joinRoom(). Solo se puede reclamar mientras
       // la sala existe y sigue en 'lobby': si no, cualquiera con el código podría acaparar
@@ -81,7 +81,12 @@ service cloud.firestore {
           && roomData(roomCode).status == 'lobby'
           // una sola función por sesión: quien ya tiene su documento de participante (pendiente,
           // admitido o rechazado) no puede reservar otra
-          && !exists(/databases/$(database)/documents/rooms/$(roomCode)/participants/$(request.auth.uid));
+          && !exists(/databases/$(database)/documents/rooms/$(roomCode)/participants/$(request.auth.uid))
+          // la reserva y el participante se crean en la MISMA operación (batch en joinRoom): sin
+          // esto se podían dejar reservas "huérfanas" (sin participante), que el facilitador no ve
+          // ni puede liberar y que bloquean la función para quien sí debe tomarla
+          && existsAfter(/databases/$(database)/documents/rooms/$(roomCode)/participants/$(request.auth.uid))
+          && getAfter(/databases/$(database)/documents/rooms/$(roomCode)/participants/$(request.auth.uid)).data.claimedRoleKey == roleKeyId;
         // Solo quien ya tenía este reclamo puede "actualizarlo" (en la práctica, solo pasa si
         // vuelve a intentar tras una falla de red a mitad del join) — cualquier otro uid que
         // llegue después de que el documento ya existe queda bloqueado acá.
@@ -110,7 +115,8 @@ service cloud.firestore {
           && request.resource.data.displayName.size() > 0
           && request.resource.data.displayName.size() <= 60
           && request.resource.data.claimedRoleKey is string
-          && get(/databases/$(database)/documents/rooms/$(roomCode)/roleClaims/$(request.resource.data.claimedRoleKey)).data.uid == uid
+          // getAfter: la reserva se crea en la misma operación (ver roleClaims)
+          && getAfter(/databases/$(database)/documents/rooms/$(roomCode)/roleClaims/$(request.resource.data.claimedRoleKey)).data.uid == uid
           && request.resource.data.vote == null
           && request.resource.data.answer == null
           && roomData(roomCode).status == 'lobby';
