@@ -1780,10 +1780,6 @@ table.report-table td{vertical-align:top;}
 #storyPanel .sit-title{font-size:var(--fs-2xl); line-height:1.15; margin:0 0 10px;}
 #storyPanel .sit-meta{margin-bottom:16px; gap:6px;}
 #storyPanel .sit-chip{background:rgba(255,255,255,0.04); border-color:rgba(255,255,255,0.10); color:var(--muted);}
-/* "Lo que se sabe" y "Lo que falta" lado a lado en pantallas anchas. */
-.sit-body .sit-pair{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:14px; margin:0 0 14px;}
-.sit-body .sit-pair .sit-block{margin:0;}
-@media (max-width:900px){ .sit-body .sit-pair{grid-template-columns:1fr;} }
 
 /* La decisión sin caja propia: las tarjetas quedan sobre el fondo. */
 .action-panel{background:transparent; border:0; box-shadow:none; padding-left:2px; padding-right:2px;}
