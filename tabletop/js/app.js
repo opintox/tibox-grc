@@ -1483,6 +1483,31 @@ function setActionButton(active, text){
   if(text) btn.textContent = text;
 }
 
+// Cuerpo de la situación. Los escenarios en formato de la skill de tabletop traen "Lo que se
+// sabe:" / "Lo que falta:" y cierran con una pregunta: se muestran como dos bloques con su
+// etiqueta y la pregunta destacada aparte. Cualquier otro párrafo se muestra tal cual.
+const SIT_KNOWN = /^lo que (?:se sabe|sabemos)\s*:\s*/i;
+const SIT_MISSING = /^lo que (?:falta|no se sabe|no sabemos)\s*:\s*/i;
+function situationBodyHtml(situation){
+  const paras = String(situation || '').split(/\n\s*\n/).map(t => t.trim()).filter(Boolean);
+  const blocks = [];
+  let structured = false;
+  paras.forEach((t, i) => {
+    if(SIT_KNOWN.test(t)){
+      structured = true;
+      blocks.push(`<div class="sit-block is-known"><span class="sit-block-label">Lo que se sabe</span><p>${escapeHtml(t.replace(SIT_KNOWN, ''))}</p></div>`);
+    } else if(SIT_MISSING.test(t)){
+      structured = true;
+      blocks.push(`<div class="sit-block is-missing"><span class="sit-block-label">Lo que falta</span><p>${escapeHtml(t.replace(SIT_MISSING, ''))}</p></div>`);
+    } else if(structured && i === paras.length - 1 && /\?\s*$/.test(t)){
+      blocks.push(`<p class="sit-question">${escapeHtml(t)}</p>`);
+    } else {
+      blocks.push(`<p>${escapeHtml(t)}</p>`);
+    }
+  });
+  return blocks.join('');
+}
+
 function renderStage(opts){
   opts = opts || {};
   const questions = stageQuestions(gameState.stages[gameState.stepIndex]);
@@ -1529,7 +1554,7 @@ function renderStage(opts){
 
   if(q.situation){
     const chips = (q.meta || []).map(m => `<span class="sit-chip">${escapeHtml(m)}</span>`).join('');
-    const parrafos = q.situation.split('\n\n').map(t => `<p>${escapeHtml(t)}</p>`).join('');
+    const parrafos = situationBodyHtml(q.situation);
     storyEl.innerHTML = `
       ${q.title ? `<h2 class="sit-title">${escapeHtml(q.title)}</h2>` : ''}
       ${chips ? `<div class="sit-meta">${chips}</div>` : ''}
@@ -1594,7 +1619,7 @@ function renderCharGrid(){
   // configuración.
   const todas = rm.keys.map(k => participants.find(p => p.roleKey === k)).filter(Boolean);
   const available = todas.filter(p => isRoleActive(p.roleKey, gameState.scenarioId));
-  grid.classList.add(`count-${Math.min(todas.length, 6)}`);
+  grid.classList.add(`count-${Math.min(todas.length, 8)}`); // 7–8 funciones: 4 columnas (ver styles.css)
   if(available.length === 0){
     grid.innerHTML = `<div class="empty-state">
       <div class="empty-state-icon"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7"/><path d="M4 4l16 16"/></svg></div>
