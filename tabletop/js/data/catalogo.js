@@ -126,6 +126,12 @@ const SCENARIO_INTROS = {
   ransomware:'El ransomware es hoy uno de los incidentes más dañinos para cualquier organización: cifra la información, detiene la operación y además suele venir acompañado de una extorsión. Cada minuto de demora en reaccionar puede significar más equipos afectados.\n\nEl ejercicio transcurre en un día hábil normal, a media mañana, con todas las áreas trabajando. Vamos a practicar cómo se contiene un ataque en curso, cómo se decide qué apagar y qué mantener, quién se comunica con quién y cómo se vuelve a operar sin reinfectarse.'
 };
 
+// Contexto para facilitadores: notas solo para quien conduce (quién es quién, canales,
+// restricciones del ejercicio). Viene del párrafo "Contexto para facilitadores." de un Word
+// importado (ver docx.js) y se muestra en una ventana antes de la introducción, solo en la
+// pantalla del facilitador. Los escenarios precargados no lo traen.
+const SCENARIO_FACILITATOR_CONTEXT = {};
+
 const DEFAULT_PARTICIPANTS = ROLE_KEYS.map(k => ({roleKey:k, empresa:'', checked:true}));
 
 // Matriz de participación por escenario: qué funciones pueden aparecer como personaje seleccionable.

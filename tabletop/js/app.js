@@ -516,6 +516,7 @@ function renderScenarioCard(s, container){
     TibDocx.downloadScenarioDocx({
       name: s.name, blurb: SCENARIO_BLURBS[s.id] || '', target: SCENARIO_TARGETS[s.id] || '',
       intro: SCENARIO_INTROS[s.id] || '',
+      facilitatorContext: SCENARIO_FACILITATOR_CONTEXT[s.id] || '',
       roleNames: rm.names,
       customRoleList: isCustomRoles ? rm.keys.map(k => ({key:k, name: rm.names[k]})) : null,
       extraRoleKeys: isCustomRoles ? [] : ROLE_KEYS.filter(k => k !== 'ti' && k !== 'seguridad' && matrix[k]),
@@ -608,6 +609,7 @@ function registerCustomScenario(data){
   SCENARIO_BLURBS[id] = data.blurb || '';
   SCENARIO_TARGETS[id] = data.target || '';
   SCENARIO_INTROS[id] = data.intro || '';
+  SCENARIO_FACILITATOR_CONTEXT[id] = data.facilitatorContext || '';
   SCENARIO_ACCENTS[id] = CUSTOM_SCENARIO_ACCENT;
   SCENARIO_ICONS[id] = CUSTOM_SCENARIO_ICON;
   const client = customScenarioClient(data);
@@ -1127,8 +1129,15 @@ function showBriefing(onStart, roomCode){
 
   const backBtn = document.getElementById('briefingBackBtn');
   const startBtn = document.getElementById('briefingStartBtn');
+  const contextBtn = document.getElementById('briefingContextBtn');
   TabletopScreens.show('briefing');
   backBtn.classList.toggle('hidden', !!roomCode);
+  // Contexto para facilitadores (solo si el escenario lo trae): se abre solo antes de la
+  // introducción y se puede volver a abrir con el botón "Contexto".
+  const facilitatorContext = (SCENARIO_FACILITATOR_CONTEXT[id] || '').trim();
+  contextBtn.classList.toggle('hidden', !facilitatorContext);
+  contextBtn.onclick = facilitatorContext ? () => showFacilitatorContext(facilitatorContext) : null;
+  if(facilitatorContext) showFacilitatorContext(facilitatorContext);
 
   if(roomCode && window.MP) window.MP.publishBriefing(roomCode, {title: scenario ? scenario.name : '', intro});
 
@@ -1142,6 +1151,18 @@ function showBriefing(onStart, roomCode){
     TabletopScreens.show('setup', {scroll: false});
     updateBottomState();
   };
+}
+
+// Ventana "Contexto": notas para el facilitador. Solo en esta pantalla (los celulares no la
+// reciben); por eso es una ventana que se lee y se cierra antes de proyectar la introducción.
+function showFacilitatorContext(text){
+  const html = text.split(/\n\s*\n|\n/).filter(t => t.trim()).map(t => `<p>${escapeHtml(t.trim())}</p>`).join('');
+  return showConfirmModal({
+    title: 'Contexto',
+    message: `<div class="facilitator-context">${html}</div>`,
+    confirmText: 'Continuar a la introducción',
+    cancelText: null
+  });
 }
 
 function startGameOrLobby(){

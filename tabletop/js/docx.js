@@ -109,6 +109,11 @@ const TibDocx = (function(){
       out.push(p('Seguridad y TI participan siempre en todo escenario; escribe aquí solo funciones adicionales, separadas por coma, eligiendo entre: Legal, Comunicaciones, RRHH, Dirección. Si ninguna otra función participa, deja la línea de arriba en blanco. (Si en cambio tu ejercicio necesita funciones completamente distintas a estas 6 — otros cargos, otro organigrama — bórrala y usa líneas "FUNCIÓN DEL ESCENARIO:" en su lugar, una por función.)', {spacingAfter:280}));
     }
     out.push(pBlank());
+    // Contexto para facilitadores (solo si el escenario lo trae): mismo párrafo que escribe la
+    // skill de tabletop, para que el Word exportado se vuelva a leer igual.
+    if(String(scenario.facilitatorContext || '').trim()){
+      out.push(p('Contexto para facilitadores. ' + String(scenario.facilitatorContext).trim()));
+    }
     // Introducción: se muestra en pantalla antes de la primera etapa. Va justo antes de la
     // primera ETAPA porque toma todos los párrafos que siguen a la etiqueta hasta la próxima.
     out.push(pLabelValue(LABELS.INTRO, ''));
@@ -598,6 +603,12 @@ const TibDocx = (function(){
     // todo hasta la próxima etiqueta reconocida (normalmente la primera "ETAPA:").
     const introParts = [];
     let introActive = false;
+    // "Contexto para facilitadores. …": párrafo de notas para quien conduce (sin etiqueta con
+    // dos puntos; se reconoce por cómo empieza). "Turnos. …" es otro párrafo de notas que se
+    // ignora. Los dos cortan la introducción si quedaron después de "INTRODUCCIÓN:".
+    let facilitatorContext = '';
+    const CONTEXT_PREFIX = /^contexto para facilitadores\s*[.:\-–—]?\s*/i;
+    const TURNS_PREFIX = /^turnos\s*[.:]/i;
     const optLabelSet = {}; LETTERS.forEach(l => { optLabelSet['ALTERNATIVA ' + l] = l; });
     const expLabelSet = {}; LETTERS.forEach(l => { expLabelSet['EXPLICACION ' + l] = l; });
 
@@ -649,6 +660,13 @@ const TibDocx = (function(){
     for(let i = 0; i < paragraphs.length; i++){
       const raw = paragraphs[i].trim();
       if(!raw) continue;
+      const plain = stripAccents(raw);
+      if(CONTEXT_PREFIX.test(plain)){
+        facilitatorContext = raw.slice(plain.match(CONTEXT_PREFIX)[0].length).trim();
+        introActive = false; situationActive = false;
+        continue;
+      }
+      if(TURNS_PREFIX.test(plain) && !currentStage){ introActive = false; continue; }
       const parts = splitLabel(raw);
       const label = parts ? parts.label : null;
       const value = parts ? parts.value : raw;
@@ -741,6 +759,7 @@ const TibDocx = (function(){
     return {
       name: name.trim(), blurb: desc.trim(), target: objetivo.trim(),
       intro: introParts.join('\n\n'),
+      facilitatorContext,
       extraRoleKeys,
       customRoles: customRoleList.length ? customRoleList : null,
       customStages: stages.map(s => s.stage),
