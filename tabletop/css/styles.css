@@ -345,11 +345,6 @@
     border-color:rgba(255,255,255,0.12);
     padding:clamp(18px, 2vw, 26px);
   }
-  /* Encabezado tipo consola SOC: el eyebrow "ESCENARIO · ETAPA" toma el acento del
-     escenario (--a, ya seteado por JS) en vez del gris genérico, como un indicador de
-     estado "en vivo" al inicio del feed. */
-  #storyScenarioLabel{color:var(--a, var(--blue)); font-weight:700;}
-  #storyScenarioLabel::before{background:var(--a, var(--blue)); box-shadow:0 0 8px var(--a, transparent);}
   /* Preguntas: tipografía más compacta y fluida para aprovechar mejor el panel. Interlineado
      algo más generoso (1.5→1.6, 1.66→1.72) para que la lectura larga se sienta más cómoda. */
   .story-text{font-family:var(--sans); font-size:var(--fs-lg); line-height:1.6; margin:0; font-weight:400; overflow-wrap:anywhere;}
@@ -378,19 +373,6 @@
     font-family:var(--display); font-weight:800; font-size:var(--fs-xl); color:#fff;
     letter-spacing:-0.015em; margin:0 0 var(--sp-3);
   }
-  /* La doble pregunta vive en su propio panel, bajo la presentación del caso, con un
-     tratamiento de vidrio esmerilado propio para que se distinga de inmediato del resto de
-     la interfaz: degradado muy sutil, borde delicado y un halo suave con el acento del
-     escenario (--a, ya seteado por JS) en vez de la barra sólida de 3px que traía antes. */
-  #askPanel{
-    display:flex; flex-wrap:wrap; align-items:center; gap:var(--sp-4);
-    padding:18px 24px; overflow:visible;
-    background:linear-gradient(135deg, rgba(255,255,255,0.075), rgba(255,255,255,0.02));
-    border:1px solid rgba(255,255,255,0.16);
-    box-shadow:0 10px 32px -14px rgba(0,0,0,0.5), 0 0 46px -22px var(--a, rgba(94,197,255,0.4)), 0 1px 0 0 rgba(255,255,255,0.06) inset;
-  }
-  .sit-ask{display:flex; flex-wrap:wrap; align-items:center; gap:var(--sp-3); width:100%;}
-  .sit-ask-q{font-family:var(--display); font-weight:800; font-size:var(--fs-xl); color:#fff; letter-spacing:-0.012em; margin-right:auto;}
   /* Pestañas/píldoras del sub-paso (1 · Función / 2 · Decisión): gris tenue mientras no es
      el paso vigente, naranjo transparente TIBOX (glassmorphism) cuando sí lo es — mismo
      lenguaje de "elemento activo" que el resto de la interfaz. */
@@ -829,7 +811,7 @@
      scrollear una grilla de opciones. */
   /* La situación (1.ª fila) tiene una altura mínima garantizada: si las tarjetas de función no
      caben, su panel se desplaza en vez de aplastar el texto del caso. */
-  .game-layout.grid4{display:grid; grid-template-columns:minmax(0,1fr); grid-template-rows:minmax(clamp(200px, 34vh, 320px),1fr) auto auto; gap:12px; min-height:0; flex:1;}
+  .game-layout.grid4{display:grid; grid-template-columns:minmax(0,1fr); grid-template-rows:minmax(clamp(200px, 34vh, 320px),1fr) auto; gap:12px; min-height:0; flex:1;}
   .grid4-cell{padding:clamp(14px,1.35vw,20px); margin-bottom:0; overflow:auto; min-height:0; min-width:0; display:flex; flex-direction:column;}
   /* Scrollbar flotante (solo aparece al pasar el mouse sobre el panel): pista siempre
      transparente, thumb invisible en reposo y semi-transparente en :hover — para que el
@@ -1721,3 +1703,63 @@ table.report-table td{vertical-align:top;}
   box-shadow:0 8px 18px -10px var(--a, rgba(255,255,255,0.18));
 }
 .char-card .c-icon svg{width:24px; height:24px;}
+
+/* ================= pantalla del ejercicio: dos superficies (caso + decisión) ================= */
+/* Encabezado del caso: etapa como etiqueta con el color del escenario y "Acto N de M". */
+.story-head{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; flex:0 0 auto;}
+.story-stage{
+  display:inline-flex; align-items:center; gap:8px; padding:5px 12px; border-radius:999px;
+  font-family:var(--mono); font-size:var(--fs-2xs); font-weight:700; letter-spacing:0.12em; text-transform:uppercase;
+  color:#fff; background:color-mix(in srgb, var(--a, var(--blue)) 22%, transparent);
+  border:1px solid color-mix(in srgb, var(--a, var(--blue)) 55%, transparent);
+}
+.story-stage::before{content:''; width:7px; height:7px; border-radius:50%; background:var(--a, var(--blue)); box-shadow:0 0 8px var(--a, var(--blue));}
+.story-act{font-family:var(--mono); font-size:var(--fs-2xs); letter-spacing:0.08em; color:var(--muted);}
+/* Título del acto con más presencia; los datos del contexto más discretos debajo. */
+#storyPanel .sit-title{font-size:var(--fs-2xl); line-height:1.15; margin:0 0 10px;}
+#storyPanel .sit-meta{margin-bottom:16px; gap:6px;}
+#storyPanel .sit-chip{background:rgba(255,255,255,0.04); border-color:rgba(255,255,255,0.10); color:var(--muted);}
+/* "Lo que se sabe" y "Lo que falta" lado a lado en pantallas anchas. */
+.sit-body .sit-pair{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:14px; margin:0 0 14px;}
+.sit-body .sit-pair .sit-block{margin:0;}
+@media (max-width:900px){ .sit-body .sit-pair{grid-template-columns:1fr;} }
+
+/* La decisión sin caja propia: las tarjetas quedan sobre el fondo. */
+.action-panel{background:transparent; border:0; box-shadow:none; padding-left:2px; padding-right:2px;}
+.action-head{display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:12px; flex:0 0 auto;}
+.action-head-text{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; min-width:0;}
+.action-q{font-family:var(--display); font-weight:800; font-size:var(--fs-xl); color:#fff; letter-spacing:-0.012em;}
+.action-hint{font-size:var(--fs-sm); color:var(--muted);}
+.action-steps{display:flex; gap:8px;}
+.answer-as{font-family:var(--mono); font-size:var(--fs-2xs); letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); margin-bottom:10px;}
+.answer-as span{color:#fff;}
+
+/* Tarjetas de función: franja de color a la izquierda (antes abajo), brillo en su color al
+   pasar el mouse y estado claro al elegir (correcta en verde, las demás se atenúan). */
+.char-card{
+  border-bottom-width:1px; border-bottom-color:rgba(255,255,255,0.1);
+  border-left:3px solid var(--card-bar, rgba(255,255,255,0.35));
+  transition:transform .18s ease, box-shadow .2s ease, border-color .18s ease, background-color .18s ease, opacity .25s ease;
+}
+.char-card:hover{border-left-color:var(--card-bar, #fff); background-color:color-mix(in srgb, var(--card-bar, #fff) 9%, rgba(15,23,42,0.7));}
+.char-card.correct-flash{background-color:rgba(34,211,166,0.10);}
+.char-card.correct-flash::before{
+  content:'✓'; position:absolute; top:10px; right:12px; width:22px; height:22px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800;
+  color:#05261C; background:var(--green); box-shadow:0 0 12px rgba(34,211,166,0.55);
+}
+/* Desde 4 funciones: tarjetas horizontales y bajas — ícono a la izquierda; nombre arriba y
+   empresa debajo (grilla, para que el nombre nunca quede aplastado por la etiqueta). */
+.char-grid:is(.count-4,.count-5,.count-6,.count-7,.count-8){grid-auto-rows:auto;}
+.char-grid:is(.count-4,.count-5,.count-6,.count-7,.count-8) .char-card{
+  display:grid; grid-template-columns:auto minmax(0,1fr); grid-template-rows:auto auto;
+  column-gap:12px; row-gap:6px; align-items:center; min-height:0; height:auto; padding:12px 14px;
+}
+.char-grid:is(.count-4,.count-5,.count-6,.count-7,.count-8) .char-card .c-head{display:contents;}
+.char-grid:is(.count-4,.count-5,.count-6,.count-7,.count-8) .char-card .c-icon{grid-column:1; grid-row:1 / span 2; width:36px; height:36px;}
+.char-grid:is(.count-4,.count-5,.count-6,.count-7,.count-8) .char-card .c-icon svg{width:20px; height:20px;}
+.char-grid:is(.count-4,.count-5,.count-6,.count-7,.count-8) .char-card .c-name{grid-column:2; grid-row:1; align-self:end; font-size:var(--fs-sm);}
+.char-grid:is(.count-4,.count-5,.count-6,.count-7,.count-8) .char-card .c-desc{display:none;}
+.char-grid:is(.count-4,.count-5,.count-6,.count-7,.count-8) .char-card .c-foot{grid-column:2; grid-row:2; align-self:start; justify-self:start; margin:0;}
+.char-grid:is(.count-4,.count-5,.count-6,.count-7,.count-8) .char-card.correct-flash{padding-right:44px;}
+.char-grid:is(.count-4,.count-5,.count-6,.count-7,.count-8) .char-card.correct-flash::before{top:50%; right:12px; transform:translateY(-50%);}

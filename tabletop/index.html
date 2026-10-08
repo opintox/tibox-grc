@@ -370,22 +370,35 @@
   <div id="screen-game" class="hidden">
 
     <div class="game-layout grid4">
+      <!-- Dos superficies: el caso (arriba) y la decisión (abajo, sin caja propia). La
+           pregunta y los pasos 1 · Función / 2 · Decisión viven en el encabezado de la
+           decisión (antes eran una barra aparte, #askPanel). -->
       <div class="panel story-panel grid4-cell" id="storyPanel">
-        <div class="eyebrow" id="storyScenarioLabel">ESCENARIO</div>
+        <div class="story-head">
+          <span class="story-stage" id="storyStage">ETAPA</span>
+          <span class="story-act" id="storyAct"></span>
+        </div>
         <p class="ops-context" id="opsContext"></p>
         <p class="story-text" id="storyText">—</p>
       </div>
 
-      <div class="panel grid4-cell" id="askPanel"></div>
-
-      <div class="panel grid4-cell" id="actionPanel">
+      <div class="grid4-cell action-panel" id="actionPanel">
+        <div class="action-head">
+          <div class="action-head-text">
+            <span class="action-q" id="askQuestion">¿Quién debe actuar?</span>
+            <span class="action-hint" id="askHint">Selecciona la función que ejecuta esta acción</span>
+          </div>
+          <div class="action-steps">
+            <span class="sit-ask-step on" id="askStep1">1 · Función</span>
+            <span class="sit-ask-step" id="askStep2">2 · Decisión</span>
+          </div>
+        </div>
         <div id="charPanel">
-          <div class="eyebrow">Selecciona la función que ejecuta esta acción</div>
           <div class="char-grid" id="charGrid"></div>
         </div>
 
         <div class="hidden" id="answerBlock">
-          <div class="eyebrow">Actúa como <span id="answeringAs"></span></div>
+          <div class="answer-as">Actúa como <span id="answeringAs"></span></div>
           <div class="answer-options" id="answerOptions"></div>
         </div>
       </div>
