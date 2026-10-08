@@ -1483,6 +1483,54 @@ function setActionButton(active, text){
   if(text) btn.textContent = text;
 }
 
+// ---------------- lectura automática de la situación ----------------
+// Si el texto del acto no cabe en su panel, el panel baja solo, muy despacio (ritmo de lectura
+// en voz alta), unos segundos después de aparecer. Se detiene apenas el facilitador toma el
+// control (rueda, clic, toque o teclado sobre el panel) y no corre con "reducir movimiento".
+const AUTO_SCROLL_DELAY_MS = 4000;
+const AUTO_SCROLL_PX_PER_S = 14;
+const AUTO_SCROLL_TICK_MS = 40;
+let storyAutoScroll = null;
+function stopStoryAutoScroll(){
+  if(!storyAutoScroll) return;
+  clearTimeout(storyAutoScroll.timer);
+  clearInterval(storyAutoScroll.tick);
+  storyAutoScroll = null;
+}
+function startStoryAutoScroll(panel){
+  stopStoryAutoScroll();
+  panel.scrollTop = 0; // cada acto empieza desde arriba
+  if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const run = {timer: 0, tick: 0};
+  storyAutoScroll = run;
+  run.timer = setTimeout(() => {
+    // Posición según el tiempo transcurrido (no según cuántos pasos corrieron) y acumulada en
+    // una variable propia: con menos de 1 px por paso, scrollTop redondea y se quedaría quieto.
+    const start = performance.now();
+    const from = panel.scrollTop;
+    run.tick = setInterval(() => {
+      if(storyAutoScroll !== run) return;
+      const max = panel.scrollHeight - panel.clientHeight;
+      const pos = from + (performance.now() - start) / 1000 * AUTO_SCROLL_PX_PER_S;
+      if(max <= 0 || pos >= max){ if(max > 0) panel.scrollTop = max; stopStoryAutoScroll(); return; }
+      panel.scrollTop = pos;
+    }, AUTO_SCROLL_TICK_MS);
+  }, AUTO_SCROLL_DELAY_MS);
+}
+['wheel', 'touchstart', 'pointerdown', 'keydown'].forEach(evt => {
+  document.getElementById('storyPanel').addEventListener(evt, stopStoryAutoScroll, {passive: true});
+});
+
+// Encabezado de la decisión: paso 1 (elegir la función) o 2 (elegir la alternativa).
+function setDecisionStep(n){
+  document.getElementById('askStep1').classList.toggle('on', n === 1);
+  document.getElementById('askStep2').classList.toggle('on', n === 2);
+  document.getElementById('askQuestion').textContent = n === 1 ? '¿Quién debe actuar?' : '¿Qué decisión debe tomar?';
+  document.getElementById('askHint').textContent = n === 1
+    ? 'Selecciona la función que ejecuta esta acción'
+    : 'Elige la alternativa correcta';
+}
+
 // Cuerpo de la situación. Los escenarios en formato de la skill de tabletop traen "Lo que se
 // sabe:" / "Lo que falta:" y cierran con una pregunta: se muestran como dos bloques con su
 // etiqueta y la pregunta destacada aparte. Cualquier otro párrafo se muestra tal cual.
@@ -1505,7 +1553,15 @@ function situationBodyHtml(situation){
       blocks.push(`<p>${escapeHtml(t)}</p>`);
     }
   });
-  return blocks.join('');
+  // Un bloque "sabe" seguido de uno "falta" van juntos en dos columnas (ver .sit-pair).
+  const html = [];
+  for(let i = 0; i < blocks.length; i++){
+    if(blocks[i].includes('is-known') && blocks[i + 1] && blocks[i + 1].includes('is-missing')){
+      html.push(`<div class="sit-pair">${blocks[i]}${blocks[i + 1]}</div>`);
+      i++;
+    } else html.push(blocks[i]);
+  }
+  return html.join('');
 }
 
 function renderStage(opts){
@@ -1535,9 +1591,8 @@ function renderStage(opts){
     });
   }
 
-  const scenarioMeta = SCENARIOS.find(s => s.id === gameState.scenarioId);
-  const subLabel = questions.length > 1 ? ` · Pregunta ${gameState.subIndex + 1} de ${questions.length} de esta etapa` : '';
-  document.getElementById('storyScenarioLabel').textContent = `${scenarioMeta.name.toUpperCase()} · ${stageLabel.toUpperCase()}${subLabel}`;
+  document.getElementById('storyStage').textContent = stageLabel;
+  document.getElementById('storyAct').textContent = questions.length > 1 ? `Acto ${gameState.subIndex + 1} de ${questions.length}` : '';
   const clientLabel = clientName ? `<b>${escapeHtml(clientName)}</b>` : 'el equipo del cliente';
   // Esta frase describe el modelo operativo estándar (TIBOX opera TI/Seguridad en remoto); un
   // escenario con funciones propias ya deja ese reparto explícito en sus propios roles, así que
@@ -1548,9 +1603,9 @@ function renderStage(opts){
   // Escenarios narrados: título de acto, metadatos, relato y —en su propio panel— la doble pregunta.
   const storyEl = document.getElementById('storyText');
   const panelEl = document.getElementById('storyPanel');
-  const askEl = document.getElementById('askPanel');
+  const actionEl = document.getElementById('actionPanel');
   const [sa, sa2] = scenarioAccent(gameState.scenarioId);
-  [panelEl, askEl].forEach(el => { el.style.setProperty('--a', sa); el.style.setProperty('--a2', sa2); });
+  [panelEl, actionEl].forEach(el => { el.style.setProperty('--a', sa); el.style.setProperty('--a2', sa2); });
 
   if(q.situation){
     const chips = (q.meta || []).map(m => `<span class="sit-chip">${escapeHtml(m)}</span>`).join('');
@@ -1562,12 +1617,8 @@ function renderStage(opts){
   } else {
     storyEl.innerHTML = escapeHtml(q.text).replace(/\n\n/g,'<br><br>');
   }
-  askEl.innerHTML = `
-    <div class="sit-ask">
-      <span class="sit-ask-q" id="askQuestion">¿Quién debe actuar?</span>
-      <span class="sit-ask-step on" id="askStep1">1 · Función</span>
-      <span class="sit-ask-step" id="askStep2">2 · Decisión</span>
-    </div>`;
+  startStoryAutoScroll(panelEl);
+  setDecisionStep(1);
 
   updateGlobalProgress();
 
@@ -1723,10 +1774,7 @@ function onCharacterPick(participant, el){
 
   gameState.nextAction = () => {
     document.getElementById('charPanel').classList.add('hidden');
-    const s1 = document.getElementById('askStep1'), s2 = document.getElementById('askStep2');
-    if(s1 && s2){ s1.classList.remove('on'); s2.classList.add('on'); }
-    const askQ = document.getElementById('askQuestion');
-    if(askQ) askQ.textContent = '¿Qué decisión debe tomar?';
+    setDecisionStep(2);
 
     document.getElementById('answeringAs').textContent = `${rmPick.names[participant.roleKey]} · ${roleCompanyFor(participant.roleKey, gameState.scenarioId)}`;
     hideExplain();
@@ -1886,6 +1934,7 @@ document.getElementById('backToSetupBtn').addEventListener('click', backToSetup)
 // ---------------- resultados e informe (js/report.js) ----------------
 function showResults(){
   hideExplain();
+  stopStoryAutoScroll();
   if(gameState.timerInterval) clearInterval(gameState.timerInterval);
   document.getElementById('roomInfoBtn').classList.add('hidden');
   if(window.MP) window.MP.closeRoomPanel();
@@ -1908,6 +1957,7 @@ function closeMultiplayerRoom(){
 
 function backToSetup(){
   hideExplain();
+  stopStoryAutoScroll();
   if(gameState.timerInterval) clearInterval(gameState.timerInterval);
   document.getElementById('roomInfoBtn').classList.add('hidden');
   if(window.MP) window.MP.closeRoomPanel();
