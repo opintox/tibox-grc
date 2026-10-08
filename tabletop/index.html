@@ -300,18 +300,36 @@
        etiqueta "INTRODUCCIÓN:" del Word importado; ver showBriefing en app.js. -->
   <div id="screen-briefing" class="hidden">
     <div class="panel section-block briefing-panel">
-      <div class="eyebrow">Introducción al ejercicio</div>
-      <h2 class="section-title" id="briefingTitle"></h2>
-      <p class="section-sub" id="briefingBlurb"></p>
-      <div class="briefing-facts">
-        <div class="briefing-fact"><span class="briefing-fact-label">Objetivo</span><span class="briefing-fact-value" id="briefingTarget"></span></div>
-        <div class="briefing-fact"><span class="briefing-fact-label">Etapas</span><span class="briefing-fact-value" id="briefingStages"></span></div>
-        <div class="briefing-fact"><span class="briefing-fact-label">Funciones que participan</span><span class="briefing-fact-value" id="briefingRoles"></span></div>
+      <div class="briefing-head">
+        <div class="briefing-icon" id="briefingIcon" aria-hidden="true"></div>
+        <div class="briefing-head-text">
+          <div class="eyebrow">Introducción al ejercicio</div>
+          <h2 class="section-title" id="briefingTitle"></h2>
+          <p class="section-sub" id="briefingBlurb"></p>
+        </div>
+      </div>
+      <div class="briefing-stats" id="briefingStats"></div>
+      <div class="briefing-grid">
+        <div class="briefing-block">
+          <div class="briefing-block-label">Objetivo</div>
+          <p class="briefing-target" id="briefingTarget"></p>
+        </div>
+        <div class="briefing-block">
+          <div class="briefing-block-label">Funciones que participan</div>
+          <div class="briefing-roles" id="briefingRoles"></div>
+        </div>
+      </div>
+      <div class="briefing-block">
+        <div class="briefing-block-label">Etapas del ejercicio</div>
+        <ol class="briefing-stages" id="briefingStages"></ol>
       </div>
       <div class="briefing-text" id="briefingText"></div>
-      <div class="lobby-actions">
+      <div class="lobby-actions briefing-actions">
         <button class="btn" id="briefingBackBtn" type="button">← Volver a la configuración</button>
-        <button class="btn hidden" id="briefingContextBtn" type="button" title="Ver el contexto para facilitadores">Contexto</button>
+        <button class="btn briefing-context-btn hidden" id="briefingContextBtn" type="button" title="Ver el contexto para facilitadores">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>
+          <span>Contexto para facilitadores</span>
+        </button>
         <button class="btn-cta" id="briefingStartBtn" type="button">Comenzar ejercicio →</button>
       </div>
     </div>

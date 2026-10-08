@@ -1110,15 +1110,36 @@ function showBriefing(onStart, roomCode){
   const id = selectedScenarioId;
   const scenario = SCENARIOS.find(s => s.id === id);
   const rm = roleMetaFor(id);
-  const roleNames = sessionRoleKeys(id).map(k => rm.names[k]);
-  const stages = stagesFor(id);
+  const roleKeys = sessionRoleKeys(id);
   const intro = (SCENARIO_INTROS[id] || '').trim();
+  // Mismas etapas y actos que se van a jugar (funciones activas de esta sesión).
+  const sessionStages = buildStagesForSession(id);
+  const totalActs = sessionStages.reduce((n, s) => n + stageQuestions(s).length, 0);
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
+  const [accent, accent2] = scenarioAccent(id);
+  const panel = document.querySelector('#screen-briefing .briefing-panel');
+  panel.style.setProperty('--a', accent);
+  panel.style.setProperty('--a2', accent2);
+  document.getElementById('briefingIcon').innerHTML = SCENARIO_ICONS[id] || ''; // SVG del catálogo
   document.getElementById('briefingTitle').textContent = scenario ? scenario.name : '';
   document.getElementById('briefingBlurb').textContent = SCENARIO_BLURBS[id] || '';
   document.getElementById('briefingTarget').textContent = SCENARIO_TARGETS[id] || '—';
-  document.getElementById('briefingStages').textContent = `${stages.length} · ${stages.join(' → ')}`;
-  document.getElementById('briefingRoles').textContent = roleNames.join(', ') || '—';
+  document.getElementById('briefingStats').innerHTML = [
+    clientName.trim() ? `<span class="briefing-stat is-client">${escapeHtml(clientName.trim())}</span>` : '',
+    `<span class="briefing-stat">${plural(sessionStages.length, 'etapa', 'etapas')}</span>`,
+    `<span class="briefing-stat">${plural(totalActs, 'acto', 'actos')}</span>`,
+    `<span class="briefing-stat">${plural(roleKeys.length, 'función', 'funciones')}</span>`
+  ].join('');
+  document.getElementById('briefingStages').innerHTML = sessionStages.map((s, i) => {
+    const acts = stageQuestions(s).length;
+    return `<li><span class="bs-n">${i + 1}</span><span class="bs-text"><span class="bs-name">${escapeHtml(s.stage)}</span><span class="bs-acts">${plural(acts, 'acto', 'actos')}</span></span></li>`;
+  }).join('');
+  document.getElementById('briefingRoles').innerHTML = roleKeys.map(k => {
+    const [c] = rm.accents[k] || ['#8592AE'];
+    const company = roleCompanyFor(k, id);
+    return `<span class="briefing-role" style="--c:${c};"><span class="br-dot"></span><span class="br-name">${escapeHtml(rm.names[k])}</span>${company ? `<span class="br-org">${escapeHtml(company)}</span>` : ''}</span>`;
+  }).join('') || '—';
   const textEl = document.getElementById('briefingText');
   textEl.innerHTML = intro.split(/\n\s*\n/).filter(t => t.trim()).map(t => `<p>${escapeHtml(t.trim())}</p>`).join('');
   textEl.classList.toggle('hidden', !intro);
