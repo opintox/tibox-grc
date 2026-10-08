@@ -1565,15 +1565,7 @@ function situationBodyHtml(situation){
       blocks.push(`<p>${escapeHtml(t)}</p>`);
     }
   });
-  // Un bloque "sabe" seguido de uno "falta" van juntos en dos columnas (ver .sit-pair).
-  const html = [];
-  for(let i = 0; i < blocks.length; i++){
-    if(blocks[i].includes('is-known') && blocks[i + 1] && blocks[i + 1].includes('is-missing')){
-      html.push(`<div class="sit-pair">${blocks[i]}${blocks[i + 1]}</div>`);
-      i++;
-    } else html.push(blocks[i]);
-  }
-  return html.join('');
+  return blocks.join('');
 }
 
 function renderStage(opts){
