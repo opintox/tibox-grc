@@ -1570,18 +1570,69 @@
 
 /* ---------- #screen-briefing: introducción del escenario (ver showBriefing en app.js) ---------- */
 body.briefing-mode .topbar-right{display:none;}
-.briefing-panel{max-width:900px; margin:0 auto;}
-.briefing-facts{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:12px; margin:18px 0 6px;}
-.briefing-fact{
-  display:flex; flex-direction:column; gap:4px; min-width:0;
-  background:var(--panel-2); border:1px solid var(--border); border-radius:10px; padding:12px 14px;
+/* El panel se centra en la altura disponible (antes quedaba arriba con un vacío debajo). */
+#screen-briefing:not(.hidden){min-height:calc(100dvh - var(--topbar-h, 64px) - 64px); display:flex; align-items:center;}
+.briefing-panel{
+  width:100%; max-width:1000px; margin:0 auto; position:relative; overflow:hidden;
+  border-top:2px solid var(--a, var(--blue));
 }
-.briefing-fact-label{font-size:var(--fs-2xs); letter-spacing:.08em; text-transform:uppercase; color:var(--muted);}
-.briefing-fact-value{font-size:var(--fs-sm); font-weight:600; color:var(--text); line-height:1.4;}
-.briefing-text{margin-top:18px; font-size:var(--fs-md); line-height:1.65; color:var(--text);}
+.briefing-panel::before{
+  content:''; position:absolute; inset:0 0 auto 0; height:160px; pointer-events:none;
+  background:linear-gradient(180deg, rgba(14,165,233,0.07), transparent);
+}
+.briefing-head{display:flex; align-items:center; gap:18px; position:relative;}
+.briefing-icon{
+  width:64px; height:64px; flex-shrink:0; border-radius:16px; color:#fff;
+  display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(135deg, var(--a, var(--blue)), var(--a2, var(--blue)));
+  box-shadow:0 12px 28px -12px var(--a, var(--blue));
+}
+.briefing-icon svg{width:32px; height:32px;}
+.briefing-head-text{min-width:0;}
+.briefing-head-text .section-title{margin:2px 0 4px; font-size:var(--fs-2xl, 1.6rem);}
+.briefing-head-text .section-sub{margin:0;}
+.briefing-stats{display:flex; flex-wrap:wrap; gap:8px; margin:18px 0 20px;}
+.briefing-stat{
+  font-size:var(--fs-xs); font-weight:600; color:var(--text); padding:5px 12px; border-radius:999px;
+  background:var(--panel-2); border:1px solid var(--border);
+}
+.briefing-stat.is-client{border-color:var(--a, var(--blue)); color:#fff;}
+.briefing-grid{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.4fr); gap:14px; margin-bottom:14px;}
+.briefing-block{background:var(--panel-2); border:1px solid var(--border); border-radius:12px; padding:14px 16px;}
+.briefing-block-label{font-family:var(--mono); font-size:var(--fs-2xs); letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin-bottom:10px;}
+.briefing-target{margin:0; font-size:var(--fs-md); font-weight:600; color:var(--text); line-height:1.5;}
+.briefing-roles{display:flex; flex-wrap:wrap; gap:8px;}
+.briefing-role{
+  display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:9px;
+  background:rgba(255,255,255,0.03); border:1px solid var(--border); border-left:3px solid var(--c, var(--blue));
+}
+.br-dot{width:7px; height:7px; border-radius:50%; background:var(--c, var(--blue)); box-shadow:0 0 8px var(--c, var(--blue)); flex-shrink:0;}
+.br-name{font-size:var(--fs-sm); font-weight:600; color:var(--text);}
+.br-org{font-family:var(--mono); font-size:var(--fs-3xs); letter-spacing:.06em; text-transform:uppercase; color:var(--muted);}
+/* Etapas como pasos numerados unidos por una línea */
+.briefing-stages{list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:10px 0;}
+.briefing-stages li{display:flex; align-items:center; gap:10px; flex:1 1 150px; min-width:150px; position:relative; padding-right:14px;}
+.briefing-stages li:not(:last-child)::after{
+  content:''; flex:1; height:2px; min-width:12px; background:linear-gradient(90deg, var(--a, var(--blue)), transparent); opacity:.45;
+}
+.bs-n{
+  width:28px; height:28px; flex-shrink:0; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  font-family:var(--mono); font-weight:700; font-size:var(--fs-xs); color:#fff;
+  background:linear-gradient(135deg, var(--a, var(--blue)), var(--a2, var(--blue)));
+}
+.bs-text{display:flex; flex-direction:column; line-height:1.25;}
+.bs-name{font-size:var(--fs-sm); font-weight:700; color:var(--text);}
+.bs-acts{font-size:var(--fs-3xs); color:var(--muted);}
+.briefing-text{margin-top:18px; font-size:var(--fs-md); line-height:1.7; color:var(--text);}
 .briefing-text p{margin:0 0 14px;}
 .briefing-text p:last-child{margin-bottom:0;}
-@media (max-width:720px){ .briefing-facts{grid-template-columns:1fr;} }
+.briefing-actions{align-items:center;}
+.briefing-context-btn{display:inline-flex; align-items:center; gap:8px;}
+@media (max-width:720px){
+  .briefing-grid{grid-template-columns:1fr;}
+  .briefing-head{align-items:flex-start;}
+  .briefing-icon{width:48px; height:48px; border-radius:12px;}
+}
 
 /* ---------- informe: secciones nuevas (contexto, desempeño por función, detalle por acto) ---------- */
 .report-section h4{font-size:var(--fs-sm); font-weight:700; color:var(--text); margin:14px 0 8px;}
