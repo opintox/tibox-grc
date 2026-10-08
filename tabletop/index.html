@@ -16,7 +16,7 @@
   <div class="brand">
     <a class="logo-home" href="../" aria-label="Ir al inicio"><img class="tibox-logo" src="assets/logo-tibox-ok.png" alt="TIBOX" style="height:22px;"></a>
     <span class="divider"></span>
-    <h1>Configuración del ejercicio</h1>
+    <h1 id="topbarTitle">Configuración del ejercicio</h1>
   </div>
   <div class="topbar-right">
     <div class="status"><span class="dot"></span><span id="statusLabel">CONFIGURACIÓN</span></div>
@@ -179,6 +179,7 @@
         <section class="wizard-step wizard-step1-cols" data-step="1" id="wizardStep1">
           <div class="panel section-block wizard-col">
             <div class="wizard-col-head">
+              <span class="wizard-col-icon" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 9h.01M15 9h.01M9 13h.01M15 13h.01"/><path d="M10 21v-4h4v4"/></svg></span>
               <div class="eyebrow">Datos de la sesión</div>
               <h2 class="section-title">Perfil del cliente</h2>
               <p class="section-sub">Nombre del cliente y facilitador de la sesión. Puedes adjuntar un playbook de referencia si lo tienes.</p>
@@ -202,13 +203,14 @@
 
           <div class="panel section-block wizard-col playbook-panel">
             <div class="wizard-col-head">
+              <span class="wizard-col-icon is-opt" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg></span>
               <div class="eyebrow">Material opcional</div>
               <h2 class="section-title">Si dispone de un playbook, cargar aquí</h2>
               <p class="section-sub">Adjunta material de referencia para la simulación, o un escenario personalizado en Word (arma el escenario con el cuestionario guiado, o completa la plantilla a mano) y súbelo aquí para que aparezca como tarjeta en "Tipo de ataque".</p>
             </div>
             <div class="wizard-col-body">
               <label class="playbook-dropzone" id="playbookDropzone">
-                <svg class="playbook-dropzone-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <svg class="playbook-dropzone-icon" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M12 15V3m0 0 4 4m-4-4L8 7"/>
                   <path d="M3 15v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4"/>
                 </svg>
@@ -228,13 +230,7 @@
         <section class="panel section-block wizard-step hidden" data-step="2" id="wizardStep2">
           <div class="setup-section-head">
             <h2 class="section-title">Tipo de ataque</h2>
-            <span class="setup-badge" id="scenarioBadge">Sin escenario</span>
-          </div>
-          <div class="scn-instruction-badge">
-            <span class="scn-instruction-icon" aria-hidden="true">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
-            </span>
-            <span>Elige el escenario que se va a discutir en la sesión.</span>
+            <p class="section-sub">Elige el escenario que se va a discutir en la sesión.</p>
           </div>
           <p class="step3-alert" id="wizardStep2Summary" role="status" aria-live="polite"></p>
           <div class="scn-grid" id="scenarioGridCore"></div>
@@ -422,9 +418,9 @@
         </div>
 
         <div class="kpi-card">
-          <div class="kpi-card-label">Precisión &amp; tiempo</div>
+          <div class="kpi-card-label">A la primera &amp; tiempo</div>
           <div class="kpi-dual">
-            <div class="kpi-dual-item"><span class="kpi-dual-val" id="kpiPrecisionPct">0%</span><span class="kpi-dual-label">Precisión</span></div>
+            <div class="kpi-dual-item"><span class="kpi-dual-val" id="kpiFirstTryPct">0%</span><span class="kpi-dual-label">Decisión a la primera</span></div>
             <div class="kpi-dual-sep"></div>
             <div class="kpi-dual-item"><span class="kpi-dual-val" id="kpiDuration">00:00</span><span class="kpi-dual-label">Tiempo total</span></div>
           </div>
@@ -443,7 +439,10 @@
       <div class="res-cols">
 
         <div class="results-main">
-          <div class="eyebrow">Errores por etapa</div>
+          <div class="res-chart-head">
+            <div class="eyebrow">Errores por etapa</div>
+            <div class="res-chart-legend"><span><i class="is-function"></i>Función</span><span><i class="is-response"></i>Respuesta</span></div>
+          </div>
           <div id="resStageChart"></div>
 
           <div class="results-sep"></div>
@@ -464,10 +463,10 @@
                 <circle id="resDonutAlt" cx="66" cy="66" r="54" fill="none" stroke="var(--err-response)" stroke-width="16" stroke-dasharray="0 340" transform="rotate(-90 66 66)"/>
                 <circle id="resDonutChar" cx="66" cy="66" r="54" fill="none" stroke="var(--err-function)" stroke-width="16" stroke-dasharray="0 340" transform="rotate(-90 66 66)"/>
               </svg>
-              <div class="donut-result-center"><b id="resDonutPct">0%</b><span>precisión</span></div>
+              <div class="donut-result-center"><b id="resDonutTotal">0</b><span>intentos</span></div>
             </div>
             <div class="donut-result-legend">
-              <div class="ring-legend-item"><span class="ring-dot" style="background:var(--green); color:var(--green);"></span>Respondidas<b id="resTotal">0</b></div>
+              <div class="ring-legend-item"><span class="ring-dot" style="background:var(--green); color:var(--green);"></span>Aciertos<b id="resTotal">0</b></div>
               <div class="ring-legend-item"><span class="ring-dot" style="background:var(--err-function); color:var(--err-function);"></span>Errores de función<b id="resWrongChars">0</b></div>
               <div class="ring-legend-item"><span class="ring-dot" style="background:var(--err-response); color:var(--err-response);"></span>Errores de respuesta<b id="resWrongAnswers">0</b></div>
               <div class="donut-result-meta">Duración total <b id="resDuration">00:00</b></div>

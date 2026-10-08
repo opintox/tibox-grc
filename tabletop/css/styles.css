@@ -28,7 +28,7 @@
     box-shadow:0 0 0 1px var(--blue), 0 0 0 6px rgba(14,165,233,0.16), 0 0 24px -4px rgba(14,165,233,0.5);
   }
   .btn:focus-visible{
-    outline:none; box-shadow:0 0 0 1px var(--blue), 0 0 0 5px rgba(14,165,233,0.16), 0 0 18px -4px rgba(14,165,233,0.5);
+    outline:none; box-shadow:0 0 0 1px #FF8A3D, 0 0 0 5px rgba(255,138,61,0.18), 0 0 18px -4px rgba(255,138,61,0.5);
   }
   input:focus-visible, select:focus-visible{
     outline:none;
@@ -193,6 +193,7 @@
      entra holgado con este tamaño/interlineado — las descripciones reales son siempre
      cortas (una frase), así que en la práctica rara vez pasan de 1-2 líneas igual. */
   .pc-desc{font-size:var(--fs-sm); color:var(--muted); line-height:1.35; margin:0 0 12px; overflow:visible; flex:1 1 auto;}
+  .pc-desc::first-letter{text-transform:uppercase;}
   /* Botón único "EMPRESA" (antes: etiqueta + chip/"+ Agregar" separados, con un botón ×
      aparte para quitar): un solo control, centrado y de alto contraste, que abre
      #companyModal tanto para asignar como para editar o vaciar la empresa. El texto del
@@ -211,10 +212,34 @@
     background:rgba(249,115,22,0.14); border-color:rgba(249,115,22,0.55);
     box-shadow:0 0 12px rgba(249,115,22,0.3); transform:translateY(-1px); color:#fff; outline:none;
   }
+  /* Sin empresa: acción clara ("+ Asignar empresa") con borde punteado, no un título en
+     mayúsculas. Con empresa: etiqueta chica + nombre + lápiz, alineado a la izquierda. */
+  .pc-empresa-btn.is-empty{font-size:var(--fs-sm); font-weight:600; color:#FFB27A; border-style:dashed; border-color:rgba(255,138,61,0.45); background:rgba(255,138,61,0.05);}
+  .pc-empresa-btn.is-set{display:flex; align-items:center; gap:10px; text-align:left; font-size:var(--fs-sm);}
+  .pc-empresa-label{font-family:var(--mono); font-size:var(--fs-4xs); font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted-2); flex-shrink:0;}
+  .pc-empresa-name{flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#fff;}
+  .pc-empresa-edit{flex-shrink:0; color:var(--muted-2);}
+  .pc-empresa-btn.is-set:hover .pc-empresa-edit{color:#FF8A3D;}
   .table-wrap{overflow-x:auto; -webkit-overflow-scrolling:touch;}
   table.ptable th{text-align:left; font-family:var(--mono); font-size:var(--fs-3xs); letter-spacing:0.1em; color:var(--muted); text-transform:uppercase; padding:0 10px 10px; border-bottom:1px solid var(--border);}
   table.ptable td{padding:10px; border-bottom:1px solid var(--border-soft, var(--border)); vertical-align:middle;}
   table.ptable tr:last-child td{border-bottom:none;}
+  /* Casillas con el diseño de la app (en vez de la casilla blanca del navegador): "Con
+     celulares" en Participantes y las funciones del constructor. Marcada = naranjo de marca. */
+  .mp-toggle-row input[type="checkbox"], .builder-role-check input[type="checkbox"]{
+    -webkit-appearance:none; appearance:none; flex-shrink:0; margin:0;
+    width:20px; height:20px; border-radius:6px; cursor:pointer;
+    border:1.5px solid rgba(255,255,255,0.28); background:rgba(255,255,255,0.04);
+    background-position:center; background-repeat:no-repeat; background-size:14px 14px;
+    transition:background-color .15s, border-color .15s, box-shadow .15s;
+  }
+  .mp-toggle-row input[type="checkbox"]:hover, .builder-role-check input[type="checkbox"]:hover{border-color:#FF8A3D;}
+  .mp-toggle-row input[type="checkbox"]:checked, .builder-role-check input[type="checkbox"]:checked{
+    border-color:transparent; background-color:#F26A2E;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E");
+    box-shadow:0 0 12px -2px rgba(242,106,46,0.6);
+  }
+  .mp-toggle-row input[type="checkbox"]:focus-visible, .builder-role-check input[type="checkbox"]:focus-visible{outline:2px solid #FF8A3D; outline-offset:2px;}
   table.ptable input[type="checkbox"]{width:17px; height:17px; accent-color:var(--green); cursor:pointer;}
 
   input[type="text"], select{
@@ -242,12 +267,14 @@
   .btn:hover{border-color:rgba(255,255,255,0.18); background:rgba(255,255,255,0.06);}
   .btn:active{transform:scale(0.98);}
   .btn:disabled{opacity:0.35; cursor:not-allowed;}
+  /* Botón principal: el mismo naranjo de marca que .btn-cta en toda la app (antes era
+     verde/cian y solo algunos botones lo sobrescribían por ID, así que convivían dos estilos). */
   .btn-primary{
-    background:linear-gradient(135deg, rgba(34,211,166,0.16), rgba(14,165,233,0.08));
-    border-color:rgba(34,211,166,0.5); color:#C9FBF0;
-    box-shadow:0 0 0 1px rgba(34,211,166,0.12) inset, 0 8px 24px -10px rgba(34,211,166,0.4);
+    background:linear-gradient(135deg,#FF8A3D,#F0401D); border-color:transparent; color:#fff;
+    box-shadow:0 8px 24px -10px rgba(240,64,29,0.55), 0 0 0 1px rgba(255,255,255,0.10) inset;
   }
-  .btn-primary:hover{box-shadow:0 0 0 1px rgba(34,211,166,0.2) inset, 0 8px 28px -8px rgba(34,211,166,0.55);}
+  .btn-primary:hover{background:linear-gradient(135deg,#FF8A3D,#F0401D); border-color:transparent; filter:brightness(1.05);
+    box-shadow:0 10px 28px -8px rgba(240,64,29,0.7), 0 0 0 1px rgba(255,255,255,0.14) inset;}
 
 
   /* Ícono de cada función en su propio chip circular con el acento de esa función
@@ -266,7 +293,7 @@
   .modal-box input[type="text"]{margin-bottom:0;}
 
   .profiles-dropdown{
-    position:fixed; z-index:100; background:var(--panel-3); border:1px solid var(--border);
+    position:absolute; top:calc(100% + 8px); z-index:100; background:var(--panel-3); border:1px solid var(--border);
     border-radius:10px; padding:8px; box-shadow:0 12px 32px rgba(0,0,0,0.5);
     min-width:260px; max-width:320px; max-height:320px; overflow-y:auto; animation:pop .12s ease;
   }
@@ -426,6 +453,12 @@
      TIBOX (respuesta/alternativa) semitransparentes (0.8), con un glow propio del mismo
      tono — misma pareja que la dona y las KPI de arriba. */
   .mini-bar-fill.is-function{background:rgba(239,68,68,0.8); box-shadow:0 0 8px -1px rgba(239,68,68,0.7);}
+  .res-chart-head{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:10px;}
+  .res-chart-head .eyebrow{margin-bottom:0;}
+  .res-chart-legend{display:flex; gap:14px; font-family:var(--mono); font-size:var(--fs-4xs); color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;}
+  .res-chart-legend span{display:inline-flex; align-items:center; gap:6px;}
+  .res-chart-legend i{width:14px; height:4px; border-radius:2px; background:rgba(249,115,22,0.85);}
+  .res-chart-legend i.is-function{background:rgba(239,68,68,0.85);}
   .mini-bar-fill.is-response{background:rgba(249,115,22,0.8); box-shadow:0 0 8px -1px rgba(249,115,22,0.7);}
   .mini-bar-val{font-family:var(--mono); font-size:var(--fs-3xs); width:16px; text-align:right; flex-shrink:0;}
 
@@ -573,6 +606,13 @@
      lo que su contenido necesita y el grupo se centra como una unidad en el ancho
      del panel — el espacio sobrante queda repartido a los lados, no metido en medio. */
   .intro-panel-split{display:flex; align-items:center; justify-content:center; gap:48px; flex-wrap:wrap;}
+  /* En pantallas anchas: título a la izquierda y los 3 puntos en una fila que ocupa el resto
+     del ancho (antes quedaba todo en un bloque centrado, con un vacío grande a cada lado). */
+  @media (min-width:1000px){
+    .intro-panel-split{justify-content:flex-start; flex-wrap:nowrap; gap:40px;}
+    .intro-panel-split .intro-panel-text{flex:0 0 auto; padding-left:8px;}
+    .intro-panel-split .intro-highlights{flex:1 1 auto; flex-direction:row; justify-content:space-evenly; gap:24px; padding-left:40px;}
+  }
   .intro-panel-text{flex:0 1 auto;}
   .intro-highlights{
     list-style:none; margin:0; padding:0 0 0 32px; display:flex; flex-direction:column; gap:16px;
@@ -1018,8 +1058,8 @@
   .explanation-placeholder{padding:10px 12px;border:1px dashed var(--border);border-radius:8px;}
   .results-actions .btn{min-height:42px;}
   /* CTA primario de resultados: mismo gradiente naranjo de marca que el resto de los CTA
-     de la app (.btn-cta), con un glow propio — .btn-primary por defecto es verde/celeste y
-     se usa en otras pantallas, así que este acento va scoped por ID, no tocando la clase. */
+     de la app (.btn-cta), con un glow más marcado que el .btn-primary de las demás pantallas
+     (por eso va por ID). */
   #goToReportBtn{
     background:linear-gradient(135deg,#FF8A3D,#F0401D); border-color:transparent; color:#fff;
     box-shadow:0 14px 30px -14px rgba(240,64,29,0.8), 0 0 16px rgba(249,115,22,0.3), 0 0 0 1px rgba(255,255,255,0.10) inset;
@@ -1053,26 +1093,6 @@
   .btn-cta svg{flex-shrink:0;}
 
   /* ---------- tarjetas de escenario ---------- */
-  /* Instrucción del paso 2 ("Elige el escenario...") como callout táctico propio, debajo
-     del título — antes vivía en línea junto al título en texto chico (.section-sub dentro
-     de .setup-section-head) y pasaba desapercibida. Con su propio contenedor (fondo +
-     borde + ícono) es lo primero que se lee después del título. */
-  .scn-instruction-badge{
-    display:inline-flex; align-items:center; gap:10px; max-width:100%;
-    margin:2px 0 var(--sp-4); padding:8px 14px; border-radius:8px;
-    background:rgba(249,115,22,0.1); border:1px solid rgba(249,115,22,0.3);
-    font-size:1rem; color:#F1F5F9; line-height:1.4;
-  }
-  @media (min-width:560px){.scn-instruction-badge{font-size:1.05rem;}}
-  @media (max-width:480px){.scn-instruction-badge{padding:8px 12px; font-size:0.95rem;}}
-  /* Ícono "objetivo" en su propio chip circular, con un halo iluminado — guía la mirada
-     hacia la instrucción antes de que el usuario baje directo a las tarjetas. */
-  .scn-instruction-icon{
-    display:flex; align-items:center; justify-content:center; flex-shrink:0;
-    width:24px; height:24px; border-radius:50%;
-    background:rgba(249,115,22,0.18); color:#FDBA74;
-    box-shadow:0 0 10px -2px rgba(249,115,22,0.65);
-  }
   /* Grid limpio de 2 columnas: el escenario ahora vive en su propio paso del wizard
      (no en la página completa), así que no necesita la cascada de 5/4/3 columnas de antes. */
   /* auto-fit en vez de 2 columnas fijas: en pantallas muy anchas se acomodan más
@@ -1307,6 +1327,14 @@
     body.game-mode .game-head{flex-wrap:wrap; gap:var(--sp-2);}
     .gh-steps{order:3; flex-basis:100%; justify-content:flex-start; overflow-x:auto;}
   }
+  /* Celular / tablet angosta: los controles bajan a su propia fila bajo el logo y el nombre
+     del escenario se oculta, para que "Siguiente" y la salida nunca queden fuera de pantalla. */
+  @media (max-width:600px){
+    body.game-mode .game-head{flex-basis:100%;}
+    body.game-mode .gh-left, #globalProgressRemaining{display:none;}
+    body.game-mode .gh-right{flex:1 1 100%; justify-content:space-between; gap:6px;}
+    body.game-mode .gh-count{margin-right:auto;}
+  }
 
   .setup-badge{
     display:inline-flex; align-items:center; gap:7px; padding:6px 12px; border-radius:999px;
@@ -1338,6 +1366,27 @@
   .wizard-step1-cols .playbook-panel{margin-top:0;}
   .wizard-col-head{flex:0 0 auto;}
   .wizard-col-body{flex:1 1 auto;}
+  /* Paso 1 centrado en el alto disponible (bajo el stepper), en vez de pegado arriba con
+     un gran vacío debajo. 136px = aire superior + stepper + separación + aire inferior. */
+  @media (min-width:821px){
+    .wizard-step1-cols{min-height:calc(100dvh - var(--topbar-h) - 136px); align-content:center;}
+  }
+  .wizard-step1-cols .wizard-col{padding:clamp(24px, 2.4vw, 34px);}
+  /* Encabezado: ícono a la izquierda del eyebrow y el título; la bajada usa todo el ancho. */
+  .wizard-step1-cols .wizard-col-head{display:grid; grid-template-columns:auto minmax(0,1fr); column-gap:14px; align-items:center;}
+  .wizard-step1-cols .wizard-col-head .eyebrow{grid-column:2; margin-bottom:2px;}
+  .wizard-step1-cols .wizard-col-head .section-title{grid-column:2; margin:0;}
+  .wizard-step1-cols .wizard-col-head .section-sub{grid-column:1 / -1; margin-top:var(--sp-3);}
+  .wizard-col-icon{
+    grid-column:1; grid-row:1 / span 2; width:46px; height:46px; border-radius:13px;
+    display:inline-flex; align-items:center; justify-content:center;
+    color:#FF8A3D; background:rgba(255,138,61,0.10); border:1px solid rgba(255,138,61,0.28);
+  }
+  .wizard-col-icon.is-opt{color:#9FB3CC; background:rgba(255,255,255,0.04); border-color:rgba(255,255,255,0.14);}
+  /* La zona de carga ocupa el alto libre de la columna (sin hueco antes de los botones). */
+  .wizard-step1-cols .playbook-panel .wizard-col-body{display:flex; flex-direction:column;}
+  .wizard-step1-cols .playbook-dropzone{flex:1 1 auto; min-height:150px; margin-bottom:0; gap:8px;}
+  .wizard-step1-cols .playbook-status:empty{min-height:0; margin:0;}
   /* Mismo tamaño de letra agrandado (1.2x) que "Las reglas del ejercicio" en el texto de
      ambas columnas del paso 1. */
   .wizard-step1-cols .section-sub, .wizard-step1-cols label, .wizard-step1-cols input,
@@ -1395,21 +1444,21 @@
   #wizardStep1Summary{margin-top:var(--sp-3);}
   .step3-alert svg{flex-shrink:0; margin-top:1px;}
   .step3-alert.is-warning{background:var(--amber-dim); border-color:rgba(255,138,0,0.4); color:#FFCE94;}
-  .step3-alert.is-ready{background:rgba(249,115,22,0.12); border-color:rgba(249,115,22,0.35); color:#FFC28A;}
-  .profile-actions{display:flex; gap:var(--sp-2); flex-wrap:wrap; margin-top:auto; padding-top:var(--sp-3);}
+  .step3-alert.is-ready{background:var(--green-dim); border-color:rgba(34,211,166,0.4); color:#9FF0D9;}
+  .profile-actions{position:relative; display:flex; gap:var(--sp-2); flex-wrap:wrap; margin-top:auto; padding-top:var(--sp-3);}
   /* Botones del Paso 1 del wizard: primarios en naranjo corporativo (mismo gradiente
      que #continueBtn, para no sumar un tercer tono de naranjo distinto en la misma
      pantalla) y los secundarios en estilo ghost/outline explícito. Va por ID —
-     .btn-primary sigue verde/cian en el resto de la app (ej. "Ver informe
-     ejecutivo →"), esto no debía tocar esos otros botones. */
-  #saveProfileBtn, #loadPlaybookBtn, #openBuilderBtn{
+     .btn-primary ya es naranjo en toda la app; esto solo
+     fija el mismo tono y sombra en estos botones. */
+  #saveProfileBtn, #loadPlaybookBtn{
     background:linear-gradient(135deg,#FF8A3D,#F0401D); border-color:transparent; color:#fff;
     box-shadow:0 8px 24px -10px rgba(240,64,29,0.55), 0 0 0 1px rgba(255,255,255,0.10) inset;
   }
-  #saveProfileBtn:hover, #loadPlaybookBtn:hover, #openBuilderBtn:hover{
+  #saveProfileBtn:hover, #loadPlaybookBtn:hover{
     box-shadow:0 10px 28px -8px rgba(240,64,29,0.7), 0 0 0 1px rgba(255,255,255,0.14) inset; filter:brightness(1.05);
   }
-  #profilesToggleBtn{
+  #profilesToggleBtn, #openBuilderBtn{
     background:transparent; border-color:rgba(255,255,255,0.22); color:#D7E2F2;
   }
   #profilesToggleBtn:hover{
@@ -1633,6 +1682,18 @@ table.report-table td{vertical-align:top;}
 .report-act h4{margin-top:0;}
 .report-act p{margin-bottom:6px;}
 .report-act-why{color:var(--muted) !important; font-style:italic;}
+/* Informe en pantalla (no afecta la impresión ni el Word): letra un poco más grande, líneas
+   de largo cómodo, títulos de sección más visibles y tablas cortas (Dato/Detalle, Función/
+   Empresa) del ancho de su contenido en vez de estirarse con un gran vacío al medio. */
+@media screen{
+  #executiveReport .report-section{margin-bottom:30px;}
+  #executiveReport .report-section-title{font-size:var(--fs-xs); color:#A5B4FC; margin-bottom:12px;}
+  #executiveReport .report-section p, #executiveReport .report-section ul, #executiveReport .report-recs{font-size:var(--fs-md); max-width:110ch;}
+  #executiveReport .report-section h4{font-size:var(--fs-md);}
+  #executiveReport table.report-table{font-size:var(--fs-md); width:auto; min-width:min(100%, 560px);}
+  #executiveReport table.report-table td:first-child{padding-right:32px; white-space:nowrap;}
+  #executiveReport .report-act{padding:16px 18px; margin-bottom:12px;}
+}
 .print-only{display:none;}
 
 /* ---------- impresión / "Guardar como PDF" del informe (ver printReport en app.js) ---------- */

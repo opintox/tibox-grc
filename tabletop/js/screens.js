@@ -7,15 +7,16 @@ window.TabletopScreens = (function(){
   // modes: clases de <body> que dependen de la pantalla (los estilos las usan para el ancho del
   // contenedor, el fondo y qué mostrar en la barra). La sala de espera conserva setup-mode
   // porque toma el mismo ancho de contenedor que la configuración.
+  // title: el título junto al logo; status: la etiqueta de estado a la derecha.
   const SCREENS = {
-    intro:    {id: 'screen-intro',    modes: ['intro-mode'],              status: 'CONFIGURACIÓN'},
-    setup:    {id: 'screen-setup',    modes: ['setup-mode'],              status: 'CONFIGURACIÓN'},
-    builder:  {id: 'screen-builder',  modes: ['builder-mode'],            status: 'CREAR ESCENARIO'},
-    lobby:    {id: 'screen-lobby',    modes: ['setup-mode', 'lobby-mode'], status: 'SALA DE ESPERA'},
-    briefing: {id: 'screen-briefing', modes: ['briefing-mode'],           status: 'INTRODUCCIÓN'},
-    game:     {id: 'screen-game',     modes: ['game-mode'],               status: 'EN CURSO'},
-    results:  {id: 'screen-results',  modes: [],                          status: 'FINALIZADO'},
-    report:   {id: 'screen-report',   modes: [],                          status: 'FINALIZADO'}
+    intro:    {id: 'screen-intro',    modes: ['intro-mode'],              title: 'Bienvenida',                  status: 'INICIO'},
+    setup:    {id: 'screen-setup',    modes: ['setup-mode'],              title: 'Configuración del ejercicio', status: 'CONFIGURACIÓN'},
+    builder:  {id: 'screen-builder',  modes: ['builder-mode'],            title: 'Configuración del ejercicio', status: 'CREAR ESCENARIO'},
+    lobby:    {id: 'screen-lobby',    modes: ['setup-mode', 'lobby-mode'], title: 'Configuración del ejercicio', status: 'SALA DE ESPERA'},
+    briefing: {id: 'screen-briefing', modes: ['briefing-mode'],           title: 'Antes de comenzar',           status: 'INTRODUCCIÓN'},
+    game:     {id: 'screen-game',     modes: ['game-mode'],               title: 'Ejercicio en curso',          status: 'EN CURSO'},
+    results:  {id: 'screen-results',  modes: [],                          title: 'Resultados del ejercicio',    status: 'FINALIZADO'},
+    report:   {id: 'screen-report',   modes: [],                          title: 'Informe ejecutivo',           status: 'FINALIZADO'}
   };
   const ALL_MODES = [...new Set(Object.values(SCREENS).flatMap(s => s.modes))];
   let current = null;
@@ -32,6 +33,8 @@ window.TabletopScreens = (function(){
     if(target.modes.length) document.body.classList.add(...target.modes);
     const label = document.getElementById('statusLabel');
     if(label) label.textContent = target.status;
+    const title = document.getElementById('topbarTitle');
+    if(title) title.textContent = target.title;
     current = name;
     if(!opts || opts.scroll !== false) window.scrollTo({top: 0, behavior: 'smooth'});
   }
