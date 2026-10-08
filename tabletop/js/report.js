@@ -134,7 +134,7 @@ window.TabletopReport = (function(){
     if(strengths.length === scenarioStages.length){
       fortalezasHtml = `<p>Todas las etapas del ejercicio se resolvieron sin errores de ningún tipo — un resultado excelente y poco común en una primera corrida.</p>`;
     } else if(strengths.length > 0){
-      fortalezasHtml = `<p>${strengths.length === 1 ? 'La etapa' : 'Las etapas'} de <b>${strengths.map(escapeHtml).join(', ')}</b> se resolvieron sin errores de personaje ni reintentos — un buen punto de partida que vale la pena reconocer con el equipo.</p>`;
+      fortalezasHtml = `<p>${strengths.length === 1 ? 'La etapa' : 'Las etapas'} de <b>${strengths.map(escapeHtml).join(', ')}</b> se resolvieron sin errores de función ni reintentos — un buen punto de partida que vale la pena reconocer con el equipo.</p>`;
     } else {
       fortalezasHtml = `<p>Ninguna etapa quedó completamente libre de errores o reintentos, aunque eso es información igual de valiosa: señala que el refuerzo debe ser transversal, no puntual.</p>`;
     }
@@ -360,10 +360,8 @@ window.TabletopReport = (function(){
     document.getElementById('resTotal').textContent = total;
     document.getElementById('resWrongAnswers').textContent = wrongA;
     document.getElementById('resWrongChars').textContent = wrongC;
-    document.getElementById('resDonutPct').textContent = accuracy + '%';
-    // KPI superiores (mismos valores que ya se muestran más abajo en la dona/leyenda, solo
-    // repetidos arriba a simple vista en el panel ejecutivo).
-    document.getElementById('kpiPrecisionPct').textContent = precision + '%';
+    // KPI superiores: la nota ya está en la primera tarjeta, así que la segunda muestra qué
+    // parte de las decisiones salió a la primera (se completa más abajo, junto con el informe).
     document.getElementById('kpiDuration').textContent = duration;
     document.getElementById('kpiWrongChars').textContent = wrongC;
     document.getElementById('kpiWrongAnswers').textContent = wrongA;
@@ -371,6 +369,7 @@ window.TabletopReport = (function(){
     // Dona de 3 colores proporcional a preguntas respondidas / errores de alternativa / errores de
     // personaje (misma base que el % de la nota final), armada con 3 círculos SVG superpuestos.
     const donutTotal = total + wrongA + wrongC;
+    document.getElementById('resDonutTotal').textContent = donutTotal;
     const circumference = 339.3; // 2 * PI * 54, coincide con el radio del círculo del SVG
     const correctLen = (total / donutTotal) * circumference;
     const altLen = (wrongA / donutTotal) * circumference;
@@ -393,20 +392,21 @@ window.TabletopReport = (function(){
         <div class="stage-chart-block results-enter" style="animation-delay:${0.24 + idx * 0.06}s;">
           <div class="stage-chart-label">${escapeHtml(stageName)} <span>(${stat.questions} pregunta${stat.questions === 1 ? '' : 's'})</span></div>
           <div class="mini-bar-row">
-            <span class="mini-bar-label">Alternativa</span>
-            <div class="mini-bar-track"><div class="mini-bar-fill is-response" style="width:${Math.min(100, (stat.wrongAnswers / stageBarMax) * 100)}%;"></div></div>
-            <span class="mini-bar-val">${stat.wrongAnswers}</span>
-          </div>
-          <div class="mini-bar-row">
-            <span class="mini-bar-label">Personaje</span>
+            <span class="mini-bar-label">Función</span>
             <div class="mini-bar-track"><div class="mini-bar-fill is-function" style="width:${Math.min(100, (stat.wrongCharacters / stageBarMax) * 100)}%;"></div></div>
             <span class="mini-bar-val">${stat.wrongCharacters}</span>
+          </div>
+          <div class="mini-bar-row">
+            <span class="mini-bar-label">Respuesta</span>
+            <div class="mini-bar-track"><div class="mini-bar-fill is-response" style="width:${Math.min(100, (stat.wrongAnswers / stageBarMax) * 100)}%;"></div></div>
+            <span class="mini-bar-val">${stat.wrongAnswers}</span>
           </div>
         </div>`;
     }).join('');
     document.getElementById('resultsMessage').textContent = message;
 
     const report = buildExecutiveReport();
+    document.getElementById('kpiFirstTryPct').textContent = report.plain.firstTryPct + '%';
     const reportEl = document.getElementById('executiveReport');
     // Orden del informe: contexto → resumen → desempeño por función → patrones/primera
     // respuesta/fortalezas → detalle acto por acto → recomendaciones → plan de acción.

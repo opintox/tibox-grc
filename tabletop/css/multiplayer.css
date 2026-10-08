@@ -94,7 +94,8 @@ body.lobby-mode .topbar-right{display:none;}
 /* ---------- join.html (participante) ---------- */
 .join-body{display:flex; flex-direction:column; align-items:center; min-height:100vh; min-height:100dvh;}
 .join-topbar{width:100%; padding:16px 20px; display:flex; justify-content:center;}
-.join-shell{width:100%; max-width:460px; padding:0 16px 60px; display:flex; flex-direction:column; gap:16px;}
+/* flex:1 + justify-content:center: la tarjeta queda al medio de la pantalla (como el inicio de sesión), no pegada arriba; el aire inferior compensa la barra del logo. */
+.join-shell{width:100%; max-width:460px; flex:1 0 auto; justify-content:center; padding:0 16px 72px; display:flex; flex-direction:column; gap:16px;}
 .join-panel{padding:26px 22px;}
 .join-role-label{display:block; font-family:var(--sans); font-weight:700; font-size:var(--fs-xs); letter-spacing:0.04em; text-transform:uppercase; color:#C7D2E3; margin:16px 0 8px;}
 .join-role-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px;}

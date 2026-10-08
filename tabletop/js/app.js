@@ -128,11 +128,11 @@ function defaultParticipantsFor(scenarioId){
 // acierta ~20 veces entre las dos pantallas, y repetir siempre la misma línea se siente
 // mecánico. Se elige una al azar cada vez en vez de un texto fijo.
 const CORRECT_CHARACTER_PHRASES = [
-  'Esta es la función que debe ejecutar la acción según el plan del ejercicio. Presiona «Siguiente» para elegir la respuesta.',
+  'Esta es la función que debe ejecutar la acción según el plan del ejercicio. Presiona «Continuar» para elegir la respuesta.',
   'Correcto: le corresponde a esta función actuar acá. Ahora falta decidir qué hace.',
   'Bien identificado. El plan del ejercicio asigna esta acción a esta función — continúa para elegir la decisión.',
   'Acertaste con quién responde. El siguiente paso es decidir qué hace.',
-  'Es la función correcta para este momento del incidente. Presiona «Siguiente» para elegir la alternativa.'
+  'Es la función correcta para este momento del incidente. Presiona «Continuar» para elegir la alternativa.'
 ];
 const CORRECT_ANSWER_TAGS = ['✓ Correcta', '✓ Acertaste', '✓ Es la decisión correcta', '✓ Bien resuelto', '✓ Elegida · Correcta'];
 function pickRandom(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
@@ -337,13 +337,13 @@ function renderProfilesPanel(){
 }
 document.getElementById('profilesToggleBtn').addEventListener('click', () => {
   if(profilesPanelEl){ closeProfilesPanel(); return; }
+  // Anclado bajo el botón (dentro de .profile-actions), no con coordenadas de pantalla:
+  // así sigue al botón si la página se mueve o se desplaza con el panel abierto.
   const btn = document.getElementById('profilesToggleBtn');
-  const rect = btn.getBoundingClientRect();
   profilesPanelEl = document.createElement('div');
   profilesPanelEl.className = 'profiles-dropdown';
-  profilesPanelEl.style.left = Math.min(rect.left, window.innerWidth - 300) + 'px';
-  profilesPanelEl.style.top = (rect.bottom + 8) + 'px';
-  document.body.appendChild(profilesPanelEl);
+  profilesPanelEl.style.left = btn.offsetLeft + 'px';
+  btn.parentElement.appendChild(profilesPanelEl);
   renderProfilesPanel();
   setTimeout(() => document.addEventListener('mousedown', profilesOutsideClick, true), 0);
 });
@@ -634,6 +634,7 @@ renderScenarioCards();
 
 // ---------------- participants table ----------------
 const bodyEl = document.getElementById('participantsBody');
+const PC_EDIT_ICON = '<svg class="pc-empresa-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
 function renderParticipants(){
   bodyEl.innerHTML = '';
   const rm = roleMetaFor(selectedScenarioId);
@@ -656,11 +657,13 @@ function renderParticipants(){
           ${roleIconChipHtml(rm, p.roleKey)}
           <span class="pc-role-name">${escapeHtml(rm.names[p.roleKey] || p.roleKey)}</span>
         </div>
-        <span class="pc-status-pill">${p.checked ? 'ACTIVO' : 'INACTIVO'}</span>
+        ${p.checked ? '' : '<span class="pc-status-pill">NO PARTICIPA</span>'}
       </div>
       <p class="pc-desc" title="${escapeHtml(rm.desc[p.roleKey] || '')}">${escapeHtml(rm.desc[p.roleKey] || '')}</p>
       <div class="pc-empresa">
-        <button type="button" class="pc-empresa-btn" data-i="${i}" aria-label="${hasEmpresa ? `Empresa asignada: ${escapeHtml(p.empresa)}. Editar.` : 'Asignar empresa'}">${hasEmpresa ? `EMPRESA: ${escapeHtml(p.empresa)}` : 'EMPRESA'}</button>
+        <button type="button" class="pc-empresa-btn ${hasEmpresa ? 'is-set' : 'is-empty'}" data-i="${i}" aria-label="${hasEmpresa ? `Empresa asignada: ${escapeHtml(p.empresa)}. Editar.` : 'Asignar empresa'}">${hasEmpresa
+          ? `<span class="pc-empresa-label">Empresa</span><span class="pc-empresa-name">${escapeHtml(p.empresa)}</span>${PC_EDIT_ICON}`
+          : '+ Asignar empresa'}</button>
       </div>`;
     card.querySelector('.pc-empresa-btn').addEventListener('click', () => openCompanyModal(i));
     card.querySelector('.pc-switch-input').addEventListener('change', e => {
@@ -809,8 +812,6 @@ function updateBottomState(){
     }
   }
 
-  const scnBadge = document.getElementById('scenarioBadge');
-  if(scnBadge) scnBadge.textContent = scenarioName || 'Sin escenario';
   const pBadge = document.getElementById('participantsBadge');
   if(pBadge) pBadge.textContent = `${activeCount} activa${activeCount === 1 ? '' : 's'}`;
 
@@ -888,6 +889,10 @@ function goToStep(n){
   });
   window.scrollTo({top: 0, behavior: 'smooth'});
   updateBottomState();
+  if(n === 2){
+    const sel = document.querySelector('#scenarioGridCore .scn-card.selected');
+    if(sel) setTimeout(() => sel.scrollIntoView({block: 'nearest', behavior: 'smooth'}), 350);
+  }
 }
 
 // ---------------- reglas del ejercicio: detalle educativo en modal al hacer clic ----------------
@@ -1521,6 +1526,13 @@ function startStoryAutoScroll(panel){
   document.getElementById('storyPanel').addEventListener(evt, stopStoryAutoScroll, {passive: true});
 });
 
+// Los escenarios predefinidos titulan sus actos "Acto 1 · …", pero el número del acto ya va
+// en el encabezado de la situación ("Acto 1 de 3"): se quita para no repetirlo y para que todos
+// los escenarios se vean igual (mismo criterio que actTitle en report.js).
+function actTitleText(t){
+  return String(t || '').replace(/^\s*acto\s+\d+\s*[·:\-–—]\s*/i, '').trim();
+}
+
 // Encabezado de la decisión: paso 1 (elegir la función) o 2 (elegir la alternativa).
 function setDecisionStep(n){
   document.getElementById('askStep1').classList.toggle('on', n === 1);
@@ -1611,7 +1623,7 @@ function renderStage(opts){
     const chips = (q.meta || []).map(m => `<span class="sit-chip">${escapeHtml(m)}</span>`).join('');
     const parrafos = situationBodyHtml(q.situation);
     storyEl.innerHTML = `
-      ${q.title ? `<h2 class="sit-title">${escapeHtml(q.title)}</h2>` : ''}
+      ${actTitleText(q.title) ? `<h2 class="sit-title">${escapeHtml(actTitleText(q.title))}</h2>` : ''}
       ${chips ? `<div class="sit-meta">${chips}</div>` : ''}
       <div class="sit-body">${parrafos}</div>`;
   } else {
@@ -1636,7 +1648,7 @@ function renderStage(opts){
   // correctIndex/explicaciones nunca salen de esta pantalla.
   if(multiplayerEnabled && mpRoomCode && window.MP){
     window.MP.publishAct(mpRoomCode, {
-      actKey: currentActKey(), stage: stageLabel, title: q.title || ''
+      actKey: currentActKey(), stage: stageLabel, title: actTitleText(q.title)
     });
   }
 
@@ -1768,7 +1780,7 @@ function onCharacterPick(participant, el){
   const rmPick = roleMetaFor(gameState.scenarioId);
   showExplain(
     `<div class="explanation-item is-correct">
-      <div class="ex-head">${roleExplainIconHtml(rmPick, participant.roleKey)}<div class="ex-head-text"><span class="ex-tag">✓ Personaje correcto</span><div class="ex-opt">${escapeHtml(rmPick.names[participant.roleKey])}</div></div></div>
+      <div class="ex-head">${roleExplainIconHtml(rmPick, participant.roleKey)}<div class="ex-head-text"><span class="ex-tag">✓ Función correcta</span><div class="ex-opt">${escapeHtml(rmPick.names[participant.roleKey])}</div></div></div>
       <div class="ex-why">${pickRandom(CORRECT_CHARACTER_PHRASES)}</div>
     </div>`);
 
@@ -1794,7 +1806,7 @@ function renderWrongCharacterExplanation(participant, q){
   const mismatch = q.mismatchContext || 'Esta acción específica requiere otra función dentro del equipo de respuesta.';
 
   const html = `<div class="explanation-item is-wrong">
-      <div class="ex-head">${roleExplainIconHtml(rm, chosenKey)}<div class="ex-head-text"><span class="ex-tag">✕ Personaje incorrecto</span><div class="ex-opt">${escapeHtml(chosenLabel)}</div></div></div>
+      <div class="ex-head">${roleExplainIconHtml(rm, chosenKey)}<div class="ex-head-text"><span class="ex-tag">✕ Función incorrecta</span><div class="ex-opt">${escapeHtml(chosenLabel)}</div></div></div>
       <div class="ex-why">${escapeHtml(chosenLabel)} ${chosenDesc}. ${escapeHtml(mismatch)}</div>
     </div>`;
   showExplain(html);
@@ -1860,7 +1872,7 @@ function onAnswerPick(idx, btn, q){
       window.MP.retryAnswer(mpRoomCode, {
         actKey: currentActKey(),
         stage: gameState.stages[gameState.stepIndex].stage,
-        title: q.title || '', target: q.target, options: q.options,
+        title: actTitleText(q.title), target: q.target, options: q.options,
         // mismo orden que ya está en pantalla (el reintento no vuelve a mezclar)
         order: [...document.querySelectorAll('#answerOptions .answer-btn')].map(b => Number(b.dataset.origIdx))
       });
