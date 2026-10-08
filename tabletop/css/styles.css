@@ -1613,3 +1613,11 @@ table.report-table td{vertical-align:top;}
   .report-section-title{font-size:12pt; color:#1F3A5F;}
   .table-wrap{overflow:visible;}
 }
+
+/* Ventana "Contexto" para facilitadores (ver showFacilitatorContext en app.js) */
+.facilitator-context{max-height:60vh; overflow-y:auto; text-align:left; line-height:1.6; padding-right:4px;}
+/* Solo la ventana del contexto: más ancha (es texto largo) y con fondo sólido, para que no se
+   lea el texto de la pantalla de atrás a través de ella. */
+.modal-box:has(.facilitator-context){max-width:760px; width:min(760px, calc(100vw - 32px)); background:#0B1120; backdrop-filter:none;}
+.facilitator-context p{margin:0 0 10px;}
+.facilitator-context p:last-child{margin-bottom:0;}
