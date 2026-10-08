@@ -458,11 +458,16 @@
   .char-grid.count-3{grid-template-columns:repeat(3,minmax(0,1fr));}
   .char-grid.count-4{grid-template-columns:repeat(2,minmax(0,1fr));}
   .char-grid.count-5,.char-grid.count-6{grid-template-columns:repeat(3,minmax(0,1fr));}
+  /* 7–8 funciones (organigramas propios de un Word): 4 columnas = 2 filas en vez de 3, y desde
+     4 funciones tarjetas más compactas, para que la situación no quede aplastada. */
+  .char-grid.count-7,.char-grid.count-8{grid-template-columns:repeat(4,minmax(0,1fr));}
+  .char-grid:is(.count-4,.count-5,.count-6,.count-7,.count-8){grid-auto-rows:minmax(112px, auto);}
+  .char-grid:is(.count-4,.count-5,.count-6,.count-7,.count-8) .char-card{min-height:112px; padding:14px;}
   @media (max-width:700px){
-    .char-grid,.char-grid.count-3,.char-grid.count-4,.char-grid.count-5,.char-grid.count-6{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .char-grid,.char-grid.count-3,.char-grid.count-4,.char-grid.count-5,.char-grid.count-6,.char-grid.count-7,.char-grid.count-8{grid-template-columns:repeat(2,minmax(0,1fr));}
   }
   @media (max-width:440px){
-    .char-grid,.char-grid.count-2,.char-grid.count-3,.char-grid.count-4,.char-grid.count-5,.char-grid.count-6{grid-template-columns:1fr;}
+    .char-grid,.char-grid.count-2,.char-grid.count-3,.char-grid.count-4,.char-grid.count-5,.char-grid.count-6,.char-grid.count-7,.char-grid.count-8{grid-template-columns:1fr;}
   }
   /* Barra de acento inferior de 2px, color plano — --card-bar la fija JS con el acento
      de la función (mismo valor que --p-bar en renderParticipants; .participant-card usa
@@ -822,7 +827,9 @@
      tarjetas necesitan (nunca scrollea) y la fila 1 (la historia) se queda con lo que sobra;
      si un relato es muy largo, es el panel de texto el que scrollea — más natural que
      scrollear una grilla de opciones. */
-  .game-layout.grid4{display:grid; grid-template-columns:minmax(0,1fr); grid-template-rows:minmax(0,1fr) auto auto; gap:12px; min-height:0; flex:1;}
+  /* La situación (1.ª fila) tiene una altura mínima garantizada: si las tarjetas de función no
+     caben, su panel se desplaza en vez de aplastar el texto del caso. */
+  .game-layout.grid4{display:grid; grid-template-columns:minmax(0,1fr); grid-template-rows:minmax(clamp(200px, 34vh, 320px),1fr) auto auto; gap:12px; min-height:0; flex:1;}
   .grid4-cell{padding:clamp(14px,1.35vw,20px); margin-bottom:0; overflow:auto; min-height:0; min-width:0; display:flex; flex-direction:column;}
   /* Scrollbar flotante (solo aparece al pasar el mouse sobre el panel): pista siempre
      transparente, thumb invisible en reposo y semi-transparente en :hover — para que el
@@ -1686,3 +1693,31 @@ table.report-table td{vertical-align:top;}
 .fc-keys li{margin-bottom:10px;}
 .fc-keys li:last-child{margin-bottom:0;}
 .fc-keys li::marker{color:var(--blue);}
+
+/* ---------- situación estructurada y tarjetas de función (pantalla del ejercicio) ---------- */
+/* "Lo que se sabe" / "Lo que falta" como bloques con etiqueta (ver situationBodyHtml). */
+.sit-body .sit-block{
+  position:relative; margin:0 0 14px; padding:12px 16px 12px 18px; border-radius:12px;
+  background:rgba(255,255,255,0.035); border:1px solid rgba(255,255,255,0.08);
+}
+.sit-body .sit-block::before{content:''; position:absolute; left:0; top:10px; bottom:10px; width:3px; border-radius:3px; background:var(--k, var(--blue));}
+.sit-body .sit-block.is-known{--k:#22D3A6;}
+.sit-body .sit-block.is-missing{--k:#F5A524;}
+.sit-block-label{
+  display:block; margin-bottom:4px; font-family:var(--mono); font-size:var(--fs-3xs);
+  letter-spacing:0.12em; text-transform:uppercase; color:var(--k, var(--blue)); font-weight:700;
+}
+.sit-body .sit-block p{margin:0;}
+.sit-body .sit-question{
+  margin-top:18px; padding:12px 16px; border-radius:12px; font-weight:700; color:#fff;
+  background:color-mix(in srgb, var(--a, var(--blue)) 14%, transparent);
+  border:1px solid color-mix(in srgb, var(--a, var(--blue)) 40%, transparent);
+}
+/* Ícono de la función con su propio color (antes gris) y un poco más grande. */
+.char-card .c-icon{
+  width:40px; height:40px; color:var(--a, var(--text));
+  background:color-mix(in srgb, var(--a, #8592AE) 16%, transparent);
+  border-color:color-mix(in srgb, var(--a, #8592AE) 45%, transparent);
+  box-shadow:0 8px 18px -10px var(--a, rgba(255,255,255,0.18));
+}
+.char-card .c-icon svg{width:24px; height:24px;}
