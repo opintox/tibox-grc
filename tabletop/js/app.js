@@ -553,10 +553,6 @@ function customScenarioClient(data){
     .normalize('NFD').replace(/\p{M}/gu, '');
   return CUSTOM_SCENARIO_CLIENT_BG.find(c => c.match.test(text)) || null;
 }
-function customScenarioClientBg(data){
-  const hit = customScenarioClient(data);
-  return hit ? hit.image : null;
-}
 
 // Empresa de cada función según el catálogo de roles del cliente: devuelve 'TIBOX' o
 // 'cliente' a partir del nombre de la función. Catálogo EEV (skill /roles): de TIBOX son los
@@ -1155,8 +1151,9 @@ function showBriefing(onStart, roomCode){
 
 // Ventana "Contexto": notas para el facilitador. Solo en esta pantalla (los celulares no la
 // reciben); por eso es una ventana que se lee y se cierra antes de proyectar la introducción.
+// El texto se ordena en antecedentes / cronología / datos clave (ver js/context-format.js).
 function showFacilitatorContext(text){
-  const html = text.split(/\n\s*\n|\n/).filter(t => t.trim()).map(t => `<p>${escapeHtml(t.trim())}</p>`).join('');
+  const html = window.formatFacilitatorContext(text);
   return showConfirmModal({
     title: 'Contexto',
     message: `<div class="facilitator-context">${html}</div>`,
