@@ -104,7 +104,7 @@ window.formatFacilitatorContext = (function(){
     });
     if(!steps.length && !groups.length) return {html: plain.length ? paragraphsHtml(plain) : '', structured: false};
     let html = '';
-    if(plain.length) html += `<section class="fc-section"><div class="fc-label">Antecedentes</div>${paragraphsHtml(plain)}</section>`;
+    if(plain.length) html += `<section class="fc-section fc-intro"><div class="fc-label">Antecedentes</div>${paragraphsHtml(plain)}</section>`;
     steps.forEach(st => {
       html += `<section class="fc-section"><div class="fc-label">Protocolo</div><p class="fc-lead">${esc(st.lead)}:</p>` +
         `<ol class="fc-steps">${st.items.map((it, i) => `<li><span class="fc-step-n">${i + 1}</span><span>${esc(it)}</span></li>`).join('')}</ol></section>`;

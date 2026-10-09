@@ -34,6 +34,16 @@
     outline:none;
   }
   html{overflow-x:hidden;}
+  /* Barras de desplazamiento de toda la app: delgadas, sin flechas, riel transparente y barra
+     gris translúcida que se aclara al pasar el mouse (en vez de la barra blanca de Windows).
+     Las zonas con su propia regla (.grid4-cell, la grilla de escenarios) la siguen usando. */
+  *{scrollbar-width:thin; scrollbar-color:rgba(255,255,255,0.18) transparent;}
+  *:hover{scrollbar-color:rgba(255,255,255,0.32) transparent;}
+  ::-webkit-scrollbar{width:6px; height:6px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.18); border-radius:3px;}
+  ::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.32);}
+  ::-webkit-scrollbar-button{display:none;}
   html,body{margin:0;padding:0;}
   body{
     background:var(--bg); color:var(--text); font-family:var(--sans); min-height:100vh; min-height:100dvh;
@@ -1756,6 +1766,24 @@ table.report-table td{vertical-align:top;}
 .fc-person-note{margin-top:8px; padding:6px 10px; border-radius:8px; font-size:var(--fs-xs); color:#FFCE94;
   background:var(--amber-dim); border:1px solid rgba(255,138,0,0.35);}
 @media (max-width:640px){ .fc-people{grid-template-columns:1fr;} }
+/* Versión compacta para que el contexto quepa sin desplazarse en una pantalla normal:
+   ventana más ancha, personas en 3 columnas, menos aire y descripciones en letra más chica. */
+.modal-box:has(.facilitator-context){max-width:1060px; width:min(1060px, calc(100vw - 32px));}
+.facilitator-context{max-height:76vh; line-height:1.55;}
+.fc-section + .fc-section{margin-top:16px; padding-top:14px;}
+.fc-label{margin-bottom:8px;}
+.fc-intro p{margin:0 !important; padding:10px 14px; border-radius:10px; border-left:3px solid var(--blue);
+  background:rgba(14,165,233,0.07); color:#E2E8F0;}
+.fc-lead{margin:0 0 8px !important;}
+.fc-steps{gap:8px;}
+.fc-steps li{padding:9px 12px;}
+.fc-people{gap:8px;}
+@media (min-width:900px){ .fc-people{grid-template-columns:repeat(3, minmax(0, 1fr));} }
+.fc-person{padding:10px 12px; gap:10px;}
+.fc-avatar{width:30px; height:30px; font-size:var(--fs-4xs);}
+.fc-person-body{line-height:1.4;}
+.fc-person-desc{font-size:var(--fs-xs); margin-top:4px;}
+.fc-person-note{margin-top:6px; padding:5px 8px; font-size:var(--fs-2xs);}
 
 /* ---------- situación estructurada y tarjetas de función (pantalla del ejercicio) ---------- */
 /* "Lo que se sabe" / "Lo que falta" como bloques con etiqueta (ver situationBodyHtml). */
