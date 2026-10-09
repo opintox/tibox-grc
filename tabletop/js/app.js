@@ -374,8 +374,10 @@ function loadSavedExercises(){
   }catch(e){ return []; }
 }
 function saveExercisesList(list){
-  try{ localStorage.setItem(EXERCISES_STORAGE_KEY, JSON.stringify(list)); }
-  catch(e){ /* localStorage no disponible o lleno; no es crítico para seguir usando la app */ }
+  // Devuelve si quedó guardado (localStorage puede estar lleno o bloqueado): quien guarda un
+  // ejercicio debe avisarle al facilitador si no se pudo, para que descargue el resultado.
+  try{ localStorage.setItem(EXERCISES_STORAGE_KEY, JSON.stringify(list)); return true; }
+  catch(e){ return false; }
 }
 
 // Modal propio (reemplaza confirm()/alert() nativos del navegador, que no respetan el estilo oscuro de la app)
@@ -2009,4 +2011,7 @@ TabletopReport.init({
   }
 });
 
+
+// Ejercicios guardados (js/saved.js): lista, resumen, Word/JSON, borrar e importar.
+TabletopSaved.init({escapeHtml, showConfirmModal, loadSavedExercises, saveExercisesList});
 })();

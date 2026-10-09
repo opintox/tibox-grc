@@ -488,7 +488,10 @@ window.TabletopReport = (function(){
 
     // Informe completo como Word: cada sección en pantalla (#executiveReport) se convierte a
     // bloques de documento (ver reportElementToDocBlocks), más las notas del acta.
-    function downloadReportDocx(){
+    // Contenido del Word (meta + secciones + nombre de archivo). Se usa para descargarlo ahora y
+    // también se guarda con «Guardar ejercicio», para poder bajar el mismo Word después desde
+    // "Ejercicios guardados" (ver saved.js).
+    function buildReportDocxPayload(){
       const sections = [...reportEl.querySelectorAll('.report-section')].map(sec => {
         const clone = sec.cloneNode(true);
         const titleEl = clone.querySelector('.report-section-title');
@@ -500,7 +503,7 @@ window.TabletopReport = (function(){
       if(notes) sections.push({title: 'Notas del facilitador', blocks: notes.split(/\n\s*\n|\n/).filter(t => t.trim()).map(t => ({type: 'p', runs: [{text: t.trim()}]}))});
       // Formato SGSI (ver docx.js): encabezado, portada, control de cambios y aprobación.
       const mmaaaa = `${String(nowDate.getMonth() + 1).padStart(2, '0')}/${nowDate.getFullYear()}`;
-      TibDocx.downloadReportDocx({
+      return {
         meta: {
           docName: 'Informe de ejercicio tabletop',
           coverTitle: 'Informe de ejercicio tabletop',
@@ -515,7 +518,11 @@ window.TabletopReport = (function(){
         },
         sections,
         filename: `informe_tabletop_${(clientName || 'cliente').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^a-z0-9]+/g,'_')}_${scenarioMeta.id}.docx`
-      }).catch(err => { console.error(err); alert('No se pudo generar el Word del informe.'); });
+      };
+    }
+    function downloadReportDocx(){
+      TibDocx.downloadReportDocx(buildReportDocxPayload())
+        .catch(err => { console.error(err); alert('No se pudo generar el Word del informe.'); });
     }
 
     // PDF: la ventana de impresión del navegador ("Guardar como PDF"). Las notas del acta se
@@ -562,12 +569,20 @@ window.TabletopReport = (function(){
       const record = buildResultsExport();
       record.id = `exercise_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
       record.guardado_en = new Date().toISOString();
+      record.informe_word = buildReportDocxPayload();
       const list = loadSavedExercises();
       list.push(record);
-      saveExercisesList(list);
+      if(!saveExercisesList(list)){
+        showConfirmModal({
+          title: 'No se pudo guardar',
+          message: 'El navegador no permitió guardar el ejercicio (almacenamiento lleno o bloqueado). Descarga los resultados (JSON) o el informe en Word antes de cerrar.',
+          confirmText: 'Entendido', cancelText: null
+        });
+        return;
+      }
       showConfirmModal({
         title: 'Ejercicio guardado',
-        message: `El resultado de <b>${escapeHtml(scenarioMeta.name)}</b>${clientName ? ` para <b>${escapeHtml(clientName)}</b>` : ''} quedó guardado en este navegador (${list.length} ejercicio${list.length === 1 ? '' : 's'} guardado${list.length === 1 ? '' : 's'} en total).`,
+        message: `El resultado de <b>${escapeHtml(scenarioMeta.name)}</b>${clientName ? ` para <b>${escapeHtml(clientName)}</b>` : ''} quedó guardado en este navegador (${list.length} ejercicio${list.length === 1 ? '' : 's'} guardado${list.length === 1 ? '' : 's'} en total). Puedes verlo cuando quieras en <b>Ejercicios guardados</b>, en el primer paso de la configuración.`,
         confirmText: 'Cerrar y volver a la configuración', cancelText: null
       }).then(closeExerciseToSetup);
     };
