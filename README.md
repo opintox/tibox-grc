@@ -31,12 +31,15 @@ Sitio estático (sin build ni dependencias de npm) publicado con GitHub Pages de
 │   └── js/
 │       ├── data/
 │       │   ├── catalogo.js    Escenarios, funciones, matriz de participación, introducciones
-│       │   └── escenarios.js  Contenido narrado: situaciones, alternativas y explicaciones
+│       │   ├── escenarios.js  Solo crea QUESTIONS vacío (el contenido va cifrado, ver abajo)
+│       │   └── escenarios.enc.json  Escenarios predefinidos cifrados (AES-256-GCM)
 │       ├── lib/               JSZip (Word) y generador de QR, versionados en el repo
 │       ├── docx.js            Leer/escribir escenarios en Word y generar el informe en Word
 │       ├── screens.js         Navegación entre pantallas (una sola función: show)
 │       ├── builder.js         Constructor guiado de escenarios
 │       ├── report.js          Resultados, informe ejecutivo y exportaciones (JSON/Word/PDF)
+│       ├── scenario-vault.js  Descifra los escenarios con la llave de Firestore (solo facilitador)
+│       ├── saved.js           Ejercicios guardados (ver, Word/JSON, borrar, importar)
 │       ├── app.js             Configuración del ejercicio y motor del juego
 │       └── multiplayer/       Modo "Con celulares" (módulos ES + Firestore)
 │           ├── firebase-init.js   Firestore + sesión anónima de los celulares
@@ -85,7 +88,7 @@ Al publicar en GitHub Pages, los cambios en `main` quedan en línea en 1–2 min
 | Ajustar la escala tipográfica | `tabletop/css/styles.css` → tokens `--fs-*` |
 | Agregar o editar un tipo de ataque | `js/data/catalogo.js` → `SCENARIOS`, `SCENARIO_BLURBS`, `SCENARIO_TARGETS`, `SCENARIO_ACCENTS`, `SCENARIO_ICONS` |
 | Cambiar quién participa en un escenario | `js/data/catalogo.js` → `PARTICIPATION_MATRIX` |
-| Escribir o corregir el relato de un escenario | `js/data/escenarios.js` |
+| Escribir o corregir el relato de un escenario | `private/escenarios.js` (fuera del repo) y luego `node tools/encrypt-escenarios.mjs` |
 | Cambiar la introducción previa a la primera etapa | `js/data/catalogo.js` → `SCENARIO_INTROS` |
 | Agregar o cambiar una pantalla | `tabletop/index.html` (marcado) + `js/screens.js` (registrarla) |
 | Cambiar el informe final o sus descargas | `js/report.js` (y `docx.js` → `downloadReportDocx` para el Word, con formato SGSI: Carta, portada, control de cambios, títulos I./1.1, tablas azul marino) |
@@ -112,7 +115,21 @@ etiquetas son opcionales.
   el logo del cliente y la empresa de cada función se completa sola (N1, N2 y TeamLeader →
   TIBOX; el resto → cliente).
 
-## Formato de un escenario en `escenarios.js`
+## Escenarios predefinidos cifrados
+
+Los escenarios predefinidos traen las respuestas correctas y el sitio es público, así que no se
+publican en texto legible:
+
+- `private/escenarios.js`: el texto legible. Solo en el computador del facilitador (`private/`
+  está en `.gitignore`), junto con la llave (`private/scenario-key.txt`).
+- `node tools/encrypt-escenarios.mjs`: cifra `private/escenarios.js` y escribe
+  `tabletop/js/data/escenarios.enc.json`, que es lo que se sube.
+- La llave también está en Firestore, en `config/scenarios` (campo `key`). Las reglas solo dejan
+  leerla al facilitador autorizado; `js/scenario-vault.js` la lee al entrar y descifra en el navegador.
+- Si se pierde `private/`, se puede recuperar el contenido descifrando `escenarios.enc.json` con la
+  llave de Firestore. Si se cambia la llave, hay que actualizarla en los dos lugares.
+
+## Formato de un escenario en `private/escenarios.js`
 
 Cada escenario es una lista de etapas; cada etapa tiene una o más preguntas (actos):
 

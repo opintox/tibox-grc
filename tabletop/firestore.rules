@@ -37,6 +37,14 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == roomData(roomCode).facilitatorUid;
     }
 
+    // Llave de los escenarios predefinidos (config/scenarios, campo "key"): con ella se descifra
+    // tabletop/js/data/escenarios.enc.json, que trae las respuestas correctas. Solo la lee el
+    // facilitador autorizado; nadie la escribe desde la app (se carga a mano en la consola).
+    match /config/{docId} {
+      allow get: if isFacilitator();
+      allow list, write: if false;
+    }
+
     match /rooms/{roomCode} {
       allow get: if request.auth != null;
       allow list: if false; // sin esto, alguien podría listar/enumerar salas ajenas

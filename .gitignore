@@ -6,3 +6,7 @@
 *.xlsx
 *.pdf
 tabletop-resultado_*.json
+
+# Escenarios predefinidos en texto legible y la llave para cifrarlos: solo en este computador
+# (en el repo va la versión cifrada, tabletop/js/data/escenarios.enc.json).
+private/

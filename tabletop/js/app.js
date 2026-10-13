@@ -512,6 +512,7 @@ function renderScenarioCard(s, container){
   el.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); choose(); } });
   el.querySelector('.scn-export-btn').addEventListener('click', e => {
     e.stopPropagation();
+    if(!scenarioQuestionsReady(s.id)) return;
     const rm = roleMetaFor(s.id);
     const isCustomRoles = rm !== DEFAULT_ROLE_META;
     const matrix = PARTICIPATION_MATRIX[s.id] || {};
@@ -1190,7 +1191,20 @@ function showFacilitatorContext(text){
   });
 }
 
+// Los escenarios predefinidos llegan cifrados y se descifran al entrar (js/scenario-vault.js);
+// los cargados desde Word ya están en QUESTIONS. Si el elegido todavía no está, se avisa por qué
+// en vez de fallar al armar las etapas.
+function scenarioQuestionsReady(scenarioId){
+  if(QUESTIONS[scenarioId]) return true;
+  const st = window.TIBOX_SCENARIOS || {status: 'error', error: 'El módulo de escenarios no cargó (revisa tu conexión).'};
+  showConfirmModal(st.status === 'loading'
+    ? {title: 'Cargando escenarios', message: 'Los escenarios predefinidos se están descifrando. Intenta de nuevo en unos segundos.', confirmText: 'Entendido', cancelText: null}
+    : {title: 'Escenarios no disponibles', message: `No se pudieron cargar los escenarios predefinidos: ${escapeHtml(st.error || 'error desconocido')}<br><br>Puedes recargar la página, o usar un escenario cargado desde Word.`, confirmText: 'Entendido', cancelText: null});
+  return false;
+}
+
 function startGameOrLobby(){
+  if(!scenarioQuestionsReady(selectedScenarioId)) return;
   if(!multiplayerEnabled){ showBriefing(startGame); return; }
   if(!window.MP){
     alert('El modo "Con celulares" no terminó de cargar (revisa tu conexión) — desactiva el toggle o recarga la página.');
