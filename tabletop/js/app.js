@@ -582,13 +582,14 @@ function customScenarioClient(data){
 }
 
 // Empresa de cada función según el catálogo de roles del cliente: devuelve 'TIBOX' o
-// 'cliente' a partir del nombre de la función. Catálogo EEV (skill /roles): de TIBOX son los
-// Ingenieros de Soporte N1/N2 y el TeamLeader; todos los demás cargos son de EEV. Operador de
-// Sala de Control y Jefe de Turno no están en el catálogo y se asumen de EEV.
+// 'cliente' a partir del nombre de la función. Catálogo EEV (skill /roles): de TIBOX son el
+// Ingeniero de Soporte N1, el Ingeniero de Soporte N2 (con o sin especialidad: Firewall,
+// Respaldos, M365, SOC) y el TeamLeader; todos los demás cargos son de EEV (Operador de Sala
+// de Control, Jefe de Turno, Encargado CIP, Área Legal, Ingeniero Proyectos y Soporte TI…).
 const ROLE_COMPANY_RULES = {
   eev: name => {
     const n = String(name || '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
-    return /\bn[12]\b|team\s*leader|tibox|mesa de ayuda/.test(n) ? 'TIBOX' : 'cliente';
+    return /\bn[12]\b|ingeniero de soporte|team\s*leader|tibox|mesa de ayuda/.test(n) ? 'TIBOX' : 'cliente';
   }
 };
 // Completa la empresa de las funciones que todavía no la tienen asignada (no pisa una
@@ -957,8 +958,8 @@ const RULE_DETAILS = {
     accent: '#0FC7F6',
     title: 'Se prepara el terreno antes de comenzar',
     why: 'En una crisis real, gran parte del caos inicial no lo causa el ataque, sino no saber quién está participando, qué está en juego y quién decide qué. Cuando el comité de respuesta se arma improvisando sobre la marcha, se pierden minutos valiosos — y esos minutos son los que más importan.',
-    how: 'Primero se elige el tipo de ataque que se va a simular (por ejemplo, un ransomware o un phishing dirigido) y se marca qué áreas de la organización participan en esta sesión: Tecnología (TI), Legal, Comunicaciones, Recursos Humanos y Dirección son opcionales según el caso, mientras que Seguridad y TI participan siempre. Junto con esto, se registra el perfil del cliente (su nombre y el del facilitador a cargo): es un dato obligatorio, y la aplicación no permite continuar sin completarlo.',
-    tip: 'Un plan de respuesta que nunca se ha ensayado con las personas reales de la organización es solo un documento. Mientras más parecida sea esta configuración inicial a la realidad de la organización, más útil resulta el diagnóstico que arroja el ejercicio al final.'
+    how: 'Primero se registra el perfil del cliente (su nombre y el del facilitador a cargo): es un dato obligatorio, y la aplicación no permite continuar sin completarlo. Luego se elige el escenario que se va a simular (por ejemplo, un ransomware o un phishing dirigido) y se marca qué funciones participan en esta sesión. Cada función es de uno de tres tipos: obligatoria (participa siempre), con suplente (si no asiste, otra función asume sus decisiones, tal como pasaría en la organización) u opcional (si no asiste, sus situaciones se omiten sin afectar el resto del ejercicio). Antes de comenzar, la aplicación muestra cómo queda el ejercicio con las funciones que faltan.',
+    tip: 'Un plan de respuesta que nunca se ha ensayado con las personas reales de la organización es solo un documento. Mientras más parecida sea esta configuración inicial a la realidad de la organización, más útil resulta el diagnóstico que arroja el ejercicio al final: si alguien no puede asistir, desmarcarlo también es realista, porque en un incidente de verdad no siempre están todos.'
   },
   2: {
     badge: 'Cómo avanza',
@@ -973,7 +974,7 @@ const RULE_DETAILS = {
     accent: '#FF8A3D',
     title: 'Actúa quien corresponde, no quien esté más disponible',
     why: 'En una crisis real, la persona más disponible no siempre es quien debe tomar la decisión — a veces por su función dentro de la organización, a veces porque esa decisión requiere una autoridad específica. Confundir esto genera respuestas desordenadas y, en el peor de los casos, decisiones tomadas por quien no tenía la atribución para hacerlo.',
-    how: 'Frente a cada situación planteada, se elige entre las funciones disponibles (por ejemplo, Seguridad, TI o Legal) cuál de ellas debería hacerse cargo de esa acción específica. Elegir una función que no corresponde cuenta como error, y antes de permitir un nuevo intento la aplicación explica por qué esa función no era la indicada.',
+    how: 'Frente a cada situación planteada, se elige entre las funciones que participan (por ejemplo, Seguridad, TI o Legal, o los cargos propios del escenario, como el Jefe de Turno, el Ingeniero de Soporte N1 o el TeamLeader) cuál de ellas debería hacerse cargo de esa acción específica. Si la función a la que normalmente le toca no participa hoy, la decisión es de quien la suple, y la aplicación lo indica al acertar. Elegir una función que no corresponde cuenta como error, y antes de permitir un nuevo intento la aplicación explica por qué esa función no era la indicada.',
     tip: 'Si durante el ejercicio hay dudas constantes sobre "a quién le toca esto", el problema no es el ejercicio en sí — es una señal de que, en la organización real, tampoco está del todo claro quién hace qué. Conviene anotarlo para conversarlo en el cierre de la sesión.'
   },
   4: {
@@ -989,7 +990,7 @@ const RULE_DETAILS = {
     accent: '#22D3A6',
     title: 'Lo que no se conversa después, se repite',
     why: 'Un ejercicio de simulación que termina sin conversar los resultados es, en el mejor de los casos, una tarde bien invertida y nada más. Lo más valioso de un tabletop —igual que el de un incidente real— está en la revisión posterior: qué salió bien, dónde hubo dificultades y qué acción concreta evita que el mismo error vuelva a ocurrir.',
-    how: 'Al terminar la última etapa, la aplicación genera automáticamente un puntaje general, un informe con los patrones de error más frecuentes y recomendaciones asociadas, y un acta de la sesión con los datos del cliente y del facilitador. Este informe se puede guardar en el navegador o descargar en formato JSON para adjuntarlo a un reporte propio de la organización.',
+    how: 'Al terminar la última etapa, la aplicación genera automáticamente un puntaje general, un informe con los patrones de error más frecuentes y recomendaciones asociadas, y un acta de la sesión con los datos del cliente y del facilitador. Este informe se puede guardar en el navegador y descargar en Word, PDF o JSON para adjuntarlo a un reporte propio de la organización. Si alguna función no participó, el informe deja anotado qué decisiones asumió su suplente.',
     tip: 'Conviene compartir el informe con el equipo mientras el ejercicio todavía está fresco en la memoria de todos. Un hallazgo que se detecta pero que nadie asume como propio para mejorarlo, tarde o temprano, vuelve a repetirse.'
   }
 };
@@ -1188,6 +1189,16 @@ function showBriefing(onStart, roomCode){
     const company = roleCompanyFor(k, id);
     return `<span class="briefing-role" style="--c:${c};"><span class="br-dot"></span><span class="br-name">${escapeHtml(rm.names[k])}</span>${company ? `<span class="br-org">${escapeHtml(company)}</span>` : ''}</span>`;
   }).join('') || '—';
+  // Funciones del escenario que hoy no participan, y quién asume sus decisiones: así el equipo
+  // sabe desde el inicio a quién le toca lo de la función ausente.
+  const absent = rm.keys.filter(k => getMatrix(id)[k] && !isRoleActive(k, id)).map(k => {
+    const sub = activeSuplenteFor(k, id);
+    return `${rm.names[k]} (${sub ? `la reemplaza ${rm.names[sub]}` : 'sus situaciones se omiten'})`;
+  });
+  if(absent.length){
+    document.getElementById('briefingRoles').insertAdjacentHTML('beforeend',
+      `<p class="briefing-absent"><b>No participan hoy:</b> ${escapeHtml(absent.join('; '))}.</p>`);
+  }
   const textEl = document.getElementById('briefingText');
   textEl.innerHTML = intro.split(/\n\s*\n/).filter(t => t.trim()).map(t => `<p>${escapeHtml(t.trim())}</p>`).join('');
   textEl.classList.toggle('hidden', !intro);
@@ -1413,6 +1424,18 @@ function resolveActTarget(q, scenarioId){
       seen.add(cur);
       cur = sup[cur];
     }
+  }
+  return null;
+}
+// Primera función activa en la cadena de suplentes de una función, o null si no hay ninguna.
+function activeSuplenteFor(roleKey, scenarioId){
+  const sup = roleMetaFor(scenarioId).suplente;
+  const seen = new Set([roleKey]);
+  let cur = sup[roleKey];
+  while(cur && !seen.has(cur)){
+    if(isRoleActive(cur, scenarioId)) return cur;
+    seen.add(cur);
+    cur = sup[cur];
   }
   return null;
 }

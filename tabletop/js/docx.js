@@ -62,18 +62,30 @@ const TibDocx = (function(){
   //   "(SUPLENTE: <función>)" si no participa, sus actos los asume esa otra función;
   //   "(OPCIONAL)"           si no participa, sus actos se omiten (escritos para no hacer falta).
   // Sin marca se trata como opcional, con un aviso al cargar. Un paréntesis final que no es una
-  // de estas marcas (ej. "Jefe de Turno (Planta)") se deja como parte del nombre.
+  // de estas marcas se deja como parte del nombre: así la especialidad del N2 sobrevive, también
+  // dentro del suplente — "Ingeniero de Soporte N1 (SUPLENTE: Ingeniero de Soporte N2 (SOC))".
+  // Devuelve [inicio, contenido] del último paréntesis balanceado al final del texto, o null.
+  function trailingParenGroup(text){
+    if(!/\)\s*$/.test(text)) return null;
+    const end = text.lastIndexOf(')');
+    let depth = 0;
+    for(let i = end; i >= 0; i--){
+      if(text[i] === ')') depth++;
+      else if(text[i] === '(' && --depth === 0) return [i, text.slice(i + 1, end)];
+    }
+    return null;
+  }
   function parseRoleDeclaration(value){
     let name = String(value || '').trim(), mandatory = false, optional = false, suplenteName = '';
-    let m;
-    while((m = name.match(/\(([^()]*)\)\s*$/))){
-      const inner = m[1].trim();
+    let g;
+    while((g = trailingParenGroup(name))){
+      const inner = g[1].trim();
       const norm = normLabel(inner);
       if(norm === 'OBLIGATORIA' || norm === 'OBLIGATORIO') mandatory = true;
       else if(norm === 'OPCIONAL') optional = true;
       else if(/^SUPLENTE\s*:/.test(norm)) suplenteName = inner.slice(inner.indexOf(':') + 1).trim();
       else break;
-      name = name.slice(0, m.index).trim();
+      name = name.slice(0, g[0]).trim();
     }
     return {name, mandatory, optional, suplenteName};
   }

@@ -114,8 +114,8 @@ etiquetas son opcionales.
 - `INTRODUCCION:` va **justo antes de la primera `ETAPA:`**: toma todos los párrafos que
   siguen hasta la próxima etiqueta.
 - Si el documento menciona "Quintero Energía" o "Empresa Eléctrica Ventanas", la tarjeta usa
-  el logo del cliente y la empresa de cada función se completa sola (N1, N2 y TeamLeader →
-  TIBOX; el resto → cliente).
+  el logo del cliente y la empresa de cada función se completa sola (Ingenieros de Soporte
+  N1/N2 y TeamLeader → TIBOX; el resto → cliente).
 
 ### Funciones que no participan: obligatorias, con suplente y opcionales
 
@@ -130,14 +130,21 @@ Cada función es de uno de tres tipos:
 
 ```
 FUNCION DEL ESCENARIO: Jefe de Turno (OBLIGATORIA)
-FUNCION DEL ESCENARIO: Equipo Soporte N1 (SUPLENTE: Equipo Soporte N2)
-FUNCION DEL ESCENARIO: Encargado CEN (OPCIONAL)
+FUNCION DEL ESCENARIO: TeamLeader (OBLIGATORIA)
+FUNCION DEL ESCENARIO: Ingeniero de Soporte N1 (SUPLENTE: Ingeniero de Soporte N2 (SOC))
+FUNCION DEL ESCENARIO: Ingeniero de Soporte N2 (SOC) (SUPLENTE: TeamLeader)
+FUNCION DEL ESCENARIO: Encargado CIP (OPCIONAL)
 ...
-FUNCION QUE RESPONDE: Encargada Legal
-SI NO PARTICIPA, RESPONDE: Jefe de Turno      ← opcional, solo para este acto
+FUNCION QUE RESPONDE: Ingeniero de Soporte N1
+SI NO PARTICIPA, RESPONDE: Ingeniero de Soporte N2 (Firewall)   ← opcional, solo para este acto
 ```
 
 - Una función sin marca se trata como opcional, con un aviso al cargar el Word.
+- Un paréntesis que no es una marca es parte del nombre: así la especialidad del N2 se
+  conserva, también dentro del suplente (`(SUPLENTE: Ingeniero de Soporte N2 (SOC))`).
+- Los cargos salen del catálogo de la skill `/roles` (Ingeniero de Soporte N1/N2, TeamLeader,
+  Encargado CIP, Área Legal…). Con el logo de EEV, la empresa se completa sola: los Ingenieros
+  de Soporte y el TeamLeader son de TIBOX; el resto, del cliente.
 - `SI NO PARTICIPA, RESPONDE:` (en un acto) manda sobre el tipo de la función.
 - Organigrama estándar (`catalogo.js` → `ROLE_MANDATORY`, `ROLE_SUPLENTES`, `ROLE_OPTIONAL`):
   Seguridad y TI obligatorias; Legal, Comunicaciones y RRHH → Dirección; Dirección → Seguridad.

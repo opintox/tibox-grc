@@ -1660,6 +1660,8 @@ body.briefing-mode .topbar-right{display:none;}
 .briefing-block-label{font-family:var(--mono); font-size:var(--fs-2xs); letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin-bottom:10px;}
 .briefing-target{margin:0; font-size:var(--fs-md); font-weight:600; color:var(--text); line-height:1.5;}
 .briefing-roles{display:flex; flex-wrap:wrap; gap:8px;}
+.briefing-absent{flex-basis:100%; margin:4px 0 0; font-size:var(--fs-xs); color:var(--muted); line-height:1.45;}
+.briefing-absent b{color:var(--text);}
 .briefing-role{
   display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:9px;
   background:rgba(255,255,255,0.03); border:1px solid var(--border); border-left:3px solid var(--c, var(--blue));
