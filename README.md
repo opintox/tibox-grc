@@ -13,6 +13,7 @@ Sitio estático (sin build ni dependencias de npm) publicado con GitHub Pages de
 /
 ├── index.html                 Inicio: tarjetas de las herramientas (protegido por login)
 ├── login.html                 Login: correo + contraseña + código TOTP
+├── firebase.json / .firebaserc  Para publicar las reglas de Firestore con Firebase CLI
 ├── shared/
 │   └── firebase-config.js     Config del proyecto Firebase (la usan login, tabletop y SGC)
 ├── auth/
@@ -23,7 +24,7 @@ Sitio estático (sin build ni dependencias de npm) publicado con GitHub Pages de
 ├── tabletop/
 │   ├── index.html             Todas las pantallas del facilitador (solo marcado)
 │   ├── join.html              Página del celular de cada participante
-│   ├── firestore.rules        Reglas de Firestore (se publican a mano en la consola)
+│   ├── firestore.rules        Reglas de Firestore (se publican con firebase deploy, ver abajo)
 │   ├── assets/                Logo e imágenes de las tarjetas de escenario
 │   ├── css/
 │   │   ├── styles.css         Tokens de diseño y estilos de todas las pantallas
@@ -174,8 +175,9 @@ sala queda cerrada, se borran todos los participantes y sus funciones, y cada ce
 de `isFacilitator()` (`tabletop/firestore.rules`) pueden entrar al sitio y crear salas. Para
 agregar a alguien, editar ambas listas y crearle la cuenta en Firebase Console.
 
-- Las reglas de `tabletop/firestore.rules` se publican a mano en Firebase Console →
-  Firestore → Reglas.
+- Las reglas de `tabletop/firestore.rules` se publican desde la raíz del repo con
+  `firebase deploy --only firestore:rules` (Firebase CLI: `npm i -g firebase-tools` y
+  `firebase login` la primera vez). Alternativa: pegarlas en Firebase Console → Firestore → Reglas.
 - Los celulares entran con sesión anónima de Firebase: en Authentication debe estar activo el
   proveedor Anónimo y permitida la creación de usuarios.
 - Si falla una escritura en Firestore, el facilitador ve un aviso en pantalla y puede seguir

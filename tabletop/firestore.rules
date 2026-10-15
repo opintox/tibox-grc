@@ -1,6 +1,7 @@
 // Reglas de seguridad para el modo "Con celulares" (ver plan de multijugador,
-// cosmic-roaming-walrus.md). Cárgalas en Firebase Console → Firestore Database → Reglas,
-// reemplazando las que trae por defecto, y publica.
+// cosmic-roaming-walrus.md). Se publican desde la raíz del repo con
+// `firebase deploy --only firestore:rules` (ver firebase.json), o pegándolas en Firebase
+// Console → Firestore Database → Reglas.
 //
 // Modelo de confianza: Auth anónima (1 uid estable por navegador/pestaña mientras dure la
 // sesión). No hay contraseñas ni cuentas reales — cualquiera con el código de sala puede
