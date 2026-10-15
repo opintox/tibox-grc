@@ -2118,17 +2118,63 @@ function showResults(){
   // ejercicio) y después se cierra la sala, lo que desconecta a todos los participantes.
   if(multiplayerEnabled && mpRoomCode && window.MP){
     gameState.personByRole = window.MP.getPersonByRole();
-    closeMultiplayerRoom();
+    closeMultiplayerRoom(buildPersonalSummaries()); // cada celular recibe su resumen antes de desconectarse
   }
   TabletopReport.show({gameState, participants, clientName, facilitatorName});
 }
 
 // Cierra la sala del modo "Con celulares" (si hay una abierta): borra participantes y
 // funciones reservadas y cada celular se desconecta solo (ver closeRoom en room.js).
-function closeMultiplayerRoom(){
+// summariesByRole: solo al terminar el ejercicio (ver buildPersonalSummaries).
+function closeMultiplayerRoom(summariesByRole){
   if(!mpRoomCode || !window.MP) return;
-  window.MP.closeRoom(mpRoomCode);
+  window.MP.closeRoom(mpRoomCode, summariesByRole);
   mpRoomCode = null;
+}
+
+// Resumen personal para el celular de cada persona (modo "Con celulares"): sus actos, cuántos
+// identificó el equipo y cuántos decidió a la primera, en qué dudó, a quién cubrió como
+// suplente y una recomendación. Sale del mismo registro acto por acto que el informe (actLog).
+// {roleKey: resumen}, solo para las funciones que alguien tomó desde un celular.
+function buildPersonalSummaries(){
+  const rm = roleMetaFor(gameState.scenarioId);
+  const scenario = SCENARIOS.find(s => s.id === gameState.scenarioId);
+  const out = {};
+  Object.keys(gameState.personByRole || {}).forEach(k => {
+    const own = gameState.actLog.filter(a => a.target === k);
+    const doubts = own.filter(a => a.wrongOptions.length).map(a => actTitleText(a.title) || a.stage);
+    const summary = {
+      roleName: rm.names[k] || k,
+      scenarioName: scenario ? scenario.name : '',
+      acts: own.length,
+      roleFirst: own.filter(a => a.wrongRoles.length === 0).length,
+      decisionFirst: own.filter(a => a.wrongOptions.length === 0).length,
+      wrongAnswers: own.reduce((n, a) => n + a.wrongOptions.length, 0),
+      chosenByMistake: gameState.actLog.reduce((n, a) => n + a.wrongRoles.filter(r => r === k).length, 0),
+      covered: [...new Set(own.filter(a => a.reassignedFrom).map(a => rm.names[a.reassignedFrom] || a.reassignedFrom))],
+      doubts: doubts.slice(0, 5)
+    };
+    summary.recommendation = personalRecommendation(summary);
+    out[k] = summary;
+  });
+  return out;
+}
+function personalRecommendation(s){
+  const veces = n => `${n} ${n === 1 ? 'vez' : 'veces'}`;
+  let text;
+  if(s.acts === 0){
+    text = 'Esta vez no te tocó responder ningún acto. Conversa con el equipo en qué momentos del incidente le habría correspondido actuar a tu función.';
+  } else if(s.wrongAnswers > 0){
+    text = `Repasa ${s.doubts.length === 1 ? 'la decisión' : 'las decisiones'} de ${s.doubts.map(t => `«${t}»`).join(', ')}: es donde hubo dudas. Revisa la explicación de la alternativa correcta en el informe del facilitador.`;
+  } else if(s.roleFirst < s.acts){
+    text = 'Tus decisiones fueron correctas a la primera, pero al equipo le costó identificar cuándo te tocaba actuar: conviene dejar más claro qué hace tu función en un incidente.';
+  } else {
+    text = 'Muy bien: el equipo supo cuándo te tocaba y tus decisiones fueron correctas a la primera. Comparte con los demás cómo lo razonaste.';
+  }
+  if(s.chosenByMistake > 0){
+    text += ` Además, el equipo te eligió ${veces(s.chosenByMistake)} cuando la acción le correspondía a otra función: puede que tu función se confunda con otra.`;
+  }
+  return text.slice(0, 1000); // tope de firestore.rules
 }
 
 function backToSetup(){

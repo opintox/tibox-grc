@@ -4,7 +4,7 @@
 // Expone window.MP para que app.js (script clásico, no módulo) lo llame sin imports.
 import {
   createRoom, listenParticipants, startRoom, publishAct, setActPhase, openAnswering, publishBriefing,
-  resolveCodeAttempt, resetCodeAttempts, rejectParticipant, closeRoom,
+  resolveCodeAttempt, resetCodeAttempts, rejectParticipant, closeRoom, publishSummaries,
   PARTICIPANT_STATUS, MAX_CODE_ATTEMPTS, isAdmitted, codeAttemptsUsed
 } from './room.js';
 
@@ -65,10 +65,21 @@ function stopAdmissionWatch(){
 
 // Cierra el ejercicio: corta la escucha, olvida los códigos y borra a todos los participantes
 // y sus funciones (ver closeRoom en room.js); cada celular se desconecta solo al detectarlo.
-function mpCloseRoom(code){
+// summariesByRole (opcional, solo al terminar el ejercicio): {roleKey: resumen personal}. Se
+// publica ANTES de cerrar, para que el celular ya lo encuentre al detectar el cierre; si falla
+// (ej. reglas sin publicar), se avisa y la sala se cierra igual.
+function mpCloseRoom(code, summariesByRole){
+  const people = lastParticipants.filter(p => isAdmitted(p) && p.claimedRoleKey);
   stopAdmissionWatch();
   closeRoomPanel();
-  closeRoom(code).catch(err => reportSyncError('cerrar la sala y desconectar a los participantes', err));
+  (async () => {
+    if(summariesByRole){
+      const list = people.filter(p => summariesByRole[p.claimedRoleKey]).map(p => ({uid: p.uid, ...summariesByRole[p.claimedRoleKey]}));
+      try{ await publishSummaries(code, list); }
+      catch(err){ reportSyncError('enviar el resumen personal a cada celular', err); }
+    }
+    await closeRoom(code);
+  })().catch(err => reportSyncError('cerrar la sala y desconectar a los participantes', err));
 }
 
 function joinUrlFor(code){

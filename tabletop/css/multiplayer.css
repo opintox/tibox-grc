@@ -121,6 +121,26 @@ body.lobby-mode .topbar-right{display:none;}
 .join-briefing-text p{margin:0 0 12px;}
 .join-briefing-text p:last-child{margin-bottom:0;}
 
+/* "Te toca a ti": destello del panel de respuesta cuando le toca a esta persona (ver alertMyTurn). */
+.join-panel.is-my-turn{animation:joinMyTurn 1.2s ease-out 2;}
+@keyframes joinMyTurn{
+  0%{box-shadow:0 0 0 0 rgba(255,138,61,0.75);}
+  100%{box-shadow:0 0 0 14px rgba(255,138,61,0);}
+}
+@media (prefers-reduced-motion: reduce){.join-panel.is-my-turn{animation:none; outline:2px solid #FF8A3D;}}
+
+/* Resumen personal al terminar (ver renderSummary en participant-app.js) */
+.join-summary-stats{display:flex; flex-direction:column; gap:8px; margin:16px 0;}
+.join-summary-stat{
+  padding:10px 12px; border-radius:9px; font-size:var(--fs-sm); font-weight:600; color:var(--text);
+  background:rgba(255,255,255,0.04); border:1px solid var(--border); border-left:3px solid #FF8A3D;
+}
+.join-summary-body{font-size:var(--fs-sm); line-height:1.6; color:var(--text);}
+.join-summary-body p{margin:0 0 10px;}
+.join-summary-body ul{margin:0 0 12px; padding-left:20px;}
+.join-summary-tip{padding:12px 14px; border-radius:10px; background:var(--blue-dim); border:1px solid rgba(14,165,233,0.35); color:#BFE6FA;}
+.join-summary-foot{margin:14px 0 0; font-size:var(--fs-2xs); color:var(--muted-2); line-height:1.45;}
+
 /* Aviso de falla de sincronización con los celulares (ver reportSyncError en facilitator.js) */
 .mp-sync-alert{
   position:fixed; left:50%; bottom:24px; transform:translate(-50%, 16px); z-index:1000;

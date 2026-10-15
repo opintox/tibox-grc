@@ -194,6 +194,23 @@ service cloud.firestore {
         // Al cerrar el ejercicio el facilitador borra a todos los participantes (ver closeRoom).
         allow delete: if isRoomFacilitator(roomCode);
       }
+
+      // Resumen personal de cada participante al terminar (aciertos, dudas, recomendación).
+      // Privado: a diferencia de participants, solo lo lee la persona a la que pertenece (y el
+      // facilitador). Lo escribe solo el facilitador de la sala; se limpia por TTL (expiresAt).
+      match /summaries/{uid} {
+        allow get: if request.auth != null && (request.auth.uid == uid || isRoomFacilitator(roomCode));
+        allow list: if false;
+        allow create, update: if isRoomFacilitator(roomCode)
+          && request.resource.data.keys().hasOnly(['uid', 'roleName', 'scenarioName', 'acts', 'roleFirst', 'decisionFirst', 'wrongAnswers', 'chosenByMistake', 'covered', 'doubts', 'recommendation', 'createdAt', 'expiresAt'])
+          && request.resource.data.uid == uid
+          && request.resource.data.covered is list
+          && request.resource.data.doubts is list
+          && request.resource.data.recommendation is string
+          && request.resource.data.recommendation.size() <= 1000
+          && request.resource.data.expiresAt is timestamp;
+        allow delete: if false;
+      }
     }
   }
 }

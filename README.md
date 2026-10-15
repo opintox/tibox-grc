@@ -214,6 +214,21 @@ Si el facilitador recarga la página, los códigos dados se pierden: se da uno n
 sala queda cerrada, se borran todos los participantes y sus funciones, y cada celular muestra
 "Ejercicio finalizado" y cierra su sesión.
 
+**Experiencia personal en el celular:**
+- *Te toca a ti*: cuando le corresponde responder a la función de esa persona, el celular la
+  llama por su nombre ("María, te toca a ti"), vibra (Android; iPhone no lo permite) y destaca
+  el panel de respuesta.
+- *Resumen personal*: al terminar el ejercicio, antes de cerrar la sala, el facilitador deja
+  en `rooms/{código}/summaries/{uid}` el resumen de cada persona: sus actos, cuántos identificó
+  el equipo y cuántos decidió a la primera, en qué dudó, a quién cubrió como suplente y una
+  recomendación. Lo lee **solo** esa persona (lo exigen las reglas: a diferencia de
+  `participants`, que lee toda la sala) y se ve en su celular al cerrarse el ejercicio. Salir
+  con ✕ o volver desde la sala de espera no deja resumen.
+- Requiere las reglas publicadas (`firebase deploy --only firestore:rules`); si no, el resumen
+  no se guarda (el facilitador ve un aviso) y la sala se cierra igual. Para que los resúmenes
+  se borren solos, agregar en Firebase Console → Firestore → TTL una política para el grupo de
+  colecciones `summaries`, campo `expiresAt`.
+
 **Facilitadores:** solo los correos de la lista `ALLOWED_FACILITATORS` (`auth/auth-core.js`) y
 de `isFacilitator()` (`tabletop/firestore.rules`) pueden entrar al sitio y crear salas. Para
 agregar a alguien, editar ambas listas y crearle la cuenta en Firebase Console.

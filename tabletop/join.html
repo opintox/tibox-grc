@@ -69,10 +69,20 @@
   </div>
 
   <div class="panel section-block join-panel hidden" id="joinAnswerPanel">
-    <div class="eyebrow">Te toca a ti</div>
+    <div class="eyebrow" id="joinAnswerEyebrow">Te toca a ti</div>
     <h1 class="section-title">¿Qué decisión debe tomar?</h1>
     <p class="join-vote-status" id="joinAnswerStatus">Elige la alternativa correcta.</p>
     <div class="answer-options" id="joinAnswerGrid"></div>
+  </div>
+
+  <!-- Resumen personal al terminar: solo lo ve esta persona (rooms/{code}/summaries/{uid}). -->
+  <div class="panel section-block join-panel hidden" id="joinSummaryPanel">
+    <div class="eyebrow">Tu resumen</div>
+    <h1 class="section-title" id="joinSummaryTitle"></h1>
+    <p class="section-sub" id="joinSummaryScenario"></p>
+    <div class="join-summary-stats" id="joinSummaryStats"></div>
+    <div class="join-summary-body" id="joinSummaryBody"></div>
+    <p class="join-summary-foot">Este resumen es solo para ti: nadie más en la sala lo ve. Si quieres conservarlo, sácale una captura antes de cerrar esta página.</p>
   </div>
 
 </div>

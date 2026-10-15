@@ -214,6 +214,28 @@ export async function closeRoom(code){
   await batch.commit();
 }
 
+// ---------------- resumen personal (al terminar) ----------------
+// Un documento por participante en rooms/{code}/summaries/{uid}, que solo puede leer ese mismo
+// uid (y el facilitador): a diferencia de participants, que lee toda la sala, acá van los
+// aciertos y dudas de cada persona. Lo escribe el facilitador justo antes de closeRoom, y el
+// celular lo lee al detectar el cierre, antes de cerrar su sesión (ver participant-app.js).
+// summaries: [{uid, roleName, scenarioName, acts, roleFirst, decisionFirst, wrongAnswers,
+// chosenByMistake, covered: [nombres], doubts: [títulos], recommendation}]
+export async function publishSummaries(code, summaries){
+  if(!summaries.length) return;
+  const {db} = await firebaseReady();
+  const expiresAt = Timestamp.fromMillis(Date.now() + ROOM_TTL_MS);
+  const batch = writeBatch(db);
+  summaries.forEach(s => batch.set(doc(db, 'rooms', code, 'summaries', s.uid), {...s, createdAt: serverTimestamp(), expiresAt}));
+  await batch.commit();
+}
+
+export async function getMySummary(code){
+  const {db, uid} = await firebaseReady();
+  const snap = await getDoc(doc(db, 'rooms', code, 'summaries', uid));
+  return snap.exists() ? snap.data() : null;
+}
+
 // El facilitador cierra el lobby y arranca el ejercicio (status -> 'in_progress'). A partir
 // de acá join.html ya no deja sumarse (ver joinRoom).
 export async function startRoom(code){

@@ -3,7 +3,7 @@
 // celular, responder la alternativa (Fase 3).
 import {
   getRoom, getMyParticipant, listenRoom, listenParticipants, listenMyParticipant, joinRoom, castVote, submitAnswer,
-  submitAccessCode, PARTICIPANT_STATUS, MAX_CODE_ATTEMPTS, codeAttemptsUsed
+  submitAccessCode, getMySummary, PARTICIPANT_STATUS, MAX_CODE_ATTEMPTS, codeAttemptsUsed
 } from './room.js';
 import { signOut } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 
@@ -33,6 +33,8 @@ const answerGrid = document.getElementById('joinAnswerGrid');
 const joinBriefing = document.getElementById('joinBriefing');
 const joinBriefingTitle = document.getElementById('joinBriefingTitle');
 const joinBriefingText = document.getElementById('joinBriefingText');
+const answerEyebrow = document.getElementById('joinAnswerEyebrow');
+const summaryPanel = document.getElementById('joinSummaryPanel');
 
 let unsubscribeParticipants = null;
 let unsubscribeRoom = null;
@@ -50,6 +52,12 @@ let unsubscribeMine = null;
 let lastRoom = null;
 let me = null;            // último documento propio (intentos de código, resultado)
 let sessionEnded = false; // la sala se cerró: ya no se escucha ni se escribe nada
+let lastAlertedActKey = null; // el aviso de "te toca" (vibración) suena una sola vez por acto
+
+// Primer nombre de la persona (lo que escribió al unirse), para hablarle directo.
+function firstName(){
+  return String((me && me.displayName) || '').trim().split(/\s+/)[0] || '';
+}
 
 function setStatus(text, kind){
   statusEl.textContent = text || '';
@@ -199,7 +207,9 @@ function enterWaitingMode(code, roleKey, roleRoster, room, status){
 
 // Fin del ejercicio: se cortan las escuchas, se ocultan votación/respuestas y se cierra la
 // sesión anónima de este celular (queda desconectado de la sala).
-function endSession(){
+// Si el ejercicio terminó (no solo se cerró la sala), antes de cerrar la sesión se lee el
+// resumen personal que dejó el facilitador: después del signOut ya no se podría leer.
+async function endSession(){
   if(sessionEnded) return;
   sessionEnded = true;
   stopWatchingRoom();
@@ -212,10 +222,33 @@ function endSession(){
   joinWaitingEyebrow.textContent = 'Ejercicio finalizado';
   joinWaitingText.textContent = 'El facilitador cerró el ejercicio y tu conexión a la sala terminó. ¡Gracias por participar!';
   const fb = window.TIBOX_MP_FIREBASE;
-  if(fb){
-    fb.sessionEnded = true; // firebase-init no vuelve a abrir una sesión anónima
-    if(fb.auth) signOut(fb.auth).catch(() => {});
+  if(fb) fb.sessionEnded = true; // firebase-init no vuelve a abrir una sesión anónima
+  if(myStatus === PARTICIPANT_STATUS.ADMITTED && currentCode){
+    const summary = await getMySummary(currentCode).catch(() => null);
+    if(summary) renderSummary(summary);
   }
+  if(fb && fb.auth) signOut(fb.auth).catch(() => {});
+}
+
+function renderSummary(s){
+  const name = firstName();
+  document.getElementById('joinSummaryTitle').textContent = name ? `${name}, así te fue` : 'Así te fue';
+  document.getElementById('joinSummaryScenario').textContent = [s.roleName, s.scenarioName].filter(Boolean).join(' · ');
+  const de = (n, total) => `${n} de ${total}`;
+  const stats = s.acts
+    ? [`${s.acts} acto${s.acts === 1 ? '' : 's'} a tu cargo`,
+       `Decisión a la primera: ${de(s.decisionFirst, s.acts)}`,
+       `El equipo te identificó a la primera: ${de(s.roleFirst, s.acts)}`]
+    : ['Sin actos a tu cargo'];
+  document.getElementById('joinSummaryStats').innerHTML = stats.map(t => `<span class="join-summary-stat">${escapeHtmlLocal(t)}</span>`).join('');
+  const parts = [];
+  if((s.covered || []).length) parts.push(`<p><b>Hoy cubriste a:</b> ${escapeHtmlLocal(s.covered.join(', '))}.</p>`);
+  if((s.doubts || []).length) parts.push(`<p><b>Donde dudaste:</b></p><ul>${s.doubts.map(t => `<li>${escapeHtmlLocal(t)}</li>`).join('')}</ul>`);
+  parts.push(`<p class="join-summary-tip">${escapeHtmlLocal(s.recommendation || '')}</p>`);
+  document.getElementById('joinSummaryBody').innerHTML = parts.join('');
+  waitingPanel.classList.add('hidden');
+  summaryPanel.classList.remove('hidden');
+  window.scrollTo({top: 0});
 }
 
 // Pantalla de espera mientras este celular no está admitido (pendiente o rechazado).
@@ -329,6 +362,7 @@ function handleActUpdate(room, roleRoster){
     waitingPanel.classList.add('hidden');
     answerPanel.classList.remove('hidden');
     if(act.actKey === lastAnsweredActKey) return; // ya se pintó/envió este acto, no repintar
+    alertMyTurn(act.actKey);
     renderAnswerGrid(act);
   } else {
     answerPanel.classList.add('hidden');
@@ -336,6 +370,18 @@ function handleActUpdate(room, roleRoster){
     const role = roleRoster.find(r => r.roleKey === act.target);
     joinWaitingText.textContent = `Turno de ${role ? role.name : (act.target || 'otra función')} — está respondiendo…`;
   }
+}
+
+// Aviso de que le toca responder a esta persona: su nombre arriba, vibración (en los celulares
+// que la permiten; iPhone no) y un destello del panel, una sola vez por acto.
+function alertMyTurn(actKey){
+  const name = firstName();
+  answerEyebrow.textContent = name ? `${name}, te toca a ti` : 'Te toca a ti';
+  if(actKey === lastAlertedActKey) return;
+  lastAlertedActKey = actKey;
+  try{ if(navigator.vibrate) navigator.vibrate([180, 90, 180]); }catch(e){ /* sin vibración: no es crítico */ }
+  answerPanel.classList.remove('is-my-turn'); void answerPanel.offsetWidth; answerPanel.classList.add('is-my-turn');
+  answerPanel.scrollIntoView({block: 'start', behavior: 'smooth'});
 }
 
 // briefing: {title, intro} publicado por el facilitador (ver publishBriefing en room.js), o
