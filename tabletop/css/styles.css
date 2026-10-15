@@ -1564,7 +1564,7 @@
   .builder-role-item{flex-wrap:wrap;}
   .builder-role-item input[type="text"]{min-width:180px;}
   .builder-role-item select{width:auto; flex:0 1 230px; min-width:0;}
-  .builder-role-mandatory{padding:8px 12px; white-space:nowrap;}
+  .builder-warnings{margin-top:10px;}
 
   /* Paso 3: lista de etapas, cada una con su lista de actos. */
   .builder-stage-list{display:flex; flex-direction:column; gap:14px;}

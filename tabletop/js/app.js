@@ -41,10 +41,10 @@ const ROLE_DESCRIPTIONS = {
 const DEFAULT_ROLE_META = {
   keys: ROLE_KEYS, names: ROLE_NAMES, icons: ROLE_ICONS, color: ROLE_COLOR,
   desc: ROLE_DESCRIPTIONS, org: ROLE_ORG, accents: ROLE_ACCENTS,
-  // mandatory: funciones que no se pueden desmarcar en participantes. suplente: quién asume los
-  // actos de una función que no participa (el organigrama estándar no define suplentes: esos
-  // actos se omiten, salvo que el acto traiga su propio "SI NO PARTICIPA, RESPONDE").
-  mandatory: {ti: true, seguridad: true}, suplente: {}
+  // Tipo de cada función cuando no participa (ver ROLE_MANDATORY en catalogo.js): obligatoria
+  // (no se puede desmarcar), con suplente (otra función asume sus actos) u opcional (sus actos
+  // se omiten). Un acto puede traer además su propio "SI NO PARTICIPA, RESPONDE" (q.backup).
+  mandatory: ROLE_MANDATORY, suplente: ROLE_SUPLENTES, optional: ROLE_OPTIONAL
 };
 // Los 4 colores oficiales de TIBOX (brand book "TIBOX AI Knowledge v0.2", ver también
 // SCENARIO_ACCENTS en catalogo.js): las tres caras del cubo — cian, amarillo, naranjo — y el
@@ -76,30 +76,34 @@ function roleExplainIconHtml(rm, roleKey){
   const [c1] = (rm.accents && rm.accents[roleKey]) || ['#8592AE'];
   return `<span class="ex-role-icon" style="background:${hexToRgba(c1, 0.18)}; color:${c1};">${icon}</span>`;
 }
-// roleList: [{key, name, mandatory?, suplente?}] en el orden en que el documento las declaró.
+// roleList: [{key, name, mandatory?, optional?, suplente?}] en el orden en que el documento las
+// declaró. Una función sin tipo se comporta como opcional, pero no se marca: así el Word
+// exportado la deja igual que venía (y el aviso de "sin tipo" se mantiene).
 function buildCustomRoleMeta(roleList){
   const keys = roleList.map(r => r.key);
-  const names = {}, icons = {}, color = {}, desc = {}, org = {}, accents = {}, mandatory = {}, suplente = {};
+  const names = {}, icons = {}, color = {}, desc = {}, org = {}, accents = {}, mandatory = {}, suplente = {}, optional = {};
   roleList.forEach((r, i) => {
     const palette = CUSTOM_ROLE_PALETTE[i % CUSTOM_ROLE_PALETTE.length];
     names[r.key] = r.name;
     if(r.mandatory) mandatory[r.key] = true;
     else if(r.suplente && keys.includes(r.suplente) && r.suplente !== r.key) suplente[r.key] = r.suplente;
+    else if(r.optional) optional[r.key] = true;
     icons[r.key] = initialsIconSvg(r.name);
     color[r.key] = palette.color;
     accents[r.key] = palette.accent;
     desc[r.key] = '';
     org[r.key] = 'Cliente';
   });
-  return {keys, names, icons, color, desc, org, accents, mandatory, suplente};
+  return {keys, names, icons, color, desc, org, accents, mandatory, suplente, optional};
 }
-// Lista {key, name, mandatory?, suplente?} de un organigrama propio: lo que vuelve a escribir
-// el Word exportado (ver TibDocx.downloadScenarioDocx).
+// Lista {key, name, mandatory?, optional?, suplente?} de un organigrama propio: lo que vuelve
+// a escribir el Word exportado (ver TibDocx.downloadScenarioDocx).
 function customRoleListFor(rm){
   return rm.keys.map(k => {
     const r = {key: k, name: rm.names[k]};
     if(rm.mandatory[k]) r.mandatory = true;
     if(rm.suplente[k]) r.suplente = rm.suplente[k];
+    if(rm.optional[k]) r.optional = true;
     return r;
   });
 }
@@ -667,8 +671,9 @@ function renderParticipants(){
     const locked = !!rm.mandatory[p.roleKey];
     const supKey = rm.suplente[p.roleKey];
     const roleRule = locked ? 'Obligatoria: participa siempre.'
-      : supKey ? `Si no participa, sus actos los asume ${rm.names[supKey] || supKey}.`
-      : rm === DEFAULT_ROLE_META ? '' : 'Sin suplente: si no participa, sus actos se omiten.';
+      : supKey ? `Con suplente: si no participa, la reemplaza ${rm.names[supKey] || supKey}.`
+      : rm.optional[p.roleKey] ? 'Opcional: si no participa, sus actos se omiten sin afectar el ejercicio.'
+      : 'Sin tipo definido: si no participa, sus actos se omiten.';
     const card = document.createElement('div');
     card.className = 'participant-card' + (p.checked ? '' : ' row-inactive');
     const [pBarColor] = (rm.accents && rm.accents[p.roleKey]) || ['#8592AE'];
@@ -1329,8 +1334,14 @@ document.getElementById('loadPlaybookBtn').addEventListener('click', async () =>
     profileSaved = false;
     updateBottomState();
     saveSetupState();
-    playbookStatus.style.color = 'var(--green)';
-    playbookStatus.textContent = `Escenario "${data.name}" cargado y seleccionado para esta sesión — continúa a "Tipo de ataque" para verlo.`;
+    const loaded = `Escenario "${data.name}" cargado y seleccionado para esta sesión — continúa a "Tipo de ataque" para verlo.`;
+    // Avisos sobre funciones que se desmarquen (tipos, suplentes, textos que nombran a quien
+    // responde): no impiden jugar, pero conviene corregirlos en el Word.
+    const warnings = data.warnings || [];
+    playbookStatus.style.color = warnings.length ? 'var(--amber)' : 'var(--green)';
+    playbookStatus.innerHTML = escapeHtml(loaded) + (warnings.length
+      ? `<br><br><b>Revisa en el Word (${warnings.length}):</b><br>${warnings.map(w => '• ' + escapeHtml(w)).join('<br>')}`
+      : '');
   }catch(e){
     playbookStatus.style.color = 'var(--red)';
     playbookStatus.textContent = e.message || 'No se pudo leer el documento.';
@@ -1391,6 +1402,8 @@ function sampleVariants(qs){
 // se omite.
 function resolveActTarget(q, scenarioId){
   if(isRoleActive(q.target, scenarioId)) return q.target;
+  // Función que ni siquiera juega en este escenario (fuera de la matriz): el acto no aplica.
+  if(!getMatrix(scenarioId)[q.target]) return null;
   const sup = roleMetaFor(scenarioId).suplente;
   const seen = new Set([q.target]);
   for(const start of [q.backup, sup[q.target]]){
@@ -1454,22 +1467,26 @@ function buildStagesForSession(scenarioId){
 function sessionAdaptationSummary(scenarioId){
   const rm = roleMetaFor(scenarioId);
   const isStandard = rm === DEFAULT_ROLE_META;
+  const matrix = getMatrix(scenarioId);
   const byRole = {};
-  const entry = k => (byRole[k] = byRole[k] || {moved: {}, omitted: 0});
+  const entry = k => (byRole[k] = byRole[k] || {moved: {}, omitted: []});
   const emptyStages = [];
   planSessionStages(scenarioId).forEach(({stageEntry, kept, omitted}) => {
     if(isStandard && stageEntry.stage === 'Cierre') return; // lo resuelve la regla de cierre
     variantGroups(kept).forEach(([q]) => {
       if(q.reassignedFrom){ const e = entry(q.reassignedFrom); e.moved[q.target] = (e.moved[q.target] || 0) + 1; }
     });
-    variantGroups(omitted).forEach(([q]) => { entry(q.target).omitted++; });
+    variantGroups(omitted).forEach(([q]) => { if(matrix[q.target]) entry(q.target).omitted.push(actTitleText(q.title) || stageEntry.stage); });
     if(kept.length === 0) emptyStages.push(stageEntry.stage);
   });
   const actos = n => `${n} acto${n === 1 ? '' : 's'}`;
   const lines = rm.keys.filter(k => byRole[k]).map(k => {
     const e = byRole[k];
     const parts = Object.keys(e.moved).map(to => `${actos(e.moved[to])} ${e.moved[to] === 1 ? 'pasa' : 'pasan'} a ${rm.names[to] || to}`);
-    if(e.omitted) parts.push(`${actos(e.omitted)} se ${e.omitted === 1 ? 'omite' : 'omiten'} (sin suplente)`);
+    if(e.omitted.length){
+      const why = rm.optional[k] ? 'es opcional' : rm.suplente[k] ? 'su suplente tampoco participa' : 'no tiene tipo definido';
+      parts.push(`se ${e.omitted.length === 1 ? 'omite' : 'omiten'} ${actos(e.omitted.length)} porque ${why} (${e.omitted.map(t => `«${t}»`).join(', ')})`);
+    }
     return `Sin ${rm.names[k] || k}: ${parts.join('; ')}.`;
   });
   if(emptyStages.length){

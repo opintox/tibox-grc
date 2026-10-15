@@ -89,6 +89,7 @@ Al publicar en GitHub Pages, los cambios en `main` quedan en línea en 1–2 min
 | Ajustar la escala tipográfica | `tabletop/css/styles.css` → tokens `--fs-*` |
 | Agregar o editar un tipo de ataque | `js/data/catalogo.js` → `SCENARIOS`, `SCENARIO_BLURBS`, `SCENARIO_TARGETS`, `SCENARIO_ACCENTS`, `SCENARIO_ICONS` |
 | Cambiar quién participa en un escenario | `js/data/catalogo.js` → `PARTICIPATION_MATRIX` |
+| Cambiar qué funciones estándar son obligatorias, opcionales o quién las suple | `js/data/catalogo.js` → `ROLE_MANDATORY`, `ROLE_SUPLENTES`, `ROLE_OPTIONAL` |
 | Escribir o corregir el relato de un escenario | `private/escenarios.js` (fuera del repo) y luego `node tools/encrypt-escenarios.mjs` |
 | Cambiar la introducción previa a la primera etapa | `js/data/catalogo.js` → `SCENARIO_INTROS` |
 | Agregar o cambiar una pantalla | `tabletop/index.html` (marcado) + `js/screens.js` (registrarla) |
@@ -116,32 +117,39 @@ etiquetas son opcionales.
   el logo del cliente y la empresa de cada función se completa sola (N1, N2 y TeamLeader →
   TIBOX; el resto → cliente).
 
-### Funciones que no participan (obligatorias y suplentes)
+### Funciones que no participan: obligatorias, con suplente y opcionales
 
-En el paso **Participantes** se puede desmarcar cualquier función que no sea obligatoria, y el
-ejercicio se adapta. Los actos de una función desmarcada no se pierden si alguien la reemplaza:
+En el paso **Participantes** se desmarcan las funciones que no asisten y el ejercicio se adapta.
+Cada función es de uno de tres tipos:
+
+| Tipo | En el Word | Si no participa… |
+|---|---|---|
+| Obligatoria | `(OBLIGATORIA)` | No se puede desmarcar |
+| Con suplente | `(SUPLENTE: otra función)` | Sus actos los asume el suplente (y si falta, el suplente del suplente) |
+| Opcional | `(OPCIONAL)` | Sus actos se omiten: se escriben para que el resto no dependa de ellos |
 
 ```
 FUNCION DEL ESCENARIO: Jefe de Turno (OBLIGATORIA)
-FUNCION DEL ESCENARIO: Ingeniero de Soporte N1 (SUPLENTE: Jefe de Turno)
-FUNCION DEL ESCENARIO: Encargado Legal (SUPLENTE: Gerente General)
+FUNCION DEL ESCENARIO: Equipo Soporte N1 (SUPLENTE: Equipo Soporte N2)
+FUNCION DEL ESCENARIO: Encargado CEN (OPCIONAL)
 ...
-FUNCION QUE RESPONDE: Encargado Legal
+FUNCION QUE RESPONDE: Encargada Legal
 SI NO PARTICIPA, RESPONDE: Jefe de Turno      ← opcional, solo para este acto
 ```
 
-- `(OBLIGATORIA)`: no se puede desmarcar. En el organigrama estándar lo son TI y Seguridad.
-- `(SUPLENTE: …)`: si la función no participa, sus actos pasan al suplente; si el suplente
-  tampoco participa, se sigue con el suplente del suplente.
-- `SI NO PARTICIPA, RESPONDE:` (en un acto) manda sobre el suplente de la función. Sirve también
-  en el organigrama estándar, que no tiene suplentes.
-- Sin respaldo, los actos de la función se omiten. Si una etapa queda sin actos, se juega su
-  primer acto con Seguridad (estándar) o con la primera función obligatoria activa.
-- El paso Participantes muestra el resumen ("Sin Encargado Legal: 2 actos pasan a Gerente
-  General"). En el juego, al acertar la función, se avisa que actúa como suplente; el informe
-  lo deja anotado en el detalle acto por acto.
-- Conviene escribir las situaciones sin nombrar el cargo que responde, para que el relato
-  calce igual cuando lo asume el suplente.
+- Una función sin marca se trata como opcional, con un aviso al cargar el Word.
+- `SI NO PARTICIPA, RESPONDE:` (en un acto) manda sobre el tipo de la función.
+- Organigrama estándar (`catalogo.js` → `ROLE_MANDATORY`, `ROLE_SUPLENTES`, `ROLE_OPTIONAL`):
+  Seguridad y TI obligatorias; Legal, Comunicaciones y RRHH → Dirección; Dirección → Seguridad.
+  Una función que no está en `PARTICIPATION_MATRIX` para un escenario no juega en él: sus actos
+  se omiten siempre.
+- Si una etapa queda sin actos, se juega su primer acto con Seguridad (estándar) o con la
+  primera función obligatoria activa.
+- Al cargar un Word se avisa (sin bloquear) si hay funciones sin tipo, ninguna obligatoria,
+  suplentes en círculo o actos cuyo texto nombra al cargo que responde (no calzaría con el
+  suplente). El constructor guiado muestra los mismos avisos en "Revisar y generar".
+- El paso Participantes resume qué pasa con cada función desmarcada, con los títulos de los
+  actos que se omiten. En el juego se avisa cuando actúa un suplente, y el informe lo anota.
 
 ## Escenarios predefinidos cifrados
 

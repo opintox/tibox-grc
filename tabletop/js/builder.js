@@ -29,6 +29,10 @@ window.TabletopBuilder = (function(){
     return ['seguridad', 'ti', ...builderState.extraRoleKeys].map(k => ({key:k, name: ROLE_NAMES[k]}));
   }
   function builderIsCustomRoles(){ return builderState.roleMode === 'custom'; }
+  // Tipo de una función propia: 'mandatory', 'optional', 'sup:<key>' o '' (sin elegir).
+  function roleKindValue(r){
+    return r.mandatory ? 'mandatory' : r.optional ? 'optional' : r.suplente ? 'sup:' + r.suplente : '';
+  }
 
   function builderValidate(){
     const errors = [];
@@ -37,6 +41,10 @@ window.TabletopBuilder = (function(){
     const roles = builderRoleList();
     if(builderIsCustomRoles() && roles.length === 0) errors.push('Agrega al menos una función propia.');
     if(builderIsCustomRoles() && roles.some(r => !r.name.trim())) errors.push('Hay una función propia sin nombre.');
+    if(builderIsCustomRoles()){
+      const untyped = roles.filter(r => !roleKindValue(r));
+      if(untyped.length) errors.push(`Elige el tipo (obligatoria, con suplente u opcional) de: ${untyped.map(r => r.name || '(sin nombre)').join(', ')}.`);
+    }
     if(s.stages.length === 0) errors.push('Agrega al menos una etapa.');
     s.stages.forEach((st, si) => {
       const stageLabel = st.stage.trim() || `Etapa ${si + 1}`;
@@ -148,15 +156,16 @@ window.TabletopBuilder = (function(){
           </div>
         ` : `
           <p class="builder-hint">Define las funciones propias de este ejercicio (ej. "Encargado Regulatorio", "Team Leader del cliente") — se usarán en vez de Seguridad/TI/Legal/Comunicaciones/RRHH/Dirección.</p>
-          <p class="builder-hint">Al configurar el ejercicio se puede desmarcar cualquier función. Marca como <b>obligatoria</b> la que debe participar siempre, y elige un <b>suplente</b> para que asuma los actos de una función que no participa (sin suplente, esos actos se omiten).</p>
+          <p class="builder-hint">Al configurar el ejercicio se pueden desmarcar las funciones que no asisten. Elige el tipo de cada una: <b>obligatoria</b> (no se puede desmarcar), <b>con suplente</b> (si falta, otra función asume sus actos) u <b>opcional</b> (si falta, sus actos se omiten: escríbelos para que el resto del ejercicio no dependa de ellos).</p>
           <div class="builder-role-list" id="bldCustomRoleList">
             ${s.customRoles.map((r, i) => `
               <div class="builder-role-item">
                 <input type="text" data-role-i="${i}" value="${escapeHtml(r.name)}" placeholder="Nombre de la función">
-                <label class="builder-role-check builder-role-mandatory"><input type="checkbox" data-role-mandatory="${i}" ${r.mandatory ? 'checked' : ''}> Obligatoria</label>
-                <select data-role-sup="${i}" aria-label="Suplente" ${r.mandatory ? 'disabled' : ''}>
-                  <option value="">Sin suplente</option>
-                  ${s.customRoles.filter(o => o.key !== r.key).map(o => `<option value="${escapeHtml(o.key)}" ${r.suplente === o.key ? 'selected' : ''}>Suplente: ${escapeHtml(o.name || '(sin nombre)')}</option>`).join('')}
+                <select data-role-kind="${i}" aria-label="Tipo de función">
+                  <option value="" disabled ${roleKindValue(r) ? '' : 'selected'}>— Tipo —</option>
+                  <option value="mandatory" ${r.mandatory ? 'selected' : ''}>Obligatoria</option>
+                  ${s.customRoles.filter(o => o.key !== r.key).map(o => `<option value="sup:${escapeHtml(o.key)}" ${r.suplente === o.key ? 'selected' : ''}>Suplente: ${escapeHtml(o.name || '(sin nombre)')}</option>`).join('')}
+                  <option value="optional" ${r.optional ? 'selected' : ''}>Opcional</option>
                 </select>
                 <button type="button" class="pc-empresa-remove" data-remove-role="${i}" aria-label="Quitar función">×</button>
               </div>`).join('') || '<p class="builder-hint">Todavía no agregaste ninguna función.</p>'}
@@ -183,25 +192,21 @@ window.TabletopBuilder = (function(){
         // al salir del campo se redibuja, para que los selectores de suplente muestren el nombre nuevo
         inp.addEventListener('change', () => renderBuilder());
       });
-      document.querySelectorAll('[data-role-mandatory]').forEach(cb => {
-        cb.addEventListener('change', e => {
-          const r = builderState.customRoles[parseInt(cb.dataset.roleMandatory, 10)];
-          r.mandatory = e.target.checked;
-          if(r.mandatory) delete r.suplente; // una obligatoria siempre participa: no necesita suplente
-          renderBuilder();
-        });
-      });
-      document.querySelectorAll('[data-role-sup]').forEach(sel => {
+      document.querySelectorAll('[data-role-kind]').forEach(sel => {
         sel.addEventListener('change', e => {
-          const r = builderState.customRoles[parseInt(sel.dataset.roleSup, 10)];
-          if(e.target.value) r.suplente = e.target.value; else delete r.suplente;
+          const r = builderState.customRoles[parseInt(sel.dataset.roleKind, 10)];
+          delete r.mandatory; delete r.optional; delete r.suplente;
+          const v = e.target.value;
+          if(v === 'mandatory') r.mandatory = true;
+          else if(v === 'optional') r.optional = true;
+          else if(v.startsWith('sup:')) r.suplente = v.slice(4);
         });
       });
       document.querySelectorAll('[data-remove-role]').forEach(btn => {
         btn.addEventListener('click', () => {
           const [removed] = builderState.customRoles.splice(parseInt(btn.dataset.removeRole, 10), 1);
           // que ninguna otra función ni acto quede apuntando a la función quitada como respaldo
-          builderState.customRoles.forEach(r => { if(r.suplente === removed.key) delete r.suplente; });
+          builderState.customRoles.forEach(r => { if(r.suplente === removed.key) delete r.suplente; }); // queda sin tipo: hay que elegirlo de nuevo
           builderState.stages.forEach(st => st.questions.forEach(q => { if(q.backup === removed.key) q.backup = ''; }));
           renderBuilder();
         });
@@ -388,6 +393,7 @@ window.TabletopBuilder = (function(){
     const s = builderState;
     const roles = builderRoleList();
     const errors = builderValidate();
+    const warnings = builderIsCustomRoles() ? TibDocx.scenarioWarnings(s.customRoles, s.stages) : [];
     const totalActs = s.stages.reduce((n, st) => n + st.questions.length, 0);
     return `
       <div class="builder-step">
@@ -413,6 +419,11 @@ window.TabletopBuilder = (function(){
           </div>
         ` : `
           <div class="builder-ok-banner">✓ Todo listo — el escenario está completo.</div>
+          ${warnings.length ? `
+            <div class="builder-errors builder-warnings">
+              <div class="builder-errors-title">Conviene revisar (no impide generarlo):</div>
+              ${warnings.map(w => `<div>• ${escapeHtml(w)}</div>`).join('')}
+            </div>` : ''}
           <div class="builder-final-actions">
             <button type="button" class="btn" id="bldDownloadBtn">Descargar Word</button>
             <button type="button" class="btn btn-cta" id="bldUseNowBtn">Usar ahora en esta sesión →</button>

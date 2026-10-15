@@ -25,6 +25,15 @@ const ROLE_ACCENTS = {
 };
 // Modelo operativo: TI y Seguridad las ejecuta TIBOX en remoto; el resto las aporta el equipo del cliente.
 const ROLE_ORG = {seguridad:'TIBOX', ti:'TIBOX', legal:'Cliente', comunicaciones:'Cliente', rrhh:'Cliente', direccion:'Cliente'};
+// Qué pasa si una función no participa en la sesión (paso Participantes):
+//  · obligatorias: no se pueden desmarcar;
+//  · con suplente: sus actos los asume esa otra función (y si tampoco participa, su suplente);
+//  · opcionales: sus actos se omiten (no hay ninguna en el organigrama estándar).
+// Una función que no aparece en PARTICIPATION_MATRIX para un escenario no juega en él: esos
+// actos se omiten siempre, tenga o no suplente.
+const ROLE_MANDATORY = {seguridad:true, ti:true};
+const ROLE_SUPLENTES = {legal:'direccion', comunicaciones:'direccion', rrhh:'direccion', direccion:'seguridad'};
+const ROLE_OPTIONAL = {};
 
 // Paleta de tipos de ataque — alineada al brand book de TIBOX (TIBOX AI Knowledge v0.2):
 //  · El azul marino profundo es siempre la superficie dominante de la tarjeta.

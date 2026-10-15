@@ -26,6 +26,8 @@ const TibDocx = (function(){
     PORQUE: 'POR QUE RESPONDE ESTA FUNCION'
   };
   const LETTERS = ['A','B','C','D'];
+  // Párrafo fijo del Word (la skill /tabletop lo copia textual): explica los tres tipos de función.
+  const ROLE_KINDS_HELP = 'Al configurar el ejercicio se pueden desmarcar las funciones que no asisten. Marca cada función al final de su línea con una de estas tres opciones: "(OBLIGATORIA)" si no se puede desmarcar; "(SUPLENTE: otra función)" si, cuando no participa, sus actos los asume esa otra función; u "(OPCIONAL)" si, cuando no participa, sus actos se omiten (escríbelos para que el resto del ejercicio no dependa de ellos). Una función sin marca se trata como opcional.';
 
   // ---------------- utilidades de texto ----------------
   function stripAccents(s){ return String(s || '').normalize('NFD').replace(/\p{M}/gu, ''); }
@@ -55,27 +57,68 @@ const TibDocx = (function(){
     used.add(key);
     return key;
   }
-  // "FUNCIÓN DEL ESCENARIO: Encargado Legal (SUPLENTE: Gerente General)" o "… (OBLIGATORIA)":
-  // separa el nombre de las marcas entre paréntesis del final. Un paréntesis que no es una de
-  // esas marcas (ej. "Jefe de Turno (Planta)") se deja como parte del nombre.
+  // Cada función propia es de uno de tres tipos, marcado al final de su línea:
+  //   "(OBLIGATORIA)"        no se puede desmarcar;
+  //   "(SUPLENTE: <función>)" si no participa, sus actos los asume esa otra función;
+  //   "(OPCIONAL)"           si no participa, sus actos se omiten (escritos para no hacer falta).
+  // Sin marca se trata como opcional, con un aviso al cargar. Un paréntesis final que no es una
+  // de estas marcas (ej. "Jefe de Turno (Planta)") se deja como parte del nombre.
   function parseRoleDeclaration(value){
-    let name = String(value || '').trim(), mandatory = false, suplenteName = '';
+    let name = String(value || '').trim(), mandatory = false, optional = false, suplenteName = '';
     let m;
     while((m = name.match(/\(([^()]*)\)\s*$/))){
       const inner = m[1].trim();
       const norm = normLabel(inner);
       if(norm === 'OBLIGATORIA' || norm === 'OBLIGATORIO') mandatory = true;
+      else if(norm === 'OPCIONAL') optional = true;
       else if(/^SUPLENTE\s*:/.test(norm)) suplenteName = inner.slice(inner.indexOf(':') + 1).trim();
       else break;
       name = name.slice(0, m.index).trim();
     }
-    return {name, mandatory, suplenteName};
+    return {name, mandatory, optional, suplenteName};
   }
   function roleDeclarationText(r, roleNames){
     let text = r.name;
     if(r.mandatory) text += ' (OBLIGATORIA)';
     else if(r.suplente && roleNames[r.suplente]) text += ` (SUPLENTE: ${roleNames[r.suplente]})`;
+    else if(r.optional) text += ' (OPCIONAL)';
     return text;
+  }
+  function textMentions(text, name){
+    const norm = s => ' ' + stripAccents(s).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim() + ' ';
+    const n = norm(name).trim();
+    return !!n && norm(text).includes(' ' + n + ' ');
+  }
+  // Avisos (no bloquean la carga) sobre cómo se comporta el escenario cuando se desmarcan
+  // funciones. Solo aplican a funciones propias: los nombres estándar (Legal, Dirección…) son
+  // palabras comunes y darían falsos positivos. roles: [{key, name, mandatory?, optional?, suplente?}].
+  function scenarioWarnings(roles, stages){
+    if(!roles || !roles.length) return [];
+    const warnings = [];
+    const byKey = {}; roles.forEach(r => { byKey[r.key] = r; });
+    const unclassified = roles.filter(r => !r.mandatory && !r.optional && !r.suplente);
+    if(unclassified.length){
+      warnings.push(`Funciones sin tipo (se tratan como opcionales: si no participan, sus actos se omiten): ${unclassified.map(r => r.name).join(', ')}. Agrega "(OBLIGATORIA)", "(SUPLENTE: …)" u "(OPCIONAL)" al final de su línea.`);
+    }
+    if(!roles.some(r => r.mandatory)) warnings.push('Ninguna función es obligatoria: al configurar se podrían desmarcar casi todas.');
+    roles.forEach(r => {
+      const seen = new Set([r.key]);
+      let cur = r.suplente;
+      while(cur && byKey[cur]){
+        if(seen.has(cur)){ warnings.push(`Los suplentes de "${r.name}" forman un círculo: si faltan todas esas funciones, sus actos se omiten.`); break; }
+        seen.add(cur);
+        cur = byKey[cur].suplente;
+      }
+    });
+    (stages || []).forEach(st => (st.questions || []).forEach(q => {
+      const r = byKey[q.target];
+      if(!r || r.mandatory) return; // una obligatoria siempre responde ella misma
+      const texts = [q.situation].concat(q.options || [], q.explanations || []);
+      if(texts.some(t => textMentions(t || '', r.name))){
+        warnings.push(`Etapa "${st.stage}", acto «${q.title || 'sin título'}»: la situación, alternativas o explicaciones nombran a "${r.name}", que es quien responde. Si lo asume ${r.suplente ? 'su suplente' : 'otra función'}, ese texto no va a calzar: describe la acción sin nombrar el cargo.`);
+      }
+    }));
+    return warnings;
   }
 
   // ================================================================
@@ -129,11 +172,13 @@ const TibDocx = (function(){
     if(scenario.customRoleList && scenario.customRoleList.length){
       scenario.customRoleList.forEach(r => out.push(pLabelValue(LABELS.FUNCION_ESCENARIO, roleDeclarationText(r, roleNames))));
       out.push(p('Este escenario usa sus propias funciones (arriba, una línea "FUNCIÓN DEL ESCENARIO" por cada una) en vez de Seguridad/TI/Legal/Comunicaciones/RRHH/Dirección. Cada "FUNCIÓN QUE RESPONDE" más abajo debe repetir uno de esos nombres tal cual. Para agregar una función nueva, agrega otra línea "FUNCIÓN DEL ESCENARIO" acá arriba.', {spacingAfter:160}));
-      out.push(p('Al configurar el ejercicio se puede desmarcar cualquier función, y el ejercicio se adapta. Agrega "(OBLIGATORIA)" al final de una función para que no se pueda desmarcar, o "(SUPLENTE: otra función)" para que, si no participa, sus actos los asuma esa otra función. Una función sin suplente que no participa pierde sus actos.', {spacingAfter:280}));
+      out.push(p(ROLE_KINDS_HELP, {spacingAfter:280}));
     } else {
       const extraNames = (scenario.extraRoleKeys || []).map(k => roleNames[k] || k).join(', ');
       out.push(pLabelValue(LABELS.EXTRA_ROLES, extraNames));
-      out.push(p('Seguridad y TI participan siempre en todo escenario; escribe aquí solo funciones adicionales, separadas por coma, eligiendo entre: Legal, Comunicaciones, RRHH, Dirección. Si ninguna otra función participa, deja la línea de arriba en blanco. (Si en cambio tu ejercicio necesita funciones completamente distintas a estas 6 — otros cargos, otro organigrama — bórrala y usa líneas "FUNCIÓN DEL ESCENARIO:" en su lugar, una por función.)', {spacingAfter:280}));
+      out.push(p('Seguridad y TI participan siempre en todo escenario; escribe aquí solo funciones adicionales, separadas por coma, eligiendo entre: Legal, Comunicaciones, RRHH, Dirección. Si ninguna otra función participa, deja la línea de arriba en blanco. (Si en cambio tu ejercicio necesita funciones completamente distintas a estas 6 — otros cargos, otro organigrama — bórrala y usa líneas "FUNCIÓN DEL ESCENARIO:" en su lugar, una por función.)', {spacingAfter:160}));
+      const suplentes = ROLE_KEYS.filter(k => ROLE_SUPLENTES[k]).map(k => `${ROLE_NAMES[k]} → ${ROLE_NAMES[ROLE_SUPLENTES[k]]}`).join(', ');
+      out.push(p(`Al configurar el ejercicio, Seguridad y TI no se pueden desmarcar. Si otra función no participa, sus actos los asume su suplente (${suplentes}).`, {spacingAfter:280}));
     }
     out.push(p('En cada acto, "SI NO PARTICIPA, RESPONDE" es opcional: indica qué función asume ese acto si la de "FUNCIÓN QUE RESPONDE" no participa en la sesión. Si va vacía, se usa el suplente de la función (si tiene) o el acto se omite.', {spacingAfter:280}));
     out.push(pBlank());
@@ -720,7 +765,10 @@ const TibDocx = (function(){
         const decl = parseRoleDeclaration(value);
         if(decl.name){
           const key = slugifyKey(decl.name, customUsedKeys);
-          customRoleList.push({key, name: decl.name, mandatory: decl.mandatory, suplenteName: decl.suplenteName});
+          customRoleList.push({key, name: decl.name, mandatory: decl.mandatory, optional: decl.optional, suplenteName: decl.suplenteName});
+          if([decl.mandatory, decl.optional, !!decl.suplenteName].filter(Boolean).length > 1){
+            errors.push(`La función "${decl.name}" tiene más de un tipo: usa solo una de "(OBLIGATORIA)", "(SUPLENTE: …)" u "(OPCIONAL)".`);
+          }
           customRoleByName[normLabel(decl.name)] = key;
         }
         situationActive = false;
@@ -788,6 +836,7 @@ const TibDocx = (function(){
     const roles = customRoleList.map(r => {
       const role = {key: r.key, name: r.name};
       if(r.mandatory) role.mandatory = true;
+      if(r.optional) role.optional = true;
       if(r.suplenteName){
         const supKey = customRoleByName[normLabel(r.suplenteName)];
         if(!supKey) errors.push(`La función "${r.name}" tiene SUPLENTE: "${r.suplenteName}", que no es ninguna de las funciones del escenario.`);
@@ -821,6 +870,7 @@ const TibDocx = (function(){
       facilitatorContext,
       extraRoleKeys,
       customRoles: roles.length ? roles : null,
+      warnings: scenarioWarnings(roles, stages),
       customStages: stages.map(s => s.stage),
       stages,
       // Texto completo del documento (sin depender de qué etiqueta lo trae), para que la app
@@ -844,5 +894,5 @@ const TibDocx = (function(){
     return paragraphsToScenario(paragraphs);
   }
 
-  return {downloadScenarioDocx, downloadBlankTemplate, parseScenarioDocxFile, downloadReportDocx};
+  return {downloadScenarioDocx, downloadBlankTemplate, parseScenarioDocxFile, downloadReportDocx, scenarioWarnings};
 })();
