@@ -3,7 +3,7 @@
 // celular, responder la alternativa (Fase 3).
 import {
   getRoom, getMyParticipant, listenRoom, listenParticipants, listenMyParticipant, joinRoom, castVote, submitAnswer,
-  submitAccessCode, getMySummary, PARTICIPANT_STATUS, MAX_CODE_ATTEMPTS, codeAttemptsUsed
+  submitAccessCode, getMySummary, deleteMySummary, PARTICIPANT_STATUS, MAX_CODE_ATTEMPTS, codeAttemptsUsed
 } from './room.js';
 import { signOut } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 
@@ -225,7 +225,10 @@ async function endSession(){
   if(fb) fb.sessionEnded = true; // firebase-init no vuelve a abrir una sesión anónima
   if(myStatus === PARTICIPANT_STATUS.ADMITTED && currentCode){
     const summary = await getMySummary(currentCode).catch(() => null);
-    if(summary) renderSummary(summary);
+    if(summary){
+      renderSummary(summary);
+      await deleteMySummary(currentCode).catch(() => {}); // ya está en pantalla: no se guarda en Firestore
+    }
   }
   if(fb && fb.auth) signOut(fb.auth).catch(() => {});
 }

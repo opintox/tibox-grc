@@ -4,7 +4,7 @@
 // No lee window.TIBOX_MP_FIREBASE al cargar el módulo (evita depender del orden exacto de
 // <script type="module">): lo hace recién dentro de cada función, cuando ya se necesita.
 import {
-  doc, setDoc, updateDoc, getDoc, getDocs, collection, onSnapshot, serverTimestamp, Timestamp, writeBatch
+  doc, setDoc, updateDoc, getDoc, getDocs, deleteDoc, collection, onSnapshot, serverTimestamp, Timestamp, writeBatch
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 // Estado de cada participante (admisión): al unirse queda 'pending' y solo el facilitador que
@@ -218,7 +218,8 @@ export async function closeRoom(code){
 // Un documento por participante en rooms/{code}/summaries/{uid}, que solo puede leer ese mismo
 // uid (y el facilitador): a diferencia de participants, que lee toda la sala, acá van los
 // aciertos y dudas de cada persona. Lo escribe el facilitador justo antes de closeRoom, y el
-// celular lo lee al detectar el cierre, antes de cerrar su sesión (ver participant-app.js).
+// celular lo lee al detectar el cierre y lo borra en seguida (ver participant-app.js): el
+// proyecto no tiene TTL (exige facturación activa), así que no queda guardado en Firestore.
 // summaries: [{uid, roleName, scenarioName, acts, roleFirst, decisionFirst, wrongAnswers,
 // chosenByMistake, covered: [nombres], doubts: [títulos], recommendation}]
 export async function publishSummaries(code, summaries){
@@ -234,6 +235,11 @@ export async function getMySummary(code){
   const {db, uid} = await firebaseReady();
   const snap = await getDoc(doc(db, 'rooms', code, 'summaries', uid));
   return snap.exists() ? snap.data() : null;
+}
+
+export async function deleteMySummary(code){
+  const {db, uid} = await firebaseReady();
+  await deleteDoc(doc(db, 'rooms', code, 'summaries', uid));
 }
 
 // El facilitador cierra el lobby y arranca el ejercicio (status -> 'in_progress'). A partir

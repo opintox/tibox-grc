@@ -197,7 +197,8 @@ service cloud.firestore {
 
       // Resumen personal de cada participante al terminar (aciertos, dudas, recomendación).
       // Privado: a diferencia de participants, solo lo lee la persona a la que pertenece (y el
-      // facilitador). Lo escribe solo el facilitador de la sala; se limpia por TTL (expiresAt).
+      // facilitador). Lo escribe solo el facilitador de la sala, y la propia persona lo borra
+      // apenas lo lee (el proyecto no tiene TTL: exige facturación activa).
       match /summaries/{uid} {
         allow get: if request.auth != null && (request.auth.uid == uid || isRoomFacilitator(roomCode));
         allow list: if false;
@@ -209,7 +210,7 @@ service cloud.firestore {
           && request.resource.data.recommendation is string
           && request.resource.data.recommendation.size() <= 1000
           && request.resource.data.expiresAt is timestamp;
-        allow delete: if false;
+        allow delete: if request.auth != null && (request.auth.uid == uid || isRoomFacilitator(roomCode));
       }
     }
   }

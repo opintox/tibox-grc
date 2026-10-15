@@ -198,7 +198,8 @@ según `PARTICIPATION_MATRIX`.
 
 El facilitador crea una sala (código + QR); cada participante entra desde `join.html`,
 elige su función, vota quién debe actuar y, si le toca, responde desde el celular. La sala
-vive en Firestore y se borra sola por TTL (`expiresAt`).
+vive en Firestore; `expiresAt` queda listo para una política TTL, que hoy no está activa (ver
+"Sin TTL" más abajo).
 
 **Admisión por código personal:** al unirse, cada participante queda *por autorizar* con su
 función reservada. El facilitador presiona **Dar código** junto a su nombre, le dicta en
@@ -222,12 +223,12 @@ sala queda cerrada, se borran todos los participantes y sus funciones, y cada ce
   en `rooms/{código}/summaries/{uid}` el resumen de cada persona: sus actos, cuántos identificó
   el equipo y cuántos decidió a la primera, en qué dudó, a quién cubrió como suplente y una
   recomendación. Lo lee **solo** esa persona (lo exigen las reglas: a diferencia de
-  `participants`, que lee toda la sala) y se ve en su celular al cerrarse el ejercicio. Salir
-  con ✕ o volver desde la sala de espera no deja resumen.
-- Requiere las reglas publicadas (`firebase deploy --only firestore:rules`); si no, el resumen
-  no se guarda (el facilitador ve un aviso) y la sala se cierra igual. Para que los resúmenes
-  se borren solos, agregar en Firebase Console → Firestore → TTL una política para el grupo de
-  colecciones `summaries`, campo `expiresAt`.
+  `participants`, que lee toda la sala) y se ve en su celular al cerrarse el ejercicio; apenas
+  lo lee, el celular lo borra de Firestore. Salir con ✕ o volver desde la sala de espera no
+  deja resumen. Si un celular estaba desconectado al cerrar, su resumen queda en Firestore.
+- **Sin TTL**: el proyecto está en el plan gratuito y Firestore solo permite políticas TTL con
+  facturación activa (plan Blaze). Por eso nada se borra solo por `expiresAt`: ni salas, ni
+  participantes, ni resúmenes; los participantes y reservas se borran al cerrar la sala.
 
 **Facilitadores:** solo los correos de la lista `ALLOWED_FACILITATORS` (`auth/auth-core.js`) y
 de `isFacilitator()` (`tabletop/firestore.rules`) pueden entrar al sitio y crear salas. Para
@@ -235,7 +236,9 @@ agregar a alguien, editar ambas listas y crearle la cuenta en Firebase Console.
 
 - Las reglas de `tabletop/firestore.rules` se publican desde la raíz del repo con
   `firebase deploy --only firestore:rules` (Firebase CLI: `npm i -g firebase-tools` y
-  `firebase login` la primera vez). Alternativa: pegarlas en Firebase Console → Firestore → Reglas.
+  `firebase login` la primera vez; en PowerShell, si dice que la ejecución de scripts está
+  deshabilitada, usar `firebase.cmd` en vez de `firebase`). Alternativa: pegarlas en Firebase
+  Console → Firestore → Reglas.
 - Los celulares entran con sesión anónima de Firebase: en Authentication debe estar activo el
   proveedor Anónimo y permitida la creación de usuarios.
 - Si falla una escritura en Firestore, el facilitador ve un aviso en pantalla y puede seguir
