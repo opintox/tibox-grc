@@ -204,6 +204,8 @@
      cortas (una frase), así que en la práctica rara vez pasan de 1-2 líneas igual. */
   .pc-desc{font-size:var(--fs-sm); color:var(--muted); line-height:1.35; margin:0 0 12px; overflow:visible; flex:1 1 auto;}
   .pc-desc::first-letter{text-transform:uppercase;}
+  /* Regla de la función al desmarcarla: obligatoria, quién la suple o si sus actos se omiten. */
+  .pc-rule{font-size:var(--fs-2xs); color:var(--muted-2); line-height:1.35; margin:-6px 0 12px; font-style:italic;}
   /* Botón único "EMPRESA" (antes: etiqueta + chip/"+ Agregar" separados, con un botón ×
      aparte para quitar): un solo control, centrado y de alto contraste, que abre
      #companyModal tanto para asignar como para editar o vaciar la empresa. El texto del
@@ -980,6 +982,9 @@
   .explanation-item .ex-why::before{content:'💡'; flex-shrink:0; font-size:13px; line-height:1.5;}
   .explanation-item .ex-why b, .explanation-item .ex-why strong{color:#fff; font-weight:700;}
   .explain-pop .explanation-item .ex-why{font-size:var(--fs-md); line-height:1.6;}
+  /* Acto reasignado a un suplente: mismo callout, con tinte azul para distinguirlo del porqué. */
+  .explanation-item .ex-backup-note{background:var(--blue-dim); border-color:rgba(14,165,233,0.35); color:#BFE6FA;}
+  .explanation-item .ex-backup-note::before{content:'↪';}
   /* Acento del HUD (timer, stepper, progreso, nav): magenta/púrpura neón (--gh-accent),
      antes verde menta — ver definición de --gh-accent en :root. Consolidado en un único
      #gameTimer (antes repartido en dos declaraciones .game-timer separadas). */
@@ -1455,6 +1460,7 @@
   .step3-alert svg{flex-shrink:0; margin-top:1px;}
   .step3-alert.is-warning{background:var(--amber-dim); border-color:rgba(255,138,0,0.4); color:#FFCE94;}
   .step3-alert.is-ready{background:var(--green-dim); border-color:rgba(34,211,166,0.4); color:#9FF0D9;}
+  .step3-alert.is-info{background:var(--blue-dim); border-color:rgba(14,165,233,0.4); color:#BFE6FA;}
   .profile-actions{position:relative; display:flex; gap:var(--sp-2); flex-wrap:wrap; margin-top:auto; padding-top:var(--sp-3);}
   /* Botones del Paso 1 del wizard: primarios en naranjo corporativo (mismo gradiente
      que #continueBtn, para no sumar un tercer tono de naranjo distinto en la misma
@@ -1555,6 +1561,10 @@
   .builder-role-list{display:flex; flex-direction:column; gap:8px;}
   .builder-role-item{display:flex; align-items:center; gap:8px;}
   .builder-role-item input[type="text"]{flex:1;}
+  .builder-role-item{flex-wrap:wrap;}
+  .builder-role-item input[type="text"]{min-width:180px;}
+  .builder-role-item select{width:auto; flex:0 1 230px; min-width:0;}
+  .builder-role-mandatory{padding:8px 12px; white-space:nowrap;}
 
   /* Paso 3: lista de etapas, cada una con su lista de actos. */
   .builder-stage-list{display:flex; flex-direction:column; gap:14px;}

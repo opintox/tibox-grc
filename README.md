@@ -116,6 +116,33 @@ etiquetas son opcionales.
   el logo del cliente y la empresa de cada función se completa sola (N1, N2 y TeamLeader →
   TIBOX; el resto → cliente).
 
+### Funciones que no participan (obligatorias y suplentes)
+
+En el paso **Participantes** se puede desmarcar cualquier función que no sea obligatoria, y el
+ejercicio se adapta. Los actos de una función desmarcada no se pierden si alguien la reemplaza:
+
+```
+FUNCION DEL ESCENARIO: Jefe de Turno (OBLIGATORIA)
+FUNCION DEL ESCENARIO: Ingeniero de Soporte N1 (SUPLENTE: Jefe de Turno)
+FUNCION DEL ESCENARIO: Encargado Legal (SUPLENTE: Gerente General)
+...
+FUNCION QUE RESPONDE: Encargado Legal
+SI NO PARTICIPA, RESPONDE: Jefe de Turno      ← opcional, solo para este acto
+```
+
+- `(OBLIGATORIA)`: no se puede desmarcar. En el organigrama estándar lo son TI y Seguridad.
+- `(SUPLENTE: …)`: si la función no participa, sus actos pasan al suplente; si el suplente
+  tampoco participa, se sigue con el suplente del suplente.
+- `SI NO PARTICIPA, RESPONDE:` (en un acto) manda sobre el suplente de la función. Sirve también
+  en el organigrama estándar, que no tiene suplentes.
+- Sin respaldo, los actos de la función se omiten. Si una etapa queda sin actos, se juega su
+  primer acto con Seguridad (estándar) o con la primera función obligatoria activa.
+- El paso Participantes muestra el resumen ("Sin Encargado Legal: 2 actos pasan a Gerente
+  General"). En el juego, al acertar la función, se avisa que actúa como suplente; el informe
+  lo deja anotado en el detalle acto por acto.
+- Conviene escribir las situaciones sin nombrar el cargo que responde, para que el relato
+  calce igual cuando lo asume el suplente.
+
 ## Escenarios predefinidos cifrados
 
 Los escenarios predefinidos traen las respuestas correctas y el sitio es público, así que no se
@@ -143,7 +170,8 @@ Cada escenario es una lista de etapas; cada etapa tiene una o más preguntas (ac
   "options": ["correcta", "incorrecta", "incorrecta", "incorrecta"],
   "explanations": ["por qué sí", "por qué no", "por qué no", "por qué no"],
   "mismatchContext": "Por qué le toca a esta función y no a otra.",
-  "correctIndex": 0                     // siempre 0: el orden se baraja en pantalla
+  "correctIndex": 0,                    // siempre 0: el orden se baraja en pantalla
+  "backup": "seguridad"                 // opcional: quién lo asume si "target" no participa
 }
 ```
 

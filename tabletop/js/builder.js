@@ -20,7 +20,7 @@ window.TabletopBuilder = (function(){
   }
   function newRoleKey(){ return 'rol_' + Math.random().toString(36).slice(2, 8); }
   function freshBuilderQuestion(){
-    return {target:'', title:'', meta:[], situation:'', options:['','','',''], explanations:['','','',''], correctIndex:0, mismatchContext:''};
+    return {target:'', backup:'', title:'', meta:[], situation:'', options:['','','',''], explanations:['','','',''], correctIndex:0, mismatchContext:''};
   }
   // Lista de funciones disponibles para elegir como "quién responde" en un acto — según el modo
   // de funciones elegido en el paso 2 (estándar + adicionales marcadas, o la lista propia).
@@ -148,10 +148,16 @@ window.TabletopBuilder = (function(){
           </div>
         ` : `
           <p class="builder-hint">Define las funciones propias de este ejercicio (ej. "Encargado Regulatorio", "Team Leader del cliente") — se usarán en vez de Seguridad/TI/Legal/Comunicaciones/RRHH/Dirección.</p>
+          <p class="builder-hint">Al configurar el ejercicio se puede desmarcar cualquier función. Marca como <b>obligatoria</b> la que debe participar siempre, y elige un <b>suplente</b> para que asuma los actos de una función que no participa (sin suplente, esos actos se omiten).</p>
           <div class="builder-role-list" id="bldCustomRoleList">
             ${s.customRoles.map((r, i) => `
               <div class="builder-role-item">
                 <input type="text" data-role-i="${i}" value="${escapeHtml(r.name)}" placeholder="Nombre de la función">
+                <label class="builder-role-check builder-role-mandatory"><input type="checkbox" data-role-mandatory="${i}" ${r.mandatory ? 'checked' : ''}> Obligatoria</label>
+                <select data-role-sup="${i}" aria-label="Suplente" ${r.mandatory ? 'disabled' : ''}>
+                  <option value="">Sin suplente</option>
+                  ${s.customRoles.filter(o => o.key !== r.key).map(o => `<option value="${escapeHtml(o.key)}" ${r.suplente === o.key ? 'selected' : ''}>Suplente: ${escapeHtml(o.name || '(sin nombre)')}</option>`).join('')}
+                </select>
                 <button type="button" class="pc-empresa-remove" data-remove-role="${i}" aria-label="Quitar función">×</button>
               </div>`).join('') || '<p class="builder-hint">Todavía no agregaste ninguna función.</p>'}
           </div>
@@ -174,9 +180,31 @@ window.TabletopBuilder = (function(){
     } else {
       document.querySelectorAll('[data-role-i]').forEach(inp => {
         inp.addEventListener('input', e => { builderState.customRoles[parseInt(inp.dataset.roleI, 10)].name = e.target.value; });
+        // al salir del campo se redibuja, para que los selectores de suplente muestren el nombre nuevo
+        inp.addEventListener('change', () => renderBuilder());
+      });
+      document.querySelectorAll('[data-role-mandatory]').forEach(cb => {
+        cb.addEventListener('change', e => {
+          const r = builderState.customRoles[parseInt(cb.dataset.roleMandatory, 10)];
+          r.mandatory = e.target.checked;
+          if(r.mandatory) delete r.suplente; // una obligatoria siempre participa: no necesita suplente
+          renderBuilder();
+        });
+      });
+      document.querySelectorAll('[data-role-sup]').forEach(sel => {
+        sel.addEventListener('change', e => {
+          const r = builderState.customRoles[parseInt(sel.dataset.roleSup, 10)];
+          if(e.target.value) r.suplente = e.target.value; else delete r.suplente;
+        });
       });
       document.querySelectorAll('[data-remove-role]').forEach(btn => {
-        btn.addEventListener('click', () => { builderState.customRoles.splice(parseInt(btn.dataset.removeRole, 10), 1); renderBuilder(); });
+        btn.addEventListener('click', () => {
+          const [removed] = builderState.customRoles.splice(parseInt(btn.dataset.removeRole, 10), 1);
+          // que ninguna otra función ni acto quede apuntando a la función quitada como respaldo
+          builderState.customRoles.forEach(r => { if(r.suplente === removed.key) delete r.suplente; });
+          builderState.stages.forEach(st => st.questions.forEach(q => { if(q.backup === removed.key) q.backup = ''; }));
+          renderBuilder();
+        });
       });
       const addBtn = document.getElementById('bldAddRole');
       if(addBtn) addBtn.addEventListener('click', () => { builderState.customRoles.push({key: newRoleKey(), name: ''}); renderBuilder(); });
@@ -276,6 +304,13 @@ window.TabletopBuilder = (function(){
               </select>
             </div>
             <div class="field-row" style="margin-bottom:0;">
+              <label>Si no participa, responde (opcional)</label>
+              <select id="actBackup">
+                <option value="">${builderIsCustomRoles() ? 'Usar el suplente de la función' : 'Nadie: el acto se omite'}</option>
+                ${roles.map(r => `<option value="${escapeHtml(r.key)}" ${q.backup === r.key ? 'selected' : ''}>${escapeHtml(r.name)}</option>`).join('')}
+              </select>
+            </div>
+            <div class="field-row" style="margin-bottom:0;">
               <label>Título del acto</label>
               <input type="text" id="actTitle" value="${escapeHtml(q.title)}" placeholder='Ej: Acto 1 · El correo del banco'>
             </div>
@@ -316,6 +351,8 @@ window.TabletopBuilder = (function(){
 
     function readForm(){
       q.target = document.getElementById('actTarget').value;
+      q.backup = document.getElementById('actBackup').value;
+      if(q.backup === q.target) q.backup = '';
       q.title = document.getElementById('actTitle').value.trim();
       q.meta = document.getElementById('actMeta').value.split(',').map(s => s.trim()).filter(Boolean);
       q.situation = document.getElementById('actSituation').value.trim();

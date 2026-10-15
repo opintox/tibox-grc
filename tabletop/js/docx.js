@@ -18,6 +18,7 @@ const TibDocx = (function(){
     INTRO: 'INTRODUCCION',
     ETAPA: 'ETAPA',
     FUNCION: 'FUNCION QUE RESPONDE',
+    RESPALDO: 'SI NO PARTICIPA, RESPONDE',
     TITULO: 'TITULO DEL ACTO',
     CONTEXTO: 'CONTEXTO',
     SITUACION: 'SITUACION',
@@ -54,6 +55,28 @@ const TibDocx = (function(){
     used.add(key);
     return key;
   }
+  // "FUNCIÓN DEL ESCENARIO: Encargado Legal (SUPLENTE: Gerente General)" o "… (OBLIGATORIA)":
+  // separa el nombre de las marcas entre paréntesis del final. Un paréntesis que no es una de
+  // esas marcas (ej. "Jefe de Turno (Planta)") se deja como parte del nombre.
+  function parseRoleDeclaration(value){
+    let name = String(value || '').trim(), mandatory = false, suplenteName = '';
+    let m;
+    while((m = name.match(/\(([^()]*)\)\s*$/))){
+      const inner = m[1].trim();
+      const norm = normLabel(inner);
+      if(norm === 'OBLIGATORIA' || norm === 'OBLIGATORIO') mandatory = true;
+      else if(/^SUPLENTE\s*:/.test(norm)) suplenteName = inner.slice(inner.indexOf(':') + 1).trim();
+      else break;
+      name = name.slice(0, m.index).trim();
+    }
+    return {name, mandatory, suplenteName};
+  }
+  function roleDeclarationText(r, roleNames){
+    let text = r.name;
+    if(r.mandatory) text += ' (OBLIGATORIA)';
+    else if(r.suplente && roleNames[r.suplente]) text += ` (SUPLENTE: ${roleNames[r.suplente]})`;
+    return text;
+  }
 
   // ================================================================
   // GENERACIÓN (escenario -> .docx)
@@ -89,9 +112,12 @@ const TibDocx = (function(){
   function buildScenarioParagraphsXml(scenario){
     // scenario: {name, blurb, target, stages:[{stage, questions:[...]}],
     //   roleNames?: {roleKey: nombre a mostrar} (por defecto ROLE_NAMES),
-    //   customRoleList?: [{key, name}, ...] — si viene, el escenario declara sus propias
-    //     funciones (en vez de las 6 estándar) y se exporta el bloque FUNCIÓN DEL ESCENARIO;
-    //   extraRoleKeys?: [roleKey,...] — solo se usa cuando NO hay customRoleList.
+    //   customRoleList?: [{key, name, mandatory?, suplente?}, ...] — si viene, el escenario declara
+    //     sus propias funciones (en vez de las 6 estándar) y se exporta el bloque FUNCIÓN DEL
+    //     ESCENARIO, con sus marcas (OBLIGATORIA) / (SUPLENTE: …);
+    //   extraRoleKeys?: [roleKey,...] — solo se usa cuando NO hay customRoleList;
+    //   showBackupLine?: true escribe "SI NO PARTICIPA, RESPONDE:" en todos los actos, aunque
+    //     vaya vacía (la plantilla en blanco, para que se vea que existe).
     const roleNames = scenario.roleNames || ROLE_NAMES;
     const out = [];
     out.push(pHeading('TABLETOP DE CIBERSEGURIDAD — PLANTILLA DE ESCENARIO', 30));
@@ -101,13 +127,15 @@ const TibDocx = (function(){
     out.push(pLabelValue(LABELS.DESC, scenario.blurb));
     out.push(pLabelValue(LABELS.OBJ, scenario.target));
     if(scenario.customRoleList && scenario.customRoleList.length){
-      scenario.customRoleList.forEach(r => out.push(pLabelValue(LABELS.FUNCION_ESCENARIO, r.name)));
-      out.push(p('Este escenario usa sus propias funciones (arriba, una línea "FUNCIÓN DEL ESCENARIO" por cada una) en vez de Seguridad/TI/Legal/Comunicaciones/RRHH/Dirección. Cada "FUNCIÓN QUE RESPONDE" más abajo debe repetir uno de esos nombres tal cual. Para agregar una función nueva, agrega otra línea "FUNCIÓN DEL ESCENARIO" acá arriba.', {spacingAfter:280}));
+      scenario.customRoleList.forEach(r => out.push(pLabelValue(LABELS.FUNCION_ESCENARIO, roleDeclarationText(r, roleNames))));
+      out.push(p('Este escenario usa sus propias funciones (arriba, una línea "FUNCIÓN DEL ESCENARIO" por cada una) en vez de Seguridad/TI/Legal/Comunicaciones/RRHH/Dirección. Cada "FUNCIÓN QUE RESPONDE" más abajo debe repetir uno de esos nombres tal cual. Para agregar una función nueva, agrega otra línea "FUNCIÓN DEL ESCENARIO" acá arriba.', {spacingAfter:160}));
+      out.push(p('Al configurar el ejercicio se puede desmarcar cualquier función, y el ejercicio se adapta. Agrega "(OBLIGATORIA)" al final de una función para que no se pueda desmarcar, o "(SUPLENTE: otra función)" para que, si no participa, sus actos los asuma esa otra función. Una función sin suplente que no participa pierde sus actos.', {spacingAfter:280}));
     } else {
       const extraNames = (scenario.extraRoleKeys || []).map(k => roleNames[k] || k).join(', ');
       out.push(pLabelValue(LABELS.EXTRA_ROLES, extraNames));
       out.push(p('Seguridad y TI participan siempre en todo escenario; escribe aquí solo funciones adicionales, separadas por coma, eligiendo entre: Legal, Comunicaciones, RRHH, Dirección. Si ninguna otra función participa, deja la línea de arriba en blanco. (Si en cambio tu ejercicio necesita funciones completamente distintas a estas 6 — otros cargos, otro organigrama — bórrala y usa líneas "FUNCIÓN DEL ESCENARIO:" en su lugar, una por función.)', {spacingAfter:280}));
     }
+    out.push(p('En cada acto, "SI NO PARTICIPA, RESPONDE" es opcional: indica qué función asume ese acto si la de "FUNCIÓN QUE RESPONDE" no participa en la sesión. Si va vacía, se usa el suplente de la función (si tiene) o el acto se omite.', {spacingAfter:280}));
     out.push(pBlank());
     // Contexto para facilitadores (solo si el escenario lo trae): mismo párrafo que escribe la
     // skill de tabletop, para que el Word exportado se vuelva a leer igual.
@@ -128,6 +156,7 @@ const TibDocx = (function(){
       out.push(pBlank());
       stageEntry.questions.forEach(q => {
         out.push(pLabelValue(LABELS.FUNCION, roleNames[q.target] || q.target));
+        if(q.backup || scenario.showBackupLine) out.push(pLabelValue(LABELS.RESPALDO, q.backup ? (roleNames[q.backup] || q.backup) : ''));
         out.push(pLabelValue(LABELS.TITULO, q.title || ''));
         out.push(pLabelValue(LABELS.CONTEXTO, (q.meta || []).join(' · ')));
         out.push(pLabelValue(LABELS.SITUACION, ''));
@@ -228,6 +257,7 @@ const TibDocx = (function(){
       blurb: '[Una frase corta que resuma el ataque — se muestra en la tarjeta de selección]',
       target: '[Activo principal afectado, ej: Servidor de nómina]',
       intro: '[Introducción que se muestra en pantalla antes de empezar: en 2 o 3 párrafos, presenta la organización, el momento en que ocurre el ejercicio y qué se busca practicar, sin adelantar lo que va a pasar. Escríbela justo debajo de "INTRODUCCIÓN:", antes de la primera "ETAPA:".]\n\n[Segundo párrafo, opcional. Deja una línea en blanco entre párrafos, tal como aquí.]',
+      showBackupLine: true,
       extraRoleKeys: [], // si tu ejercicio tiene un organigrama propio (no Seguridad/TI/Legal/Comunicaciones/RRHH/Dirección), reemplaza esto por líneas "FUNCIÓN DEL ESCENARIO:" — ver docx.js
       stages: STAGE_LABELS.map((stage, i) => ({
         stage,
@@ -641,7 +671,8 @@ const TibDocx = (function(){
           options: order.map(i => opts[i]),
           explanations: order.map(i => exps[i]),
           mismatchContext: currentQ.mismatchContext || '',
-          correctIndex: 0
+          correctIndex: 0,
+          ...(currentQ.backup ? {backup: currentQ.backup} : {})
         });
       }
       currentQ = null;
@@ -686,10 +717,11 @@ const TibDocx = (function(){
       if(label === LABELS.OBJ){ objetivo = value; situationActive = false; continue; }
       if(label === LABELS.EXTRA_ROLES){ extraRolesRaw = value; situationActive = false; continue; }
       if(label === LABELS.FUNCION_ESCENARIO){
-        if(value){
-          const key = slugifyKey(value, customUsedKeys);
-          customRoleList.push({key, name: value});
-          customRoleByName[normLabel(value)] = key;
+        const decl = parseRoleDeclaration(value);
+        if(decl.name){
+          const key = slugifyKey(decl.name, customUsedKeys);
+          customRoleList.push({key, name: decl.name, mandatory: decl.mandatory, suplenteName: decl.suplenteName});
+          customRoleByName[normLabel(decl.name)] = key;
         }
         situationActive = false;
         continue;
@@ -717,6 +749,19 @@ const TibDocx = (function(){
       }
       if(!currentQ) continue; // texto suelto entre la etapa y el primer acto
 
+      if(label === LABELS.RESPALDO){
+        if(value){
+          const usingCustomRoles = customRoleList.length > 0;
+          const backupKey = usingCustomRoles ? customRoleByName[normLabel(value)] : ROLE_BY_NAME[normLabel(value)];
+          if(!backupKey){
+            errors.push(`En la etapa "${currentStage.stage}" hay un acto con "SI NO PARTICIPA, RESPONDE" = "${value}", que no es ninguna de las funciones del escenario.`);
+          } else if(backupKey !== currentQ.target){
+            currentQ.backup = backupKey;
+          }
+        }
+        situationActive = false;
+        continue;
+      }
       if(label === LABELS.TITULO){ currentQ.title = value; situationActive = false; continue; }
       if(label === LABELS.CONTEXTO){
         let meta = value.split('·').map(s => s.trim()).filter(Boolean);
@@ -737,6 +782,20 @@ const TibDocx = (function(){
       // cualquier otro texto suelto (comentarios del usuario, el título del documento) se ignora
     }
     closeStage();
+
+    // Los suplentes se resuelven al final: una función puede nombrar como suplente a otra que
+    // se declara más abajo en el documento.
+    const roles = customRoleList.map(r => {
+      const role = {key: r.key, name: r.name};
+      if(r.mandatory) role.mandatory = true;
+      if(r.suplenteName){
+        const supKey = customRoleByName[normLabel(r.suplenteName)];
+        if(!supKey) errors.push(`La función "${r.name}" tiene SUPLENTE: "${r.suplenteName}", que no es ninguna de las funciones del escenario.`);
+        else if(supKey === r.key) errors.push(`La función "${r.name}" no puede ser su propio suplente.`);
+        else role.suplente = supKey;
+      }
+      return role;
+    });
 
     if(!name) errors.push(`Falta la línea "${LABELS.NOMBRE}:" con el nombre del escenario.`);
     // Las etapas se toman tal cual el documento las declaró (nombre y orden libres): el juego
@@ -761,7 +820,7 @@ const TibDocx = (function(){
       intro: introParts.join('\n\n'),
       facilitatorContext,
       extraRoleKeys,
-      customRoles: customRoleList.length ? customRoleList : null,
+      customRoles: roles.length ? roles : null,
       customStages: stages.map(s => s.stage),
       stages,
       // Texto completo del documento (sin depender de qué etiqueta lo trae), para que la app

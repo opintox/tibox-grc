@@ -40,7 +40,11 @@ const ROLE_DESCRIPTIONS = {
 // no toca en nada a los que usan la estructura estándar.
 const DEFAULT_ROLE_META = {
   keys: ROLE_KEYS, names: ROLE_NAMES, icons: ROLE_ICONS, color: ROLE_COLOR,
-  desc: ROLE_DESCRIPTIONS, org: ROLE_ORG, accents: ROLE_ACCENTS
+  desc: ROLE_DESCRIPTIONS, org: ROLE_ORG, accents: ROLE_ACCENTS,
+  // mandatory: funciones que no se pueden desmarcar en participantes. suplente: quién asume los
+  // actos de una función que no participa (el organigrama estándar no define suplentes: esos
+  // actos se omiten, salvo que el acto traiga su propio "SI NO PARTICIPA, RESPONDE").
+  mandatory: {ti: true, seguridad: true}, suplente: {}
 };
 // Los 4 colores oficiales de TIBOX (brand book "TIBOX AI Knowledge v0.2", ver también
 // SCENARIO_ACCENTS en catalogo.js): las tres caras del cubo — cian, amarillo, naranjo — y el
@@ -72,20 +76,35 @@ function roleExplainIconHtml(rm, roleKey){
   const [c1] = (rm.accents && rm.accents[roleKey]) || ['#8592AE'];
   return `<span class="ex-role-icon" style="background:${hexToRgba(c1, 0.18)}; color:${c1};">${icon}</span>`;
 }
-// roleList: [{key, name}] en el orden en que el documento las declaró.
+// roleList: [{key, name, mandatory?, suplente?}] en el orden en que el documento las declaró.
 function buildCustomRoleMeta(roleList){
   const keys = roleList.map(r => r.key);
-  const names = {}, icons = {}, color = {}, desc = {}, org = {}, accents = {};
+  const names = {}, icons = {}, color = {}, desc = {}, org = {}, accents = {}, mandatory = {}, suplente = {};
   roleList.forEach((r, i) => {
     const palette = CUSTOM_ROLE_PALETTE[i % CUSTOM_ROLE_PALETTE.length];
     names[r.key] = r.name;
+    if(r.mandatory) mandatory[r.key] = true;
+    else if(r.suplente && keys.includes(r.suplente) && r.suplente !== r.key) suplente[r.key] = r.suplente;
     icons[r.key] = initialsIconSvg(r.name);
     color[r.key] = palette.color;
     accents[r.key] = palette.accent;
     desc[r.key] = '';
     org[r.key] = 'Cliente';
   });
-  return {keys, names, icons, color, desc, org, accents};
+  return {keys, names, icons, color, desc, org, accents, mandatory, suplente};
+}
+// Lista {key, name, mandatory?, suplente?} de un organigrama propio: lo que vuelve a escribir
+// el Word exportado (ver TibDocx.downloadScenarioDocx).
+function customRoleListFor(rm){
+  return rm.keys.map(k => {
+    const r = {key: k, name: rm.names[k]};
+    if(rm.mandatory[k]) r.mandatory = true;
+    if(rm.suplente[k]) r.suplente = rm.suplente[k];
+    return r;
+  });
+}
+function isMandatoryRole(roleKey, scenarioId){
+  return !!roleMetaFor(scenarioId).mandatory[roleKey];
 }
 function roleMetaFor(scenarioId){
   const s = SCENARIOS.find(x => x.id === scenarioId);
@@ -144,7 +163,7 @@ function applyScenarioSelection(id){
   const sameKeys = participants.length === newKeys.length && participants.every((p,i) => p.roleKey === newKeys[i]);
   if(!sameKeys) participants = defaultParticipantsFor(id);
   selectedScenarioId = id;
-  enforceMandatoryRoles();
+  enforceMandatoryRoles(id);
   autoAssignCompanies(id);
 }
 
@@ -186,12 +205,13 @@ function getMatrix(scenarioId){
   }
   return m;
 }
-// TI y Seguridad no se pueden desmarcar como participantes (ver getMatrix): se fuerza su
+// Las funciones obligatorias (TI y Seguridad en el organigrama estándar, las marcadas
+// "(OBLIGATORIA)" en uno propio) no se pueden desmarcar como participantes: se fuerza su
 // checked=true cada vez que la lista de participantes se reemplaza (carga inicial, restauración
 // de configuración guardada o importación de un archivo), para que la matriz forzada arriba y lo
 // que ve el usuario en pantalla nunca queden desincronizados.
-function enforceMandatoryRoles(){
-  participants.forEach(p => { if(p.roleKey === 'ti' || p.roleKey === 'seguridad') p.checked = true; });
+function enforceMandatoryRoles(scenarioId){
+  participants.forEach(p => { if(isMandatoryRole(p.roleKey, scenarioId)) p.checked = true; });
 }
 
 // ---------------- autoguardado de configuración (setup) ----------------
@@ -270,7 +290,7 @@ function loadProfileIntoForm(profile){
   const expectedKeys = activeRoleKeysFor(profile.selectedScenarioId || null);
   participants = Array.isArray(profile.participants) && profile.participants.length === expectedKeys.length
     ? profile.participants.map(p => ({...p})) : defaultParticipantsFor(profile.selectedScenarioId || null);
-  enforceMandatoryRoles();
+  enforceMandatoryRoles(profile.selectedScenarioId || null);
   selectedScenarioId = profile.selectedScenarioId || null;
   // Un escenario cargado desde Word solo vive en esta sesión (ver registerCustomScenario):
   // si el perfil guardado apuntaba a uno, ya no existe tras recargar la página.
@@ -421,7 +441,7 @@ function loadSetupState(){
   const expectedKeys = activeRoleKeysFor(data.selectedScenarioId || null);
   if(Array.isArray(data.participants) && data.participants.length === expectedKeys.length) participants = data.participants;
   else participants = defaultParticipantsFor(data.selectedScenarioId || null);
-  enforceMandatoryRoles();
+  enforceMandatoryRoles(data.selectedScenarioId || null);
   selectedScenarioId = data.selectedScenarioId || null;
   // Un escenario cargado desde Word solo vive en esta sesión (ver registerCustomScenario):
   // si la configuración guardada apuntaba a uno, ya no existe tras recargar la página.
@@ -521,7 +541,7 @@ function renderScenarioCard(s, container){
       intro: SCENARIO_INTROS[s.id] || '',
       facilitatorContext: SCENARIO_FACILITATOR_CONTEXT[s.id] || '',
       roleNames: rm.names,
-      customRoleList: isCustomRoles ? rm.keys.map(k => ({key:k, name: rm.names[k]})) : null,
+      customRoleList: isCustomRoles ? customRoleListFor(rm) : null,
       extraRoleKeys: isCustomRoles ? [] : ROLE_KEYS.filter(k => k !== 'ti' && k !== 'seguridad' && matrix[k]),
       stages: QUESTIONS[s.id]
     });
@@ -642,9 +662,13 @@ function renderParticipants(){
   bodyEl.innerHTML = '';
   const rm = roleMetaFor(selectedScenarioId);
   participants.forEach((p, i) => {
-    // TI y Seguridad son obligatorias solo en el organigrama estándar (6 funciones fijas); un
-    // escenario con funciones propias no tiene ese concepto y deja todas editables.
-    const locked = rm === DEFAULT_ROLE_META && (p.roleKey === 'ti' || p.roleKey === 'seguridad');
+    // Obligatorias: TI y Seguridad en el organigrama estándar; en uno propio, las marcadas
+    // "(OBLIGATORIA)" en el Word. El resto se puede desmarcar y el ejercicio se adapta.
+    const locked = !!rm.mandatory[p.roleKey];
+    const supKey = rm.suplente[p.roleKey];
+    const roleRule = locked ? 'Obligatoria: participa siempre.'
+      : supKey ? `Si no participa, sus actos los asume ${rm.names[supKey] || supKey}.`
+      : rm === DEFAULT_ROLE_META ? '' : 'Sin suplente: si no participa, sus actos se omiten.';
     const card = document.createElement('div');
     card.className = 'participant-card' + (p.checked ? '' : ' row-inactive');
     const [pBarColor] = (rm.accents && rm.accents[p.roleKey]) || ['#8592AE'];
@@ -653,7 +677,7 @@ function renderParticipants(){
     card.innerHTML = `
       <div class="pc-head">
         <label class="pc-switch">
-          <input type="checkbox" class="pc-switch-input" ${p.checked ? 'checked' : ''} ${locked ? 'disabled title="TI y Seguridad participan siempre"' : ''} data-i="${i}">
+          <input type="checkbox" class="pc-switch-input" ${p.checked ? 'checked' : ''} ${locked ? 'disabled title="Función obligatoria: participa siempre"' : ''} data-i="${i}">
           <span class="pc-switch-track"><span class="pc-switch-thumb"></span></span>
         </label>
         <div class="pc-role">
@@ -663,6 +687,7 @@ function renderParticipants(){
         ${p.checked ? '' : '<span class="pc-status-pill">NO PARTICIPA</span>'}
       </div>
       <p class="pc-desc" title="${escapeHtml(rm.desc[p.roleKey] || '')}">${escapeHtml(rm.desc[p.roleKey] || '')}</p>
+      ${roleRule ? `<p class="pc-rule">${escapeHtml(roleRule)}</p>` : ''}
       <div class="pc-empresa">
         <button type="button" class="pc-empresa-btn ${hasEmpresa ? 'is-set' : 'is-empty'}" data-i="${i}" aria-label="${hasEmpresa ? `Empresa asignada: ${escapeHtml(p.empresa)}. Editar.` : 'Asignar empresa'}">${hasEmpresa
           ? `<span class="pc-empresa-label">Empresa</span><span class="pc-empresa-name">${escapeHtml(p.empresa)}</span>${PC_EDIT_ICON}`
@@ -783,6 +808,7 @@ function renderWizardStepper(){
 }
 
 const STEP3_ALERT_ICON_WARN = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/></svg>';
+const STEP3_ALERT_ICON_INFO = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/></svg>';
 const STEP3_ALERT_ICON_OK = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 5-5"/></svg>';
 function updateBottomState(){
   const hasClientName = !!clientName.trim();
@@ -860,6 +886,15 @@ function updateBottomState(){
       }
       summaryEl.innerHTML = `${STEP3_ALERT_ICON_WARN}<span>${escapeHtml(`Falta: ${missingParts.join('; ')}.`)}</span>`;
     }
+  }
+
+  // Paso 3: cómo se adapta el ejercicio a las funciones desmarcadas (suplentes y actos omitidos).
+  const adaptEl = document.getElementById('wizardStep3Adapt');
+  if(adaptEl){
+    const lines = (hasScenario && QUESTIONS[selectedScenarioId]) ? sessionAdaptationSummary(selectedScenarioId) : [];
+    adaptEl.innerHTML = lines.length
+      ? `${STEP3_ALERT_ICON_INFO}<span>${lines.map(escapeHtml).join('<br>')}</span>`
+      : '';
   }
 }
 // La app abre siempre en la pantalla de bienvenida (reglas del ejercicio); recién al presionar
@@ -1336,7 +1371,7 @@ function fmtElapsed(ms){ const t=Math.floor(ms/1000); return String(Math.floor(t
 // Antes se mostraban TODAS seguidas en una misma sesión, haciendo esa etapa 5-10x más larga y
 // repetitiva que en otros escenarios. Esto agrupa esas variantes por firma (target+opciones+explicaciones)
 // y elige una al azar por grupo, dejando intactas las preguntas realmente distintas (distinto target).
-function sampleVariants(qs){
+function variantGroups(qs){
   const groups = [];
   const seen = new Map();
   qs.forEach(q => {
@@ -1344,33 +1379,104 @@ function sampleVariants(qs){
     if(!seen.has(sig)){ const g = []; seen.set(sig, g); groups.push(g); }
     seen.get(sig).push(q);
   });
-  return groups.map(g => g[Math.floor(Math.random() * g.length)]);
+  return groups;
+}
+function sampleVariants(qs){
+  return variantGroups(qs).map(g => g[Math.floor(Math.random() * g.length)]);
+}
+
+// Quién responde un acto en esta sesión: su función, si participa; si no, el respaldo propio
+// del acto ("SI NO PARTICIPA, RESPONDE" en el Word) o el suplente de la función, siguiendo la
+// cadena de suplentes hasta dar con una función activa. null = nadie lo puede asumir y el acto
+// se omite.
+function resolveActTarget(q, scenarioId){
+  if(isRoleActive(q.target, scenarioId)) return q.target;
+  const sup = roleMetaFor(scenarioId).suplente;
+  const seen = new Set([q.target]);
+  for(const start of [q.backup, sup[q.target]]){
+    let cur = start;
+    while(cur && !seen.has(cur)){
+      if(isRoleActive(cur, scenarioId)) return cur;
+      seen.add(cur);
+      cur = sup[cur];
+    }
+  }
+  return null;
+}
+// A quién se le asigna el acto de una etapa que se quedó sin ninguno: Seguridad en el
+// organigrama estándar (siempre participa); en uno propio, la primera obligatoria activa o,
+// si no hay, la primera función activa.
+function fallbackRoleFor(scenarioId){
+  const rm = roleMetaFor(scenarioId);
+  if(rm === DEFAULT_ROLE_META) return 'seguridad';
+  const active = sessionRoleKeys(scenarioId);
+  return active.find(k => rm.mandatory[k]) || active[0] || rm.keys[0];
+}
+// Reparto de actos según quién participa hoy, sin sortear variantes: lo usan el armado de la
+// sesión y el resumen del paso Participantes. Los actos reasignados guardan reassignedFrom
+// (la función original) para explicarlo en pantalla y en el informe.
+function planSessionStages(scenarioId){
+  return QUESTIONS[scenarioId].map(stageEntry => {
+    const kept = [], omitted = [];
+    stageQuestions(stageEntry).forEach(q => {
+      const t = resolveActTarget(q, scenarioId);
+      if(!t) omitted.push(q);
+      else kept.push(t === q.target ? q : {...q, target: t, reassignedFrom: q.target});
+    });
+    return {stageEntry, kept, omitted};
+  });
 }
 
 function buildStagesForSession(scenarioId){
-  const rawStages = QUESTIONS[scenarioId];
-  const rm = roleMetaFor(scenarioId);
-  // El auto-cierre (Dirección/Seguridad) y la red de seguridad de "seguridad" son reglas del
-  // organigrama estándar; un escenario con funciones propias ya trae su propio cierre y no tiene
-  // una función universal a la que recurrir, así que usa su primera función declarada.
-  const isStandard = rm === DEFAULT_ROLE_META;
-  return rawStages.map(stageEntry => {
-    let qs = stageQuestions(stageEntry).filter(q => {
-      // una pregunta solo entra si su función está activa en la sesión (isRoleActive). TI y
-      // Seguridad siempre lo están: la matriz las fuerza en getMatrix() y su checkbox está
-      // bloqueado en renderParticipants().
-      return isRoleActive(q.target, scenarioId);
-    });
-    qs = sampleVariants(qs);
+  // El auto-cierre (Dirección/Seguridad) es una regla del organigrama estándar; un escenario
+  // con funciones propias ya trae su propio cierre.
+  const isStandard = roleMetaFor(scenarioId) === DEFAULT_ROLE_META;
+  return planSessionStages(scenarioId).map(({stageEntry, kept}) => {
+    let qs = sampleVariants(kept);
+    // red de seguridad: nunca dejar una etapa sin preguntas.
+    if(qs.length === 0){
+      const first = stageQuestions(stageEntry)[0];
+      const t = fallbackRoleFor(scenarioId);
+      qs = [t === first.target ? first : {...first, target: t, reassignedFrom: first.target}];
+    }
     if(isStandard && stageEntry.stage === 'Cierre'){
       // el cierre lo autoriza Dirección si participa (matriz) y sigue marcada hoy; si no, lo asume Seguridad
       const closingRole = isRoleActive('direccion', scenarioId) ? 'direccion' : 'seguridad';
-      qs = qs.map(q => ({...q, target: closingRole}));
+      qs = qs.map(({reassignedFrom, ...q}) => ({...q, target: closingRole}));
     }
-    // red de seguridad: nunca dejar una etapa sin preguntas.
-    if(qs.length === 0) qs = [{...stageQuestions(stageEntry)[0], target: isStandard ? 'seguridad' : rm.keys[0]}];
     return {stage: stageEntry.stage, questions: qs};
   });
+}
+
+// Resumen para el paso Participantes de cómo se adapta el ejercicio a las funciones
+// desmarcadas: a quién pasan sus actos y cuántos se omiten. Cuenta variantes narrativas de un
+// mismo acto como uno solo (como se juegan).
+function sessionAdaptationSummary(scenarioId){
+  const rm = roleMetaFor(scenarioId);
+  const isStandard = rm === DEFAULT_ROLE_META;
+  const byRole = {};
+  const entry = k => (byRole[k] = byRole[k] || {moved: {}, omitted: 0});
+  const emptyStages = [];
+  planSessionStages(scenarioId).forEach(({stageEntry, kept, omitted}) => {
+    if(isStandard && stageEntry.stage === 'Cierre') return; // lo resuelve la regla de cierre
+    variantGroups(kept).forEach(([q]) => {
+      if(q.reassignedFrom){ const e = entry(q.reassignedFrom); e.moved[q.target] = (e.moved[q.target] || 0) + 1; }
+    });
+    variantGroups(omitted).forEach(([q]) => { entry(q.target).omitted++; });
+    if(kept.length === 0) emptyStages.push(stageEntry.stage);
+  });
+  const actos = n => `${n} acto${n === 1 ? '' : 's'}`;
+  const lines = rm.keys.filter(k => byRole[k]).map(k => {
+    const e = byRole[k];
+    const parts = Object.keys(e.moved).map(to => `${actos(e.moved[to])} ${e.moved[to] === 1 ? 'pasa' : 'pasan'} a ${rm.names[to] || to}`);
+    if(e.omitted) parts.push(`${actos(e.omitted)} se ${e.omitted === 1 ? 'omite' : 'omiten'} (sin suplente)`);
+    return `Sin ${rm.names[k] || k}: ${parts.join('; ')}.`;
+  });
+  if(emptyStages.length){
+    const fb = rm.names[fallbackRoleFor(scenarioId)];
+    lines.push(`${emptyStages.length === 1 ? 'La etapa' : 'Las etapas'} ${emptyStages.join(', ')} ${emptyStages.length === 1 ? 'quedó' : 'quedaron'} sin actos: se juega su primer acto con ${fb}.`);
+  }
+  return lines;
 }
 
 function startGame(){
@@ -1790,6 +1896,7 @@ function onCharacterPick(participant, el){
     `<div class="explanation-item is-correct">
       <div class="ex-head">${roleExplainIconHtml(rmPick, participant.roleKey)}<div class="ex-head-text"><span class="ex-tag">✓ Función correcta</span><div class="ex-opt">${escapeHtml(rmPick.names[participant.roleKey])}</div></div></div>
       <div class="ex-why">${pickRandom(CORRECT_CHARACTER_PHRASES)}</div>
+      ${q.reassignedFrom ? `<div class="ex-why ex-backup-note">${escapeHtml(backupNoteText(q))}</div>` : ''}
     </div>`);
 
   gameState.nextAction = () => {
@@ -1811,13 +1918,21 @@ function renderWrongCharacterExplanation(participant, q){
   const chosenKey = participant.roleKey;
   const chosenLabel = rm.names[chosenKey];
   const chosenDesc = rm.desc[chosenKey] || 'cumple otra función dentro del ejercicio';
-  const mismatch = q.mismatchContext || 'Esta acción específica requiere otra función dentro del equipo de respuesta.';
+  let mismatch = q.mismatchContext || 'Esta acción específica requiere otra función dentro del equipo de respuesta.';
+  // Acto reasignado: el "por qué" del Word habla de la función original, que hoy no participa.
+  // Se aclara sin nombrar al suplente, para no regalar la respuesta.
+  if(q.reassignedFrom) mismatch += ` Hoy ${rm.names[q.reassignedFrom] || q.reassignedFrom} no participa: esta acción la asume quien la reemplaza.`;
 
   const html = `<div class="explanation-item is-wrong">
       <div class="ex-head">${roleExplainIconHtml(rm, chosenKey)}<div class="ex-head-text"><span class="ex-tag">✕ Función incorrecta</span><div class="ex-opt">${escapeHtml(chosenLabel)}</div></div></div>
       <div class="ex-why">${escapeHtml(chosenLabel)} ${chosenDesc}. ${escapeHtml(mismatch)}</div>
     </div>`;
   showExplain(html);
+}
+
+function backupNoteText(q){
+  const rm = roleMetaFor(gameState.scenarioId);
+  return `Normalmente esta acción le corresponde a ${rm.names[q.reassignedFrom] || q.reassignedFrom}, que no participa hoy: la asume ${rm.names[q.target] || q.target} como suplente.`;
 }
 
 function shuffledIndices(n){
@@ -1905,6 +2020,7 @@ function onAnswerPick(idx, btn, q){
   const act = gameState.currentAct || {wrongRoles: [], wrongOptions: []};
   gameState.actLog.push({
     stage: gameState.stages[gameState.stepIndex].stage, title: q.title || '', target: q.target,
+    reassignedFrom: q.reassignedFrom || null,
     wrongRoles: act.wrongRoles.slice(), wrongOptions: act.wrongOptions.slice(),
     correctOption: q.options[idx], explanation: q.explanations[idx] || ''
   });

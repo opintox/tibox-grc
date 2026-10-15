@@ -253,7 +253,8 @@ window.TabletopReport = (function(){
   function buildActsPart(){
     const rm = roleMetaFor(gameState.scenarioId);
     const html = gameState.actLog.map((a, i) => {
-      const target = `${rm.names[a.target] || a.target}${roleCompanyFor(a.target, gameState.scenarioId) ? ` (${roleCompanyFor(a.target, gameState.scenarioId)})` : ''}`;
+      const target = `${rm.names[a.target] || a.target}${roleCompanyFor(a.target, gameState.scenarioId) ? ` (${roleCompanyFor(a.target, gameState.scenarioId)})` : ''}`
+        + (a.reassignedFrom ? `, como suplente de ${rm.names[a.reassignedFrom] || a.reassignedFrom}, que no participó` : '');
       const roleLine = a.wrongRoles.length
         ? `✕ Antes se eligió a ${a.wrongRoles.map(r => rm.names[r] || r).join(', ')}`
         : '✓ Identificada a la primera';
