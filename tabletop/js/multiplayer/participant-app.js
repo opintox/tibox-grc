@@ -401,7 +401,7 @@ function renderBriefing(briefing){
 function renderVoteGrid(act, roleRoster){
   voteStageEl.textContent = act.stage || 'Etapa';
   voteTitleEl.textContent = act.title || '¿Quién debe actuar?';
-  voteStatusEl.textContent = 'Elige la función que crees que debe hacerse cargo de esta situación.';
+  voteStatusEl.textContent = '¿Qué función crees que debe hacerse cargo? Tu voto se ve en la pantalla del facilitador; la decisión la toma el equipo con el facilitador.';
   voteGrid.innerHTML = roleRoster.map(r => {
     const [a] = r.accent || ['#8592AE'];
     return `<button type="button" class="join-vote-btn" data-role="${escapeHtmlLocal(r.roleKey)}" style="--a:${a};">${escapeHtmlLocal(r.name)}</button>`;
@@ -414,7 +414,7 @@ function renderVoteGrid(act, roleRoster){
       try{
         await castVote(currentCode, actKey, btn.dataset.role);
         lastVotedActKey = actKey;
-        voteStatusEl.textContent = 'Voto registrado — esperando a los demás.';
+        voteStatusEl.textContent = 'Voto registrado. Conversen en la sala: el facilitador elige la función y avanza cuando el equipo esté de acuerdo.';
       }catch(err){
         voteStatusEl.textContent = err.message || 'No se pudo registrar el voto.';
         voteGrid.querySelectorAll('.join-vote-btn').forEach(b => { b.disabled = false; });

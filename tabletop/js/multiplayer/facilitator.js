@@ -1,6 +1,7 @@
 // Lado facilitador del modo "Con celulares": Fase 1 (crear la sala, mostrar código/QR, ver
 // el lobby en vivo, iniciar el ejercicio existente sin tocarlo) + Fase 2 (votación: publicar
-// el acto vigente, tally en vivo sobre las mismas .char-card, resolver por timeout/empate).
+// el acto vigente y mostrar el conteo en vivo sobre las mismas .char-card; la función la
+// elige siempre el facilitador).
 // Expone window.MP para que app.js (script clásico, no módulo) lo llame sin imports.
 import {
   createRoom, listenParticipants, startRoom, publishAct, setActPhase, openAnswering, publishBriefing,
@@ -301,17 +302,16 @@ function mpPublishBriefing(roomCode, briefing){
   });
 }
 
-// ---------------- Fase 2: votación ----------------
+// ---------------- Fase 2: votación (consultiva) ----------------
 // app.js llama a estas 3 desde renderStage()/renderCharGrid()/onCharacterPick() (hooks
-// mínimos, ver plan de multijugador) — todo el estado de la votación en sí (quién votó qué,
-// el timeout, el desempate) vive acá adentro, no en app.js.
-const MP_VOTE_SECONDS = 45;
+// mínimos, ver plan de multijugador) — el conteo de votos vive acá adentro, no en app.js.
+// La votación solo muestra qué cree el equipo: nunca elige la función ni hace avanzar el
+// ejercicio. Antes, a los 45 s se elegía sola la más votada (bastaba un voto), así que un
+// celular podía pasar el acto a las alternativas; ahora eso lo decide siempre el facilitador.
 let voteUnsub = null;
-let voteTimeoutHandle = null;
 
 function clearVotingWatch(){
   if(voteUnsub){ voteUnsub(); voteUnsub = null; }
-  if(voteTimeoutHandle){ clearTimeout(voteTimeoutHandle); voteTimeoutHandle = null; }
 }
 
 // Dibuja/actualiza un badge de conteo sobre cada .char-card activa (data-role-key, ver
@@ -331,18 +331,6 @@ function renderVoteBadges(tally){
   });
 }
 
-// Empate: gana la función que aparece primero en roleKeys — ese arreglo ya viene en el orden
-// fijo del organigrama del escenario (roleMetaFor(...).keys en app.js), no por quién votó
-// primero ni por latencia (ver plan, criterio de desempate explícito y reproducible).
-function pickWinner(tally, roleKeys){
-  let best = null, bestCount = 0;
-  roleKeys.forEach(key => {
-    const count = tally[key] || 0;
-    if(count > bestCount){ best = key; bestCount = count; }
-  });
-  return best;
-}
-
 // Publica el acto vigente en Firestore (fase 'voting') — se llama una vez por acto, desde
 // renderStage(). No hace nada más: la UI de la votación la arma attachVotingPhase.
 function mpPublishAct(roomCode, act){
@@ -351,24 +339,11 @@ function mpPublishAct(roomCode, act){
   });
 }
 
-// Suscribe la tarjeta en vivo del acto actual: pinta los votos que van llegando sobre las
-// .char-card y, a los MP_VOTE_SECONDS, resuelve automáticamente por mayoría (si hubo al
-// menos un voto) llamando a onResolve(roleKeyGanador) — que en app.js dispara el mismo
-// onCharacterPick de siempre. El clic manual del facilitador en una tarjeta sigue funcionando
-// en paralelo en todo momento (no se deshabilita nada acá): es el "desatasco" si la votación
-// queda empatada sin ganador o si nadie votó.
-function attachVotingPhase(roomCode, actKey, roleKeys, onResolve){
+// Suscribe el conteo en vivo del acto actual: pinta los votos que van llegando sobre las
+// .char-card. No resuelve nada: la función la elige el facilitador con un clic en la tarjeta
+// (onCharacterPick en app.js), que a su vez cierra la votación (closeVoting).
+function attachVotingPhase(roomCode, actKey, roleKeys){
   clearVotingWatch();
-  let resolved = false;
-  let lastTally = {};
-
-  const resolveOnce = winnerKey => {
-    if(resolved || !winnerKey) return;
-    resolved = true;
-    clearVotingWatch();
-    onResolve(winnerKey);
-  };
-
   voteUnsub = listenParticipants(roomCode, list => {
     const tally = {};
     // Solo votan los admitidos (las reglas ya lo impiden; esto además ignora datos viejos).
@@ -377,11 +352,8 @@ function attachVotingPhase(roomCode, actKey, roleKeys, onResolve){
         tally[p.vote.roleKey] = (tally[p.vote.roleKey] || 0) + 1;
       }
     });
-    lastTally = tally;
     renderVoteBadges(tally);
   });
-
-  voteTimeoutHandle = setTimeout(() => resolveOnce(pickWinner(lastTally, roleKeys)), MP_VOTE_SECONDS * 1000);
 }
 
 // Se llama desde onCharacterPick() apenas se resuelve el acto (por clic manual o por

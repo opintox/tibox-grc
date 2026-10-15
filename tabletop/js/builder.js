@@ -146,7 +146,7 @@ window.TabletopBuilder = (function(){
           <button type="button" class="builder-mode-btn${s.roleMode === 'custom' ? ' active' : ''}" data-mode="custom">Funciones propias</button>
         </div>
         ${s.roleMode === 'standard' ? `
-          <p class="builder-hint">Seguridad y TI participan siempre. Marca qué otras funciones participan en este escenario.</p>
+          <p class="builder-hint">Seguridad y TI participan siempre. Marca qué otras funciones participan en este escenario: si marcas Dirección, también será obligatoria; Legal, Comunicaciones y RRHH son opcionales (si no asisten, sus actos se omiten).</p>
           <div class="builder-role-checks">
             ${BUILDER_EXTRA_ROLES.map(([k, name]) => `
               <label class="builder-role-check">

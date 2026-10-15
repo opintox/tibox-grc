@@ -147,7 +147,13 @@ SI NO PARTICIPA, RESPONDE: Ingeniero de Soporte N2 (Firewall)   ← opcional, so
   de Soporte y el TeamLeader son de TIBOX; el resto, del cliente.
 - `SI NO PARTICIPA, RESPONDE:` (en un acto) manda sobre el tipo de la función.
 - Organigrama estándar (`catalogo.js` → `ROLE_MANDATORY`, `ROLE_SUPLENTES`, `ROLE_OPTIONAL`):
-  Seguridad y TI obligatorias; Legal, Comunicaciones y RRHH → Dirección; Dirección → Seguridad.
+  Seguridad, TI y Dirección obligatorias (Dirección, en los escenarios donde participa);
+  Legal, Comunicaciones y RRHH opcionales. Dirección es obligatoria porque su acto es el Cierre,
+  una decisión de la gerencia que el texto dice que no se delega: si la asumiera Seguridad, el
+  acto no calzaría. Donde Dirección no está en la matriz, el Cierre lo responde Seguridad.
+  Legal, Comunicaciones y RRHH no tienen suplente porque en los escenarios predefinidos sus
+  actos son de competencia exclusiva (el propio "por qué" del acto lo dice) y ningún otro acto
+  depende de ellos: omitirlos no deja huecos, reasignarlos sí contradeciría la explicación.
   Una función que no está en `PARTICIPATION_MATRIX` para un escenario no juega en él: sus actos
   se omiten siempre.
 - Si una etapa queda sin actos, se juega su primer acto con Seguridad (estándar) o con la
@@ -200,6 +206,11 @@ El facilitador crea una sala (código + QR); cada participante entra desde `join
 elige su función, vota quién debe actuar y, si le toca, responde desde el celular. La sala
 vive en Firestore; `expiresAt` queda listo para una política TTL, que hoy no está activa (ver
 "Sin TTL" más abajo).
+
+**Votación consultiva:** el voto de "quién debe actuar" solo muestra, sobre las tarjetas del
+facilitador, qué cree el equipo. Nunca elige la función ni avanza el ejercicio: la función la
+elige siempre el facilitador con un clic, y recién ahí el celular de esa función recibe las
+alternativas. Después de cada respuesta, también es el facilitador quien pasa al acto siguiente.
 
 **Admisión por código personal:** al unirse, cada participante queda *por autorizar* con su
 función reservada. El facilitador presiona **Dar código** junto a su nombre, le dicta en

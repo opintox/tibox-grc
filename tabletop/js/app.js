@@ -1880,16 +1880,12 @@ function renderCharGrid(){
     grid.appendChild(el);
   });
 
-  // Modo "Con celulares" (Fase 2): arranca la votación de este acto. El clic manual de arriba
-  // sigue funcionando en paralelo (no se toca) — es el desatasco si la votación empata o nadie
-  // vota. Al resolver, dispara el mismo onCharacterPick de siempre, con el participant/el
-  // reales, resueltos acá (MP solo conoce roleKeys, no la lista de participantes de la app).
+  // Modo "Con celulares" (Fase 2): arranca la votación de este acto. Es solo consultiva: los
+  // votos se ven sobre las tarjetas para saber qué cree el equipo, pero la función la elige
+  // siempre el facilitador con el clic de arriba. Ningún voto (ni la mayoría) hace avanzar el
+  // ejercicio a las alternativas.
   if(multiplayerEnabled && mpRoomCode && window.MP){
-    window.MP.attachVotingPhase(mpRoomCode, currentActKey(), available.map(p => p.roleKey), winnerRoleKey => {
-      const winnerParticipant = available.find(p => p.roleKey === winnerRoleKey);
-      const winnerEl = grid.querySelector(`.char-card[data-role-key="${winnerRoleKey}"]`);
-      if(winnerParticipant && winnerEl) onCharacterPick(winnerParticipant, winnerEl);
-    });
+    window.MP.attachVotingPhase(mpRoomCode, currentActKey(), available.map(p => p.roleKey));
   }
 }
 

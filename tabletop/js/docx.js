@@ -189,8 +189,11 @@ const TibDocx = (function(){
       const extraNames = (scenario.extraRoleKeys || []).map(k => roleNames[k] || k).join(', ');
       out.push(pLabelValue(LABELS.EXTRA_ROLES, extraNames));
       out.push(p('Seguridad y TI participan siempre en todo escenario; escribe aquí solo funciones adicionales, separadas por coma, eligiendo entre: Legal, Comunicaciones, RRHH, Dirección. Si ninguna otra función participa, deja la línea de arriba en blanco. (Si en cambio tu ejercicio necesita funciones completamente distintas a estas 6 — otros cargos, otro organigrama — bórrala y usa líneas "FUNCIÓN DEL ESCENARIO:" en su lugar, una por función.)', {spacingAfter:160}));
+      const list = keys => keys.map(k => ROLE_NAMES[k]).join(', ').replace(/, ([^,]*)$/, ' y $1');
+      const obligatorias = list(ROLE_KEYS.filter(k => ROLE_MANDATORY[k]));
+      const opcionales = list(ROLE_KEYS.filter(k => ROLE_OPTIONAL[k]));
       const suplentes = ROLE_KEYS.filter(k => ROLE_SUPLENTES[k]).map(k => `${ROLE_NAMES[k]} → ${ROLE_NAMES[ROLE_SUPLENTES[k]]}`).join(', ');
-      out.push(p(`Al configurar el ejercicio, Seguridad y TI no se pueden desmarcar. Si otra función no participa, sus actos los asume su suplente (${suplentes}).`, {spacingAfter:280}));
+      out.push(p(`Al configurar el ejercicio, ${obligatorias} no se pueden desmarcar (Dirección, solo si participa en el escenario). Si no participa una función opcional (${opcionales}), sus actos se omiten: escríbelos para que el resto del ejercicio no dependa de ellos.${suplentes ? ` Si no participa una función con suplente (${suplentes}), sus actos los asume el suplente.` : ''}`, {spacingAfter:280}));
     }
     out.push(p('En cada acto, "SI NO PARTICIPA, RESPONDE" es opcional: indica qué función asume ese acto si la de "FUNCIÓN QUE RESPONDE" no participa en la sesión. Si va vacía, se usa el suplente de la función (si tiene) o el acto se omite.', {spacingAfter:280}));
     out.push(pBlank());

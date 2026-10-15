@@ -28,12 +28,20 @@ const ROLE_ORG = {seguridad:'TIBOX', ti:'TIBOX', legal:'Cliente', comunicaciones
 // Qué pasa si una función no participa en la sesión (paso Participantes):
 //  · obligatorias: no se pueden desmarcar;
 //  · con suplente: sus actos los asume esa otra función (y si tampoco participa, su suplente);
-//  · opcionales: sus actos se omiten (no hay ninguna en el organigrama estándar).
-// Una función que no aparece en PARTICIPATION_MATRIX para un escenario no juega en él: esos
-// actos se omiten siempre, tenga o no suplente.
-const ROLE_MANDATORY = {seguridad:true, ti:true};
-const ROLE_SUPLENTES = {legal:'direccion', comunicaciones:'direccion', rrhh:'direccion', direccion:'seguridad'};
-const ROLE_OPTIONAL = {};
+//  · opcionales: sus actos se omiten.
+// Legal, Comunicaciones y RRHH son opcionales y no tienen suplente a propósito: en los
+// escenarios predefinidos sus actos son de competencia exclusiva (interpretar un contrato,
+// armar el mensaje público, conducir el vínculo laboral) y su propio "por qué" dice que nadie
+// más puede tomar esa decisión; ningún otro acto depende de ellos, así que omitirlos no deja
+// huecos. Dirección es obligatoria donde participa: en los escenarios predefinidos su acto es
+// el Cierre, una decisión de la gerencia que el propio texto dice que no se delega (ej.
+// «La decisión que no se delega» en ransomware); si la asumiera Seguridad, el acto no calzaría.
+// En los escenarios donde Dirección no está en la matriz, el Cierre lo responde Seguridad (ver
+// buildStagesForSession). Una función que no aparece en PARTICIPATION_MATRIX para un escenario
+// no juega en él: esos actos se omiten siempre, tenga o no suplente.
+const ROLE_MANDATORY = {seguridad:true, ti:true, direccion:true};
+const ROLE_SUPLENTES = {};
+const ROLE_OPTIONAL = {legal:true, comunicaciones:true, rrhh:true};
 
 // Paleta de tipos de ataque — alineada al brand book de TIBOX (TIBOX AI Knowledge v0.2):
 //  · El azul marino profundo es siempre la superficie dominante de la tarjeta.
