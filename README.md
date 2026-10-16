@@ -115,6 +115,13 @@ etiquetas son opcionales.
 
 - `INTRODUCCION:` va **justo antes de la primera `ETAPA:`**: toma todos los párrafos que
   siguen hasta la próxima etiqueta.
+- El párrafo que empieza con `Contexto para facilitadores.` se muestra en la ventana
+  "Contexto" ordenado en bloques (`js/context-format.js`), según cómo esté escrita cada
+  oración: antecedentes; cronología (oraciones que empiezan con una hora); protocolo ("…debe
+  hacer tres cosas: a, b y c"); personas ("…participan: Nombre, Cargo, que…; …"); cadena de
+  escalamiento ("el SOC escala al TeamLeader y el TeamLeader pide … a Empresa X"); cargos que
+  "solo se mencionan; no juegan"; y fichas `Etiqueta: valor` (ej. `Plazos:`, `Fuera de
+  alcance:`, `Duración objetivo:`), con los tiempos destacados.
 - Si el documento menciona "Quintero Energía" o "Empresa Eléctrica Ventanas", la tarjeta usa
   el logo del cliente y la empresa de cada función se completa sola (Ingenieros de Soporte
   N1/N2 y TeamLeader → TIBOX; el resto → cliente).

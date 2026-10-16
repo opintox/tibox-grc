@@ -1796,6 +1796,30 @@ table.report-table td{vertical-align:top;}
 .fc-person-body{line-height:1.4;}
 .fc-person-desc{font-size:var(--fs-xs); margin-top:4px;}
 .fc-person-note{margin-top:6px; padding:5px 8px; font-size:var(--fs-2xs);}
+/* Cadena de escalamiento: nodos con flecha y la acción encima ("escala", "pide las autorizaciones"). */
+.fc-chain{list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; align-items:center; gap:6px 4px;}
+.fc-chain-node{padding:8px 14px; border-radius:999px; font-weight:700; color:#fff; background:rgba(14,165,233,0.12); border:1px solid rgba(14,165,233,0.45);}
+.fc-chain-arrow{display:flex; flex-direction:column; align-items:center; padding:0 6px; color:#7DD3FC; font-size:var(--fs-md); line-height:1;}
+.fc-chain-arrow span{font-family:var(--mono); font-size:var(--fs-4xs); letter-spacing:0.04em; text-transform:uppercase; color:var(--muted); margin-bottom:2px; white-space:nowrap;}
+/* Se mencionan, pero no juegan: tarjetas tenues (no son funciones del ejercicio). */
+.fc-mentioned{display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:8px;}
+.fc-mention{padding:10px 12px; border-radius:12px; border:1px dashed rgba(255,255,255,0.18); background:rgba(255,255,255,0.02); line-height:1.4;}
+.fc-mention-name{font-weight:700; color:#E2E8F0;}
+.fc-mention-note{margin-top:4px; font-size:var(--fs-xs); color:var(--muted);}
+/* Datos clave en fichas: plazos en renglones, fuera de alcance en etiquetas, duración en grande. */
+.fc-facts{display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:8px;}
+.fc-fact{padding:10px 12px; border-radius:12px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); line-height:1.4;}
+.fc-fact-label{font-family:var(--mono); font-size:var(--fs-3xs); letter-spacing:0.08em; text-transform:uppercase; color:#7DD3FC; margin-bottom:6px;}
+.fc-fact strong{color:#FFCE94; font-weight:700;}
+.fc-fact-list{list-style:none; margin:0; padding:0;}
+.fc-fact-list li{padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.06);}
+.fc-fact-list li:last-child{border-bottom:0;}
+.fc-fact-note{margin-top:6px; font-size:var(--fs-xs); color:var(--muted);}
+.fc-fact-big{font-size:var(--fs-xl); line-height:1.2;}
+.fc-fact-big strong{color:#fff;}
+.fc-fact-text{font-size:var(--fs-sm);}
+.fc-chips{display:flex; flex-wrap:wrap; gap:6px;}
+.fc-chip{padding:4px 10px; border-radius:999px; font-size:var(--fs-xs); color:#FECACA; background:rgba(255,77,106,0.10); border:1px solid rgba(255,77,106,0.35);}
 
 /* ---------- situación estructurada y tarjetas de función (pantalla del ejercicio) ---------- */
 /* "Lo que se sabe" / "Lo que falta" como bloques con etiqueta (ver situationBodyHtml). */

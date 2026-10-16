@@ -10,6 +10,13 @@
 //     oraciones sin hora que vienen entre hitos (o justo después, antes de "Otros datos:") se
 //     suman al hito anterior.
 //   - DATOS CLAVE: lo que va después de "Otros datos:" / "Además:", en viñetas.
+//   - ESCALAMIENTO: "…el SOC escala al TeamLeader y el TeamLeader pide las autorizaciones a
+//     Empresa Eléctrica Ventanas" se muestra como cadena con flechas (SOC → TeamLeader → …).
+//   - SE MENCIONAN, NO JUEGAN: "El Jefe … (nota) y el Área Legal solo se mencionan; no juegan"
+//     se muestra como tarjetas, una por cargo, con la nota entre paréntesis.
+//   - FICHAS: cada oración "Etiqueta: valor" (etiqueta corta, ej. "Plazos:", "Fuera de
+//     alcance:", "Duración objetivo:") es una ficha. Si el valor es una enumeración, va en
+//     renglones o etiquetas; si es corto ("50 minutos"), en grande; los tiempos se destacan.
 // Si no se reconoce ninguna estructura, queda en párrafos cortos (2–3 oraciones). Función pura
 // (sin DOM): devuelve HTML con todo el texto escapado. Script clásico: window.formatFacilitatorContext.
 window.formatFacilitatorContext = (function(){
@@ -89,22 +96,124 @@ window.formatFacilitatorContext = (function(){
   }
 
   const initials = name => name.split(/\s+/).filter(w => /^[A-ZÁÉÍÓÚÑ]/.test(w)).slice(0, 2).map(w => w[0]).join('');
+  const words = s => String(s).trim().split(/\s+/).filter(Boolean).length;
+  const stripArticle = s => String(s).trim().replace(/^(?:el|la|los|las)\s+/i, '');
 
-  // Antecedentes + protocolo + personas a partir de una lista de oraciones sin horas.
+  // Corta por ", " y " y " solo fuera de paréntesis: "a (x, y), b y c" → [a (x, y), b, c].
+  function splitTop(str){
+    const out = [];
+    let depth = 0, cur = '';
+    const s = String(str);
+    for(let i = 0; i < s.length; i++){
+      const c = s[i];
+      if(c === '(') depth++;
+      else if(c === ')') depth = Math.max(0, depth - 1);
+      if(depth === 0 && c === ',' && s[i + 1] === ' '){ out.push(cur); cur = ''; i++; continue; }
+      if(depth === 0 && s.slice(i, i + 3) === ' y ' ){ out.push(cur); cur = ''; i += 2; continue; }
+      cur += c;
+    }
+    out.push(cur);
+    return out.map(x => x.trim()).filter(Boolean);
+  }
+
+  // "Etiqueta: valor" con etiqueta corta (hasta 4 palabras, sin verbo de lista ni personas).
+  const FACT_MARK = /^([A-ZÁÉÍÓÚÑ][^:;]{1,40}?)\s*:\s+(.+)$/;
+  // Cola aclaratoria de una enumeración: ", contados desde…", ", salvo…".
+  const QUALIFIER = /^(?:contad[oa]s?|medid[oa]s?|desde|a partir|seg[uú]n|salvo|excepto|siempre que|en ambos casos)\b/i;
+  // Tiempos y duraciones que conviene destacar: "1 hora", "72 h", "50 minutos", "03:10".
+  const DURATION = /(\b\d+(?:[.,]\d+)?\s*(?:h|hrs?|horas?|min|minutos?|d[ií]as?(?:\s+(?:h[aá]biles|corridos))?|semanas?)\b|\b\d{1,2}:\d{2}\b)/gi;
+  const emph = s => esc(s).replace(DURATION, '<strong>$1</strong>');
+
+  function parseFact(sentence){
+    const m = trimEnd(sentence).match(FACT_MARK);
+    if(!m || words(m[1]) > 4) return null;
+    const label = m[1].trim();
+    const value = m[2].trim();
+    const parts = splitTop(value);
+    let note = '';
+    if(parts.length > 1 && QUALIFIER.test(parts[parts.length - 1])) note = parts.pop();
+    const items = parts.length >= 2 && parts.every(p => words(p) <= 9) ? parts.map(cap) : null;
+    return {label, value, items, note: cap(note)};
+  }
+
+  // "…el SOC escala al TeamLeader y el TeamLeader pide las autorizaciones a Empresa X".
+  function parseChain(sentence){
+    const m = trimEnd(sentence).match(/^(?:(?:en|dentro de)\s+[^,]+,\s*)?(?:el|la)\s+(.+?)\s+escala\s+(?:al|a la|a)\s+(.+)$/i);
+    if(!m) return null;
+    const from = m[1].trim();
+    let rest = m[2].trim(), to = rest, then = '', last = '';
+    const y = rest.match(/^(.+?)\s+y\s+(?:el|la)\s+(.+)$/i);
+    if(y){
+      to = y[1].trim();
+      // "…y el TeamLeader pide las autorizaciones a Empresa X" → acción "pide las autorizaciones", destino "Empresa X"
+      const act = y[2].trim().match(/^(?:\S+\s+){0,3}?(pide|solicita|informa|avisa|escala|deriva|reporta|consulta)\b(.*?)\s+(?:al|a la|a)\s+(.+)$/i);
+      if(act){ then = (act[1] + act[2]).trim(); last = act[3].trim(); }
+      else return null;
+    }
+    if(words(from) > 5 || words(to) > 5 || (last && words(last) > 6)) return null;
+    const steps = [{name: from}, {name: to, via: 'escala'}];
+    if(last) steps.push({name: last, via: then});
+    return steps;
+  }
+
+  // "El Jefe Departamento Operaciones (autoriza…) y el Área Legal solo se mencionan; no juegan."
+  function parseMentioned(sentence){
+    const m = trimEnd(sentence).match(/^(.+?)\s+(?:solo\s+)?(?:se mencionan|no juegan|no participan)\b(.*)$/i);
+    if(!m) return null;
+    const items = splitTop(m[1]).map(raw => {
+      const p = stripArticle(raw).match(/^([^()]+?)\s*(?:\(([^)]+)\))?$/);
+      return p ? {name: cap(p[1].trim()), note: cap((p[2] || '').trim())} : null;
+    });
+    if(!items.length || items.some(x => !x || words(x.name) > 6)) return null;
+    return items;
+  }
+
+  function factHtml(f){
+    let body;
+    if(f.items && /fuera de alcance|no incluye|excluye|no se juega/i.test(f.label)){
+      body = `<div class="fc-chips">${f.items.map(it => `<span class="fc-chip">${esc(cap(stripArticle(it)))}</span>`).join('')}</div>`;
+    } else if(f.items){
+      body = `<ul class="fc-fact-list">${f.items.map(it => `<li>${emph(it)}</li>`).join('')}</ul>`;
+    } else if(words(f.value) <= 3){
+      body = `<div class="fc-fact-big">${emph(f.value)}</div>`;
+    } else {
+      body = `<div class="fc-fact-text">${emph(f.value)}</div>`;
+    }
+    return `<div class="fc-fact"><div class="fc-fact-label">${esc(f.label)}</div>${body}${f.note ? `<div class="fc-fact-note">${emph(f.note)}</div>` : ''}</div>`;
+  }
+
+  // Antecedentes + escalamiento + protocolo + personas + mencionados + fichas, a partir de una
+  // lista de oraciones sin horas.
   function structuredHtml(list){
     const plain = [];
     const steps = [];
     const groups = [];
+    const chains = [];
+    const mentioned = [];
+    const facts = [];
     list.forEach(s => {
       const st = parseSteps(s);
       if(st){ steps.push(st); return; }
       const pe = parsePeople(s);
       if(pe){ groups.push(pe); return; }
+      const ch = parseChain(s);
+      if(ch){ chains.push(ch); return; }
+      const me = parseMentioned(s);
+      if(me){ mentioned.push(...me); return; }
+      const fa = parseFact(s);
+      if(fa){ facts.push(fa); return; }
       plain.push(s);
     });
-    if(!steps.length && !groups.length) return {html: plain.length ? paragraphsHtml(plain) : '', structured: false};
+    if(!steps.length && !groups.length && !chains.length && !mentioned.length && !facts.length){
+      return {html: plain.length ? paragraphsHtml(plain) : '', structured: false};
+    }
     let html = '';
     if(plain.length) html += `<section class="fc-section fc-intro"><div class="fc-label">Antecedentes</div>${paragraphsHtml(plain)}</section>`;
+    chains.forEach(ch => {
+      html += `<section class="fc-section"><div class="fc-label">Cadena de escalamiento</div><ol class="fc-chain">` +
+        ch.map((st, i) => (i ? `<li class="fc-chain-arrow" aria-hidden="true"><span>${esc(st.via || '')}</span>→</li>` : '') +
+          `<li class="fc-chain-node">${esc(st.name)}</li>`).join('') + '</ol></section>';
+    });
     steps.forEach(st => {
       html += `<section class="fc-section"><div class="fc-label">Protocolo</div><p class="fc-lead">${esc(st.lead)}:</p>` +
         `<ol class="fc-steps">${st.items.map((it, i) => `<li><span class="fc-step-n">${i + 1}</span><span>${esc(it)}</span></li>`).join('')}</ol></section>`;
@@ -121,6 +230,14 @@ window.formatFacilitatorContext = (function(){
           </div>
         </div>`).join('') + '</div></section>';
     });
+    if(mentioned.length){
+      html += `<section class="fc-section"><div class="fc-label">Se mencionan, pero no juegan</div><div class="fc-mentioned">` +
+        mentioned.map(m => `<div class="fc-mention"><div class="fc-mention-name">${esc(m.name)}</div>${m.note ? `<div class="fc-mention-note">${esc(m.note)}</div>` : ''}</div>`).join('') +
+        '</div></section>';
+    }
+    if(facts.length){
+      html += `<section class="fc-section"><div class="fc-label">Datos clave</div><div class="fc-facts">${facts.map(factHtml).join('')}</div></section>`;
+    }
     return {html, structured: true};
   }
 
