@@ -114,6 +114,10 @@ window.TabletopSaved = (function(){
     TibDocx.downloadReportDocx(docxPayload(r))
       .catch(err => { console.error(err); alert('No se pudo generar el Word del informe.'); });
   }
+  // PDF con el mismo documento y formato que el Word (ver report-pdf.js).
+  function downloadPdf(r){
+    TabletopReportPdf.print(docxPayload(r));
+  }
   function downloadJson(r){
     const copy = Object.assign({}, r);
     delete copy.informe_word;
@@ -214,6 +218,7 @@ window.TabletopSaved = (function(){
           <div class="sv-row-actions">
             <button class="btn btn-sm btn-primary" data-act="view">Ver</button>
             <button class="btn btn-sm" data-act="word">Word</button>
+            <button class="btn btn-sm" data-act="pdf">PDF</button>
             <button class="btn btn-sm" data-act="json">JSON</button>
             <button class="sv-del" data-act="del" title="Borrar" aria-label="Borrar ejercicio">✕</button>
           </div>
@@ -226,6 +231,7 @@ window.TabletopSaved = (function(){
         const act = btn.dataset.act;
         if(act === 'view') renderDetail(r);
         else if(act === 'word') downloadWord(r);
+        else if(act === 'pdf') downloadPdf(r);
         else if(act === 'json') downloadJson(r);
         else if(act === 'del' && await remove(r)) renderList();
       }));
@@ -245,6 +251,7 @@ window.TabletopSaved = (function(){
         <button class="btn btn-sm" id="svBack">← Todos los ejercicios</button>
         <div class="sv-detail-actions">
           <button class="btn btn-sm btn-primary" id="svWord">Descargar Word</button>
+          <button class="btn btn-sm" id="svPdf">PDF</button>
           <button class="btn btn-sm" id="svJson">JSON</button>
           <button class="btn btn-sm sv-del-btn" id="svDel">Borrar</button>
         </div>
@@ -281,6 +288,7 @@ window.TabletopSaved = (function(){
       </div>`;
     body.querySelector('#svBack').addEventListener('click', renderList);
     body.querySelector('#svWord').addEventListener('click', () => downloadWord(r));
+    body.querySelector('#svPdf').addEventListener('click', () => downloadPdf(r));
     body.querySelector('#svJson').addEventListener('click', () => downloadJson(r));
     body.querySelector('#svDel').addEventListener('click', async () => { if(await remove(r)) renderList(); });
     body.scrollTop = 0;

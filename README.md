@@ -39,6 +39,7 @@ Sitio estático (sin build ni dependencias de npm) publicado con GitHub Pages de
 │       ├── screens.js         Navegación entre pantallas (una sola función: show)
 │       ├── builder.js         Constructor guiado de escenarios
 │       ├── report.js          Resultados, informe ejecutivo y exportaciones (JSON/Word/PDF)
+│       ├── report-pdf.js      Informe en PDF con el mismo formato del Word (formato-sgsi-v2)
 │       ├── scenario-vault.js  Descifra los escenarios con la llave de Firestore (solo facilitador)
 │       ├── saved.js           Ejercicios guardados (ver, Word/JSON, borrar, importar)
 │       ├── app.js             Configuración del ejercicio y motor del juego
@@ -93,7 +94,7 @@ Al publicar en GitHub Pages, los cambios en `main` quedan en línea en 1–2 min
 | Escribir o corregir el relato de un escenario | `private/escenarios.js` (fuera del repo) y luego `node tools/encrypt-escenarios.mjs` |
 | Cambiar la introducción previa a la primera etapa | `js/data/catalogo.js` → `SCENARIO_INTROS` |
 | Agregar o cambiar una pantalla | `tabletop/index.html` (marcado) + `js/screens.js` (registrarla) |
-| Cambiar el informe final o sus descargas | `js/report.js` (y `docx.js` → `downloadReportDocx` para el Word, con formato SGSI: Carta, portada, control de cambios, títulos I./1.1, tablas azul marino) |
+| Cambiar el informe final o sus descargas | `js/report.js`; el Word en `docx.js` → `downloadReportDocx` y el PDF en `js/report-pdf.js`, los dos con el formato de la skill `/formato-sgsi-v2` (Carta, portada con imagen TIBOX, encabezado con logo, control de cambios, títulos I./1.1, tablas azul marino). Las imágenes están en `tabletop/assets/informe/`; si se cambia el formato, cambiar los dos archivos |
 | Cambiar el constructor de escenarios | `js/builder.js` |
 | Cambiar el modo con celulares | `js/multiplayer/` y `tabletop/firestore.rules` |
 | Cambiar el comportamiento del ejercicio | `js/app.js` |

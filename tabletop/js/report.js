@@ -526,14 +526,10 @@ window.TabletopReport = (function(){
         .catch(err => { console.error(err); alert('No se pudo generar el Word del informe.'); });
     }
 
-    // PDF: la ventana de impresión del navegador ("Guardar como PDF"). Las notas del acta se
-    // copian a un bloque solo-impresión porque un <textarea> no se imprime completo.
+    // PDF: el mismo documento del Word (portada, encabezado, control de cambios, secciones y
+    // notas del acta), maquetado con el formato SGSI para "Guardar como PDF" (ver report-pdf.js).
     function printReport(){
-      const notes = document.getElementById('actaNotes').value.trim();
-      const printNotes = document.getElementById('actaNotesPrint');
-      printNotes.textContent = notes;
-      printNotes.classList.toggle('hidden', !notes);
-      window.print();
+      TabletopReportPdf.print(buildReportDocxPayload());
     }
 
     document.getElementById('downloadReportDocxBtn').onclick = downloadReportDocx;

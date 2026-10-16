@@ -355,11 +355,14 @@ const TibDocx = (function(){
   // ================================================================
   // INFORME DEL EJERCICIO (resultado -> .docx con formato SGSI)
   // ================================================================
-  // Formato de los documentos del sistema de gestión (referencia: D-25, skill formato-sgsi):
-  // Carta, encabezado con nombre/versión/código/fecha y razón social, pie "Página X de Y",
-  // portada, Control de cambios + bloque de aprobación en la página 2, títulos numerados en
-  // romanos (I., II.) y subtítulos 5.1, cuerpo Aptos Light 12 justificado y tablas azul marino.
-  // El formato vive en los estilos de Word (styles.xml + numbering.xml), no párrafo a párrafo.
+  // Formato de los documentos del sistema de gestión (skill formato-sgsi-v2; referencia D-25 y,
+  // para la portada, el "Informe de ejercicio tabletop" de EEV): Carta, portada con la imagen
+  // TIBOX a página completa detrás del texto y el título en el espacio blanco inferior (sin
+  // encabezado ni pie), encabezado desde la página 2 con logo TIBOX + nombre/versión/código/fecha
+  // y razón social, pie "Página X de Y", Control de cambios + bloque de aprobación en la página
+  // 2, títulos numerados en romanos (I., II.) y subtítulos 5.1, cuerpo Aptos Light 12 justificado
+  // y tablas azul marino. El formato vive en los estilos de Word (styles.xml + numbering.xml).
+  // La versión PDF se arma con este mismo documento (ver report-pdf.js).
   //
   // report: {sections:[{title, blocks}], filename, meta}. Bloques (los arma
   // reportElementToDocBlocks en report.js): {type:'p'|'bullet', runs:[{text,bold}]},
@@ -375,6 +378,46 @@ const TibDocx = (function(){
   };
   const SG_FONT_TITLE = 'Cambria';
   const SG_FONT_BODY = 'Aptos Light';
+  // Imágenes de la skill formato-sgsi-v2 (copiadas a assets/informe). Medidas en EMU (pt × 12 700).
+  const SG_IMG = {
+    cover: {url: 'assets/informe/portada-tibox.jpg', cx: 7815580, cy: 10045700},  // 615,4 × 791 pt, toda la hoja
+    logo: {url: 'assets/informe/logo-tibox-encabezado.png', cx: 762000, cy: 135550} // 60 pt de ancho (163 × 29 px)
+  };
+  const SG_NS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" ' +
+    'xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" ' +
+    'xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"';
+  function sgGraphic(relId, name, cx, cy, id){
+    return `<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic>` +
+      `<pic:nvPicPr><pic:cNvPr id="${id}" name="${name}"/><pic:cNvPicPr/></pic:nvPicPr>` +
+      `<pic:blipFill><a:blip r:embed="${relId}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>` +
+      `<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>` +
+      `</pic:pic></a:graphicData></a:graphic>`;
+  }
+  // Portada: imagen flotante detrás del texto, a página completa (valores del anchor de la skill).
+  function sgCoverImageRun(){
+    const {cx, cy} = SG_IMG.cover;
+    return '<w:r><w:drawing><wp:anchor behindDoc="1" locked="0" layoutInCell="1" allowOverlap="1" relativeHeight="0" simplePos="0" distT="0" distB="0" distL="0" distR="0">' +
+      '<wp:simplePos x="0" y="0"/><wp:positionH relativeFrom="margin"><wp:posOffset>-1066800</wp:posOffset></wp:positionH>' +
+      '<wp:positionV relativeFrom="page"><wp:posOffset>10160</wp:posOffset></wp:positionV>' +
+      `<wp:extent cx="${cx}" cy="${cy}"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:wrapNone/>` +
+      '<wp:docPr id="1" name="Portada TIBOX"/><wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr>' +
+      sgGraphic('rIdCover', 'Portada TIBOX', cx, cy, 1) + '</wp:anchor></w:drawing></w:r>';
+  }
+  // Logo TIBOX del encabezado: imagen en línea, 60 pt de ancho.
+  function sgLogoRun(){
+    const {cx, cy} = SG_IMG.logo;
+    return `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:effectExtent l="0" t="0" r="0" b="0"/>` +
+      '<wp:docPr id="2" name="Logo TIBOX"/><wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr>' +
+      sgGraphic('rIdLogo', 'Logo TIBOX', cx, cy, 2) + '</wp:inline></w:drawing></w:r>';
+  }
+  // Descarga una imagen del sitio para incrustarla en el .docx; null si no se pudo (el
+  // documento se genera igual, sin esa imagen).
+  async function sgFetchImage(url){
+    try{
+      const res = await fetch(url);
+      return res.ok ? await res.arrayBuffer() : null;
+    }catch(e){ return null; }
+  }
 
   function sgRun(text, o){
     o = o || {};
@@ -482,20 +525,26 @@ const TibDocx = (function(){
       '</w:tbl>';
   }
 
-  function sgSectPr(extra){
+  // extra: elementos que van después de pgMar (vAlign, titlePg). firstRefs: la portada usa
+  // "primera página diferente" con encabezado y pie vacíos, para que no muestre la tabla.
+  function sgSectPr(extra, firstRefs){
     const m = SG.margin;
     return '<w:sectPr><w:headerReference w:type="default" r:id="rIdHeader1"/><w:footerReference w:type="default" r:id="rIdFooter1"/>' +
+      (firstRefs ? '<w:headerReference w:type="first" r:id="rIdHeaderEmpty"/><w:footerReference w:type="first" r:id="rIdFooterEmpty"/>' : '') +
       `<w:type w:val="nextPage"/><w:pgSz w:w="${SG.pageW}" w:h="${SG.pageH}"/>` +
       `<w:pgMar w:top="${m.top}" w:right="${m.right}" w:bottom="${m.bottom}" w:left="${m.left}" w:header="${m.header}" w:footer="${m.footer}" w:gutter="0"/>` +
       `${extra || ''}</w:sectPr>`;
   }
 
-  function buildSgsiBodyXml(report){
+  function buildSgsiBodyXml(report, images){
     const meta = report.meta;
     const out = [];
-    // Página 1: portada centrada verticalmente (sección propia con vAlign=center).
-    out.push(sgPara(sgRun(meta.coverTitle), {style: 'CoverTitle'}));
-    out.push(`<w:p><w:pPr><w:pStyle w:val="CoverSubtitle"/>${sgSectPr('<w:vAlign w:val="center"/>')}</w:pPr>${sgRun(meta.coverSubtitle)}</w:p>`);
+    // Página 1: portada con la imagen TIBOX a toda la hoja (anclada al título, detrás del texto)
+    // y el título y subtítulo en el espacio blanco bajo los paneles: 540 pt de espacio antes del
+    // título lo dejan a ≈ 611 pt del borde superior (70,9 de margen + 540). Sección propia con
+    // "primera página diferente": sin encabezado ni pie.
+    out.push(`<w:p><w:pPr><w:pStyle w:val="CoverTitle"/><w:spacing w:before="10800"/></w:pPr>${images.cover ? sgCoverImageRun() : ''}${sgRun(meta.coverTitle)}</w:p>`);
+    out.push(`<w:p><w:pPr><w:pStyle w:val="CoverSubtitle"/>${sgSectPr('<w:titlePg/>', true)}</w:pPr>${sgRun(meta.coverSubtitle)}</w:p>`);
     // Página 2: Control de cambios + bloque de aprobación al pie.
     out.push(sgPara(sgRun('Control de cambios'), {style: 'ChangesTitle'}));
     out.push(sgPara(sgRun(`Toda modificación a este documento debe ser aprobada por el ${meta.approverRole} de ${meta.approverCompany} antes de su distribución.`)));
@@ -519,19 +568,21 @@ const TibDocx = (function(){
     return out.join('');
   }
 
-  function sgHeaderXml(meta){
+  function sgHeaderXml(meta, withLogo){
     const w = [2000, 5260, 3800];
     const total = w[0] + w[1] + w[2];
     const p = (runs, jc) => `<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/><w:jc w:val="${jc}"/></w:pPr>${runs}</w:p>`;
     const small = t => p(sgRun(t, {font: SG_FONT_TITLE, size: 20, color: '000000'}), 'left');
     const tc = (width, content, extra) => `<w:tc><w:tcPr><w:tcW w:w="${width}" w:type="dxa"/>${extra || ''}<w:vAlign w:val="center"/></w:tcPr>${content}</w:tc>`;
     return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
-      '<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+      `<w:hdr ${SG_NS}>` +
       `<w:tbl><w:tblPr><w:tblW w:w="${total}" w:type="dxa"/><w:tblInd w:w="${-Math.round((total - SG.textW) / 2)}" w:type="dxa"/>` +
       '<w:tblBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/></w:tblBorders>' +
       `<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>${w.map(x => `<w:gridCol w:w="${x}"/>`).join('')}</w:tblGrid>` +
       '<w:tr>' +
-        tc(w[0], p('', 'left')) +
+        // Cuadro izquierdo: logo TIBOX (la app no tiene logo del cliente; si lo tuviera, iría al
+        // lado, en el mismo párrafo, con alto máximo 30 pt).
+        tc(w[0], p(withLogo ? sgLogoRun() : '', 'center')) +
         tc(w[1], p(sgRun(meta.docName, {font: SG_FONT_TITLE, size: 22, bold: true, color: '000000'}), 'center')) +
         tc(w[2], small(`Versión: ${meta.version}`) + small(`Código: ${meta.code}`) + small(`Fecha Emisión: ${meta.issueDate}`)) +
       '</w:tr><w:tr>' +
@@ -599,18 +650,23 @@ const TibDocx = (function(){
   }
 
   async function buildSgsiDocxBlob(report){
-    const W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
+    const [cover, logo] = await Promise.all([sgFetchImage(SG_IMG.cover.url), sgFetchImage(SG_IMG.logo.url)]);
     const documentXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
-      `<w:document ${W}><w:body>${buildSgsiBodyXml(report)}${sgSectPr()}</w:body></w:document>`;
+      `<w:document ${SG_NS}><w:body>${buildSgsiBodyXml(report, {cover: !!cover})}${sgSectPr()}</w:body></w:document>`;
+    const emptyHeader = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p/></w:hdr>';
+    const emptyFooter = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p/></w:ftr>';
     const contentTypes = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
       '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
       '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
       '<Default Extension="xml" ContentType="application/xml"/>' +
+      '<Default Extension="jpg" ContentType="image/jpeg"/><Default Extension="png" ContentType="image/png"/>' +
       '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
       '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>' +
       '<Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>' +
       '<Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>' +
+      '<Override PartName="/word/header2.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>' +
       '<Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>' +
+      '<Override PartName="/word/footer2.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>' +
       '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>' +
       '<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>' +
       '</Types>';
@@ -620,6 +676,13 @@ const TibDocx = (function(){
       '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/>' +
       '<Relationship Id="rIdHeader1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>' +
       '<Relationship Id="rIdFooter1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>' +
+      '<Relationship Id="rIdHeaderEmpty" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header2.xml"/>' +
+      '<Relationship Id="rIdFooterEmpty" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer2.xml"/>' +
+      (cover ? '<Relationship Id="rIdCover" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/portada-tibox.jpg"/>' : '') +
+      '</Relationships>';
+    const headerRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      (logo ? '<Relationship Id="rIdLogo" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/logo-tibox.png"/>' : '') +
       '</Relationships>';
     const zip = new JSZip();
     zip.file('[Content_Types].xml', contentTypes);
@@ -628,8 +691,13 @@ const TibDocx = (function(){
     zip.file('word/_rels/document.xml.rels', docRels);
     zip.file('word/styles.xml', sgStylesXml());
     zip.file('word/numbering.xml', sgNumberingXml());
-    zip.file('word/header1.xml', sgHeaderXml(report.meta));
+    zip.file('word/header1.xml', sgHeaderXml(report.meta, !!logo));
+    zip.file('word/_rels/header1.xml.rels', headerRels);
+    zip.file('word/header2.xml', emptyHeader);
     zip.file('word/footer1.xml', sgFooterXml());
+    zip.file('word/footer2.xml', emptyFooter);
+    if(cover) zip.file('word/media/portada-tibox.jpg', cover);
+    if(logo) zip.file('word/media/logo-tibox.png', logo);
     zip.file('docProps/core.xml', coreXml(report.meta.docName));
     zip.file('docProps/app.xml', APP_XML);
     return zip.generateAsync({type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
