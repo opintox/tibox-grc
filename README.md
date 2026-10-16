@@ -13,6 +13,7 @@ Sitio estático (sin build ni dependencias de npm) publicado con GitHub Pages de
 /
 ├── index.html                 Inicio: tarjetas de las herramientas (protegido por login)
 ├── login.html                 Login: correo + contraseña + código TOTP
+├── favicon.ico / apple-touch-icon.png  Ícono de la pestaña (cubo TIBOX); cada página lo enlaza
 ├── firebase.json / .firebaserc  Para publicar las reglas de Firestore con Firebase CLI
 ├── shared/
 │   └── firebase-config.js     Config del proyecto Firebase (la usan login, tabletop y SGC)
