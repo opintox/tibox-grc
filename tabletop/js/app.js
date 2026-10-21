@@ -1707,22 +1707,20 @@ function setDecisionStep(n){
 
 // Cuerpo de la situación. Los escenarios en formato de la skill de tabletop traen "Lo que se
 // sabe:" / "Lo que falta:" y cierran con una pregunta: se muestran como dos bloques con su
-// etiqueta y la pregunta se omite, porque el panel de decisión ya pregunta quién actúa y qué
-// decide. Cualquier otro párrafo se muestra tal cual.
+// etiqueta. La pregunta de cierre (último párrafo terminado en "?", con o sin esos bloques) se
+// omite, porque el panel de decisión ya pregunta quién actúa y qué decide. Cualquier otro
+// párrafo se muestra tal cual.
 const SIT_KNOWN = /^lo que (?:se sabe|sabemos)\s*:\s*/i;
 const SIT_MISSING = /^lo que (?:falta|no se sabe|no sabemos)\s*:\s*/i;
 function situationBodyHtml(situation){
   const paras = String(situation || '').split(/\n\s*\n/).map(t => t.trim()).filter(Boolean);
   const blocks = [];
-  let structured = false;
   paras.forEach((t, i) => {
     if(SIT_KNOWN.test(t)){
-      structured = true;
       blocks.push(`<div class="sit-block is-known"><span class="sit-block-label">Lo que se sabe</span><p>${escapeHtml(t.replace(SIT_KNOWN, ''))}</p></div>`);
     } else if(SIT_MISSING.test(t)){
-      structured = true;
       blocks.push(`<div class="sit-block is-missing"><span class="sit-block-label">Lo que falta</span><p>${escapeHtml(t.replace(SIT_MISSING, ''))}</p></div>`);
-    } else if(structured && i === paras.length - 1 && /\?\s*$/.test(t)){
+    } else if(i > 0 && i === paras.length - 1 && /\?\s*$/.test(t)){
       // Pregunta de cierre: no se muestra (la repite el panel de decisión).
     } else {
       blocks.push(`<p>${escapeHtml(t)}</p>`);
