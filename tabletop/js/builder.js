@@ -188,9 +188,16 @@ window.TabletopBuilder = (function(){
       });
     } else {
       document.querySelectorAll('[data-role-i]').forEach(inp => {
-        inp.addEventListener('input', e => { builderState.customRoles[parseInt(inp.dataset.roleI, 10)].name = e.target.value; });
-        // al salir del campo se redibuja, para que los selectores de suplente muestren el nombre nuevo
-        inp.addEventListener('change', () => renderBuilder());
+        inp.addEventListener('input', e => {
+          const r = builderState.customRoles[parseInt(inp.dataset.roleI, 10)];
+          r.name = e.target.value;
+          // El nombre nuevo se refleja en los selectores de suplente de las demás funciones, en el
+          // mismo lugar: redibujar la lista al salir del campo se comía el clic (y lo escrito) en
+          // el campo siguiente.
+          document.querySelectorAll(`[data-role-kind] option[value="sup:${r.key}"]`).forEach(o => {
+            o.textContent = `Suplente: ${r.name || '(sin nombre)'}`;
+          });
+        });
       });
       document.querySelectorAll('[data-role-kind]').forEach(sel => {
         sel.addEventListener('change', e => {

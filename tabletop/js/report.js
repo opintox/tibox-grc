@@ -356,7 +356,7 @@ window.TabletopReport = (function(){
     document.getElementById('gradeBadge').className = `kpi-card kpi-card-score ${gradeClass}`;
     document.getElementById('gradePct').textContent = accuracy + '%';
     document.getElementById('gradeLabel').textContent = gradeLabel;
-    document.getElementById('gradeMeta').textContent = `Precisión ${precision}% · −${timePenalty} pts por tiempo`;
+    document.getElementById('gradeMeta').textContent = `Precisión ${precision}% · ${timePenalty ? `−${timePenalty} pts por tiempo` : 'sin descuento por tiempo'}`;
     document.getElementById('resDuration').textContent = duration;
     document.getElementById('resTotal').textContent = total;
     document.getElementById('resWrongAnswers').textContent = wrongA;
@@ -391,7 +391,7 @@ window.TabletopReport = (function(){
       if(!stat) return '';
       return `
         <div class="stage-chart-block results-enter" style="animation-delay:${0.24 + idx * 0.06}s;">
-          <div class="stage-chart-label">${escapeHtml(stageName)} <span>(${stat.questions} pregunta${stat.questions === 1 ? '' : 's'})</span></div>
+          <div class="stage-chart-label">${escapeHtml(stageName)} <span>(${stat.questions} acto${stat.questions === 1 ? '' : 's'})</span></div>
           <div class="mini-bar-row">
             <span class="mini-bar-label">Función</span>
             <div class="mini-bar-track"><div class="mini-bar-fill is-function" style="width:${Math.min(100, (stat.wrongCharacters / stageBarMax) * 100)}%;"></div></div>

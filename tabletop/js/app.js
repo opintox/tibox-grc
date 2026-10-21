@@ -1707,7 +1707,8 @@ function setDecisionStep(n){
 
 // Cuerpo de la situación. Los escenarios en formato de la skill de tabletop traen "Lo que se
 // sabe:" / "Lo que falta:" y cierran con una pregunta: se muestran como dos bloques con su
-// etiqueta y la pregunta destacada aparte. Cualquier otro párrafo se muestra tal cual.
+// etiqueta y la pregunta se omite, porque el panel de decisión ya pregunta quién actúa y qué
+// decide. Cualquier otro párrafo se muestra tal cual.
 const SIT_KNOWN = /^lo que (?:se sabe|sabemos)\s*:\s*/i;
 const SIT_MISSING = /^lo que (?:falta|no se sabe|no sabemos)\s*:\s*/i;
 function situationBodyHtml(situation){
@@ -1722,7 +1723,7 @@ function situationBodyHtml(situation){
       structured = true;
       blocks.push(`<div class="sit-block is-missing"><span class="sit-block-label">Lo que falta</span><p>${escapeHtml(t.replace(SIT_MISSING, ''))}</p></div>`);
     } else if(structured && i === paras.length - 1 && /\?\s*$/.test(t)){
-      blocks.push(`<p class="sit-question">${escapeHtml(t)}</p>`);
+      // Pregunta de cierre: no se muestra (la repite el panel de decisión).
     } else {
       blocks.push(`<p>${escapeHtml(t)}</p>`);
     }
@@ -1732,6 +1733,9 @@ function situationBodyHtml(situation){
 
 function renderStage(opts){
   opts = opts || {};
+  // En pantallas angostas (bajo 921 px) el juego no tiene alto fijo y la página se desplaza: cada
+  // acto tiene que empezar arriba, en el relato, y no donde quedó el botón del acto anterior.
+  if(window.matchMedia && window.matchMedia('(max-width:920px)').matches) window.scrollTo(0, 0);
   const questions = stageQuestions(gameState.stages[gameState.stepIndex]);
   const stageLabel = gameState.stages[gameState.stepIndex].stage;
   const q = questions[gameState.subIndex];

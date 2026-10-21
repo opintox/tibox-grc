@@ -120,6 +120,8 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;justify-conten
 .hub-card:hover .hub-card-cta svg{transform:translateX(3px)}
 
 footer{padding:var(--sp-5);text-align:center;color:var(--muted-2);font-size:var(--fs-3xs);letter-spacing:.04em}
+/* Foco de teclado visible en botones y enlaces (accesibilidad) */
+:where(a,button,summary,[role="button"]):focus-visible{outline:2px solid #FF8A3D;outline-offset:2px}
 </style>
 </head>
 <body>

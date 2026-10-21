@@ -20,6 +20,9 @@
      ahora se usan cifras tabulares para mantener alineadas horas y contadores. */
   .game-timer, .gh-count, .sit-chip, .scn-fields, .c-foot, .acta-label,
   .stat-value, .donut-result-center b, .plazo-chip{font-variant-numeric:tabular-nums;}
+  /* Foco de teclado visible en todo lo interactivo (accesibilidad). :where no suma especificidad,
+     así que los estilos de foco propios de cada componente siguen mandando. */
+  :where(a, button, input, select, textarea, summary, [role="button"], [tabindex]):focus-visible{outline:2px solid #FF8A3D; outline-offset:2px;}
   @media (prefers-reduced-motion: reduce){
     *{animation-duration:0.01ms !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important;}
   }
@@ -1564,6 +1567,15 @@
   .builder-role-item{flex-wrap:wrap;}
   .builder-role-item input[type="text"]{min-width:180px;}
   .builder-role-item select{width:auto; flex:0 1 230px; min-width:0;}
+  /* Botón "×" para quitar una función, etapa o acto del constructor (sin estilo propio se veía
+     como el botón gris del navegador). */
+  .pc-empresa-remove{
+    flex-shrink:0; width:30px; height:30px; display:inline-flex; align-items:center; justify-content:center;
+    border-radius:8px; border:1px solid rgba(255,255,255,0.14); background:rgba(255,255,255,0.04);
+    color:var(--muted); font-size:18px; line-height:1; cursor:pointer; padding:0;
+    transition:color .15s ease, background-color .15s ease, border-color .15s ease;
+  }
+  .pc-empresa-remove:hover{color:#FECACA; background:rgba(255,77,106,0.12); border-color:rgba(255,77,106,0.45);}
   .builder-warnings{margin-top:10px;}
 
   /* Paso 3: lista de etapas, cada una con su lista de actos. */
@@ -1596,6 +1608,8 @@
   .builder-act-modal{max-width:680px; max-height:86vh; overflow-y:auto;}
   .builder-act-grid{display:grid; grid-template-columns:1fr 1fr; gap:var(--sp-4);}
   @media (max-width:700px){.builder-act-grid{grid-template-columns:1fr;}}
+  /* Función que responde y respaldo en la primera fila; el título del acto, a lo ancho debajo. */
+  .builder-act-grid > :nth-child(3){grid-column:1 / -1;}
   .builder-opt-list{display:flex; flex-direction:column; gap:12px;}
   .builder-opt-row{border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:12px 14px; background:rgba(255,255,255,0.02);}
   .builder-opt-row.is-correct{border-color:rgba(34,211,166,0.4); background:var(--green-dim);}
