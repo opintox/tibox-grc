@@ -10,3 +10,6 @@ tabletop-resultado_*.json
 # Escenarios predefinidos en texto legible y la llave para cifrarlos: solo en este computador
 # (en el repo va la versión cifrada, tabletop/js/data/escenarios.enc.json).
 private/
+
+# Respaldos del historial de git (pueden traer contenido de antes de limpiarlo): nunca al repo
+*.bundle
