@@ -31,10 +31,10 @@ body.lobby-mode .topbar-right{display:none;}
 /* El código es lo primero que se lee en voz alta al abrir la sala — borde y resplandor
    naranjo (marca TIBOX) le dan la misma jerarquía visual que un CTA, sin ser un botón. */
 .lobby-code{
-  font-family:var(--mono); font-weight:800; font-size:2.1rem; letter-spacing:0.16em;
-  color:#fff; background:var(--panel-2); border:1px solid rgba(255,138,61,0.4);
+  font-family:var(--code); font-weight:600; font-size:2.1rem; letter-spacing:0.16em;
+  color:#fff; background:var(--panel-2); border:1px solid rgba(0,209,255,0.4);
   border-radius:12px; padding:14px 10px; width:100%;
-  box-shadow:0 0 22px -10px rgba(255,138,61,0.55), inset 0 1px 0 0 rgba(255,255,255,0.04);
+  box-shadow:0 0 22px -10px rgba(0,209,255,0.55), inset 0 1px 0 0 rgba(255,255,255,0.04);
 }
 .lobby-qr{
   width:260px; height:260px; background:#fff; border-radius:12px; padding:10px;
@@ -124,16 +124,16 @@ body.lobby-mode .topbar-right{display:none;}
 /* "Te toca a ti": destello del panel de respuesta cuando le toca a esta persona (ver alertMyTurn). */
 .join-panel.is-my-turn{animation:joinMyTurn 1.2s ease-out 2;}
 @keyframes joinMyTurn{
-  0%{box-shadow:0 0 0 0 rgba(255,138,61,0.75);}
-  100%{box-shadow:0 0 0 14px rgba(255,138,61,0);}
+  0%{box-shadow:0 0 0 0 rgba(0,209,255,0.75);}
+  100%{box-shadow:0 0 0 14px rgba(0,209,255,0);}
 }
-@media (prefers-reduced-motion: reduce){.join-panel.is-my-turn{animation:none; outline:2px solid #FF8A3D;}}
+@media (prefers-reduced-motion: reduce){.join-panel.is-my-turn{animation:none; outline:2px solid #00D1FF;}}
 
 /* Resumen personal al terminar (ver renderSummary en participant-app.js) */
 .join-summary-stats{display:flex; flex-direction:column; gap:8px; margin:16px 0;}
 .join-summary-stat{
   padding:10px 12px; border-radius:9px; font-size:var(--fs-sm); font-weight:600; color:var(--text);
-  background:rgba(255,255,255,0.04); border:1px solid var(--border); border-left:3px solid #FF8A3D;
+  background:rgba(255,255,255,0.04); border:1px solid var(--border); border-left:3px solid #00D1FF;
 }
 .join-summary-body{font-size:var(--fs-sm); line-height:1.6; color:var(--text);}
 .join-summary-body p{margin:0 0 10px;}
@@ -165,20 +165,20 @@ body.lobby-mode .topbar-right{display:none;}
 
 /* Admisión por código: código oculto/visible e intentos en el roster del facilitador */
 .lobby-access-code{
-  font-family:var(--mono); font-weight:800; font-size:var(--fs-sm); letter-spacing:0.12em;
+  font-family:var(--mono); font-weight:700; font-size:var(--fs-sm); letter-spacing:0.12em;
   padding:3px 8px; border-radius:7px; background:var(--panel-2); border:1px solid var(--border); color:var(--muted);
 }
-.lobby-access-code.is-shown{color:#fff; border-color:rgba(255,138,61,0.6); box-shadow:0 0 14px -6px rgba(255,138,61,0.7);}
+.lobby-access-code.is-shown{color:#fff; border-color:rgba(0,209,255,0.6); box-shadow:0 0 14px -6px rgba(0,209,255,0.7);}
 .lobby-attempts{font-size:var(--fs-3xs); color:var(--muted); align-self:center;}
 .lobby-attempts.is-out{color:var(--red); font-weight:700;}
-.lobby-give-btn{border-color:rgba(255,138,61,0.55); color:var(--amber);}
+.lobby-give-btn{border-color:rgba(0,209,255,0.55); color:var(--amber);}
 .lobby-roster-actions{flex-wrap:wrap; justify-content:flex-end; align-items:center;}
 
 /* Código en el celular (join.html) */
 .join-code-form{display:flex; flex-direction:column; gap:10px; margin-top:16px;}
 .join-code-form label{font-size:var(--fs-2xs); letter-spacing:0.08em; text-transform:uppercase; color:var(--muted);}
 .join-access-input{
-  text-align:center; font-family:var(--mono); font-size:1.6rem; font-weight:800; letter-spacing:0.4em;
+  text-align:center; font-family:var(--mono); font-size:1.6rem; font-weight:700; letter-spacing:0.4em;
   padding:12px; border-radius:12px; background:var(--panel-2); border:1px solid var(--border); color:var(--text);
 }
 .join-code-msg{min-height:1.2em; margin:0; font-size:var(--fs-sm); color:var(--muted);}

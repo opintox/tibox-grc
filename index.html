@@ -12,13 +12,14 @@
 <style id="authHide">html{visibility:hidden}</style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@300;400;600;700&family=IBM+Plex+Mono:wght@600&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#070C1A; --panel:rgba(15,23,42,0.55); --panel-2:rgba(11,17,32,0.75);
-  --border:rgba(255,255,255,0.08); --text:#F1F5F9; --muted:#8592AE; --muted-2:#52607D;
-  --amber:#FF8A00; --blue:#0EA5E9;
-  --sans:'Plus Jakarta Sans',-apple-system,sans-serif;
+  /* Paleta Diseño TIBOX (www.tibox.cl) */
+  --bg:#06152F; --panel:rgba(0,21,67,0.62); --panel-2:rgba(0,14,61,0.80);
+  --border:rgba(0,209,255,0.13); --text:#F4F7FF; --muted:#B8C2D8; --muted-2:#7D89A6;
+  --amber:#FF8200; --blue:#00D1FF;
+  --sans:'Titillium Web','Segoe UI',-apple-system,sans-serif;
   --fs-3xs:0.625rem; --fs-xs:0.75rem; --fs-sm:0.8125rem; --fs-md:0.875rem;
   --fs-lg:1rem; --fs-xl:1.25rem; --fs-2xl:1.75rem; --fs-3xl:2.5rem;
   --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:22px; --sp-6:30px; --sp-7:40px;
@@ -36,7 +37,7 @@ body::before{content:'';position:fixed;inset:0;z-index:-2;pointer-events:none;}
 @media (min-width:721px){
   body::before{
     background:
-      linear-gradient(rgba(7,12,26,.72),rgba(7,12,26,.72)),
+      linear-gradient(rgba(6,21,47,.78),rgba(6,21,47,.78)),
       url('img/fondo.png');
     background-size:cover;background-position:center;background-repeat:no-repeat;
   }
@@ -44,9 +45,9 @@ body::before{content:'';position:fixed;inset:0;z-index:-2;pointer-events:none;}
 body::after{
   content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
   background:
-    radial-gradient(42vw circle at 14% 10%,rgba(255,138,0,0.10),transparent 60%),
-    radial-gradient(46vw circle at 86% 18%,rgba(14,165,233,0.13),transparent 60%),
-    radial-gradient(38vw circle at 50% 100%,rgba(14,165,233,0.06),transparent 60%);
+    radial-gradient(42vw circle at 14% 10%,rgba(0,209,255,0.11),transparent 60%),
+    radial-gradient(46vw circle at 86% 18%,rgba(0,76,255,0.15),transparent 60%),
+    radial-gradient(38vw circle at 50% 100%,rgba(0,165,255,0.07),transparent 60%);
 }
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms !important;transition-duration:.01ms !important}}
 
@@ -71,9 +72,12 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;justify-conten
   display:inline-flex;align-items:center;gap:8px;margin-bottom:var(--sp-3);
 }
 .eyebrow::before,.eyebrow::after{content:'';width:14px;height:1px;background:var(--muted-2)}
+/* Titular de portada de la marca: Titillium SemiBold con el degradado azul horizontal. */
 .hub-head h1{
-  font-size:var(--fs-3xl);font-weight:800;letter-spacing:-.02em;margin:0 0 10px;
-  text-wrap:balance;
+  font-size:clamp(2.25rem,5vw,3.25rem);font-weight:600;line-height:1.1;margin:0 0 12px;
+  text-wrap:balance;color:#F4F7FF;
+  background:linear-gradient(90deg,#00D7FF,#00A5FF 45%,#004CFF);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
 }
 .hub-head p{color:var(--muted);font-size:var(--fs-lg);line-height:1.5;margin:0;max-width:34rem;margin-inline:auto}
 
@@ -110,7 +114,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;justify-conten
 }
 .hub-card-icon svg{width:21px;height:21px}
 
-.hub-card h2{font-size:var(--fs-2xl);font-weight:800;margin:0;letter-spacing:-.01em}
+.hub-card h2{font-size:var(--fs-2xl);font-weight:600;margin:0;letter-spacing:-.01em}
 .hub-card p.desc{color:var(--muted);font-size:var(--fs-sm);line-height:1.5;margin:0;flex:1}
 .hub-card-cta{
   font-size:var(--fs-xs);font-weight:700;color:var(--glow);
@@ -121,7 +125,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;justify-conten
 
 footer{padding:var(--sp-5);text-align:center;color:var(--muted-2);font-size:var(--fs-3xs);letter-spacing:.04em}
 /* Foco de teclado visible en botones y enlaces (accesibilidad) */
-:where(a,button,summary,[role="button"]):focus-visible{outline:2px solid #FF8A3D;outline-offset:2px}
+:where(a,button,summary,[role="button"]):focus-visible{outline:2px solid #00D1FF;outline-offset:2px}
 </style>
 </head>
 <body>
@@ -142,7 +146,7 @@ footer{padding:var(--sp-5);text-align:center;color:var(--muted-2);font-size:var(
   </div>
 
   <div class="card-grid">
-    <a class="hub-card acc-amber" href="tabletop/">
+    <a class="hub-card acc-blue" href="tabletop/">
       <div class="hub-card-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"/>

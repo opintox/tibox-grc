@@ -12,12 +12,12 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@300;400;600;700&family=IBM+Plex+Mono:wght@600&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#070C1A; --panel:rgba(15,23,42,0.72); --border:rgba(255,255,255,0.10);
-  --text:#F1F5F9; --muted:#8592AE; --amber:#FF8A00; --blue:#0EA5E9; --red:#FF6B7F; --green:#34D399;
-  --sans:'Plus Jakarta Sans',-apple-system,sans-serif;
+  --bg:#06152F; --panel:rgba(0,21,67,0.78); --border:rgba(0,209,255,0.16);
+  --text:#F4F7FF; --muted:#B8C2D8; --amber:#FF8200; --blue:#00D1FF; --red:#FF6B7F; --green:#34D399;
+  --sans:'Titillium Web','Segoe UI',-apple-system,sans-serif;
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
@@ -28,7 +28,7 @@ body{
 body::before{content:'';position:fixed;inset:0;z-index:-2;pointer-events:none;}
 @media (min-width:721px){
   body::before{
-    background:linear-gradient(rgba(7,12,26,.72),rgba(7,12,26,.72)),url('img/fondo.png');
+    background:linear-gradient(rgba(6,21,47,.78),rgba(6,21,47,.78)),url('img/fondo.png');
     background-size:cover;background-position:center;background-repeat:no-repeat;
   }
 }
@@ -42,7 +42,7 @@ main{flex:1;display:flex;align-items:center;justify-content:center;padding:24px 
   box-shadow:0 20px 40px -24px rgba(0,0,0,.6);
 }
 .eyebrow{font-size:.625rem;letter-spacing:.16em;color:var(--muted);text-transform:uppercase;margin-bottom:8px}
-h1{font-size:1.5rem;font-weight:800;margin:0 0 6px;letter-spacing:-.01em}
+h1{font-size:1.75rem;font-weight:600;margin:0 0 6px}
 .sub{color:var(--muted);font-size:.85rem;line-height:1.5;margin:0 0 22px}
 label{display:block;font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
 input{
@@ -53,7 +53,7 @@ input:focus{outline:none;border-color:var(--blue)}
 input.code{text-align:center;letter-spacing:.4em;font-size:1.3rem;font-weight:700}
 button{
   width:100%;padding:13px 16px;border-radius:12px;border:0;cursor:pointer;font:inherit;font-weight:700;
-  font-size:.95rem;color:#fff;background:linear-gradient(135deg,#FF8A3D,#F0651D);
+  font-size:.95rem;color:#fff;background:linear-gradient(180deg,#FF8200,#FF5322);
 }
 button:disabled{opacity:.5;cursor:not-allowed}
 button.link{background:none;color:var(--muted);font-weight:600;font-size:.82rem;margin-top:10px;padding:8px}
@@ -72,7 +72,7 @@ button.link{background:none;color:var(--muted);font-weight:600;font-size:.82rem;
 }
 .hint{font-size:.78rem;color:var(--muted);text-align:center;margin:0 0 14px;line-height:1.5}
 /* Foco de teclado visible en botones y enlaces (accesibilidad) */
-:where(a,button,summary,[role="button"]):focus-visible{outline:2px solid #FF8A3D;outline-offset:2px}
+:where(a,button,summary,[role="button"]):focus-visible{outline:2px solid #00D1FF;outline-offset:2px}
 </style>
 </head>
 <body>
