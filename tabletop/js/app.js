@@ -76,7 +76,7 @@ function roleExplainIconHtml(rm, roleKey){
   const [c1] = (rm.accents && rm.accents[roleKey]) || ['#8592AE'];
   return `<span class="ex-role-icon" style="background:${hexToRgba(c1, 0.18)}; color:${c1};">${icon}</span>`;
 }
-// roleList: [{key, name, mandatory?, optional?, suplente?}] en el orden en que el documento las
+// roleList: [{key, name, desc?, mandatory?, optional?, suplente?}] en el orden en que el documento las
 // declaró. Una función sin tipo se comporta como opcional, pero no se marca: así el Word
 // exportado la deja igual que venía (y el aviso de "sin tipo" se mantiene).
 function buildCustomRoleMeta(roleList){
@@ -91,16 +91,17 @@ function buildCustomRoleMeta(roleList){
     icons[r.key] = initialsIconSvg(r.name);
     color[r.key] = palette.color;
     accents[r.key] = palette.accent;
-    desc[r.key] = '';
+    desc[r.key] = r.desc || ''; // "DESCRIPCIÓN DE LA FUNCIÓN" del Word (opcional)
     org[r.key] = 'Cliente';
   });
   return {keys, names, icons, color, desc, org, accents, mandatory, suplente, optional};
 }
-// Lista {key, name, mandatory?, optional?, suplente?} de un organigrama propio: lo que vuelve
+// Lista {key, name, desc?, mandatory?, optional?, suplente?} de un organigrama propio: lo que vuelve
 // a escribir el Word exportado (ver TibDocx.downloadScenarioDocx).
 function customRoleListFor(rm){
   return rm.keys.map(k => {
     const r = {key: k, name: rm.names[k]};
+    if(rm.desc[k]) r.desc = rm.desc[k];
     if(rm.mandatory[k]) r.mandatory = true;
     if(rm.suplente[k]) r.suplente = rm.suplente[k];
     if(rm.optional[k]) r.optional = true;
@@ -1215,18 +1216,67 @@ function showBriefing(onStart, roomCode){
   contextBtn.onclick = facilitatorContext ? () => showFacilitatorContext(facilitatorContext) : null;
   if(facilitatorContext) showFacilitatorContext(facilitatorContext);
 
-  if(roomCode && window.MP) window.MP.publishBriefing(roomCode, {title: scenario ? scenario.name : '', intro});
+  // Los celulares reciben, junto con la introducción, la descripción de cada función: cada uno
+  // muestra solo la suya (ver renderBriefing en participant-app.js).
+  const team = teamRolesFor(id);
+  if(roomCode && window.MP) window.MP.publishBriefing(roomCode, {
+    title: scenario ? scenario.name : '', intro,
+    roles: Object.fromEntries(team.map(r => [r.key, {desc: r.desc, covers: r.covers}]))
+  });
 
   const leave = () => {
     startBtn.onclick = null;
     backBtn.onclick = null;
   };
-  startBtn.onclick = () => { leave(); onStart(); };
+  // "Comenzar" pasa primero por la presentación del equipo; desde ahí se puede volver a esta
+  // pantalla sin rearmarla (los manejadores siguen puestos hasta que el ejercicio parte).
+  startBtn.onclick = () => showTeamIntro(team, roomCode, () => { leave(); onStart(); });
   backBtn.onclick = () => {
     leave();
     TabletopScreens.show('setup', {scroll: false});
     updateBottomState();
   };
+}
+
+// Funciones activas de la sesión, con lo necesario para presentarlas: descripción (sin
+// adelantar situaciones) y las funciones ausentes cuyos actos asumen hoy.
+function teamRolesFor(scenarioId){
+  const rm = roleMetaFor(scenarioId);
+  const sentence = t => { t = String(t || '').trim(); return t ? t[0].toUpperCase() + t.slice(1) + (/[.!?]$/.test(t) ? '' : '.') : ''; };
+  return sessionRoleKeys(scenarioId).map(k => ({
+    key: k,
+    name: rm.names[k],
+    company: roleCompanyFor(k, scenarioId),
+    desc: sentence(rm.desc[k]),
+    covers: rm.keys.filter(o => getMatrix(scenarioId)[o] && !isRoleActive(o, scenarioId) && activeSuplenteFor(o, scenarioId) === k)
+      .map(o => rm.names[o])
+  }));
+}
+
+// Presentación del equipo (#screen-team): entre la introducción y la primera etapa. Una tarjeta
+// por función activa, con el nombre de la persona si entró con el celular.
+function showTeamIntro(team, roomCode, onStart){
+  const people = (roomCode && window.MP) ? window.MP.getPersonByRole() : {};
+  const list = items => items.join(', ').replace(/, ([^,]*)$/, ' y $1');
+  document.getElementById('teamGrid').innerHTML = team.map(r => {
+    const person = String(people[r.key] || '').trim();
+    // Diseño TIBOX: todas las tarjetas en cian (sin el color de cada función: la marca admite
+    // máximo dos colores secundarios por pantalla y nunca como color de texto).
+    return `<article class="team-card">
+      <div class="team-card-id">
+        ${person ? `<div class="team-card-person">${escapeHtml(person)}</div>` : ''}
+        <div class="team-card-role${person ? '' : ' is-main'}">${escapeHtml(r.name)}</div>
+        ${r.company ? `<div class="team-card-org">${escapeHtml(r.company)}</div>` : ''}
+      </div>
+      ${r.desc ? `<p class="team-card-desc">${escapeHtml(r.desc)}</p>` : ''}
+      ${r.covers.length ? `<p class="team-card-covers">Hoy además asume las decisiones de <b>${escapeHtml(list(r.covers))}</b>.</p>` : ''}
+    </article>`;
+  }).join('');
+  const startBtn = document.getElementById('teamStartBtn');
+  const backBtn = document.getElementById('teamBackBtn');
+  TabletopScreens.show('team');
+  startBtn.onclick = () => { startBtn.onclick = null; backBtn.onclick = null; onStart(); };
+  backBtn.onclick = () => TabletopScreens.show('briefing');
 }
 
 // Ventana "Contexto": notas para el facilitador. Solo en esta pantalla (los celulares no la

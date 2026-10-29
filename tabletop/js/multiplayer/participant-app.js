@@ -33,6 +33,10 @@ const answerGrid = document.getElementById('joinAnswerGrid');
 const joinBriefing = document.getElementById('joinBriefing');
 const joinBriefingTitle = document.getElementById('joinBriefingTitle');
 const joinBriefingText = document.getElementById('joinBriefingText');
+const joinMyRole = document.getElementById('joinMyRole');
+const joinMyRoleName = document.getElementById('joinMyRoleName');
+const joinMyRoleDesc = document.getElementById('joinMyRoleDesc');
+const joinMyRoleCovers = document.getElementById('joinMyRoleCovers');
 const answerEyebrow = document.getElementById('joinAnswerEyebrow');
 const summaryPanel = document.getElementById('joinSummaryPanel');
 
@@ -336,7 +340,7 @@ function handleActUpdate(room, roleRoster){
   const act = room.currentAct;
   // Introducción del escenario: solo entre que el facilitador inicia y publica el primer acto.
   const showBriefing = room.status === 'in_progress' && !act && !!room.briefing;
-  renderBriefing(showBriefing ? room.briefing : null);
+  renderBriefing(showBriefing ? room.briefing : null, roleRoster);
 
   if(room.status !== 'in_progress' || !act || (act.phase !== 'voting' && act.phase !== 'answering')){
     votePanel.classList.add('hidden');
@@ -387,15 +391,27 @@ function alertMyTurn(actKey){
   answerPanel.scrollIntoView({block: 'start', behavior: 'smooth'});
 }
 
-// briefing: {title, intro} publicado por el facilitador (ver publishBriefing en room.js), o
-// null para ocultarlo. Texto plano: cada párrafo se escapa (lo escribe el facilitador, pero
-// viene de un Word importado).
-function renderBriefing(briefing){
+// briefing: {title, intro, roles?} publicado por el facilitador (ver publishBriefing en room.js),
+// o null para ocultarlo. Texto plano: cada párrafo se escapa (lo escribe el facilitador, pero
+// viene de un Word importado). roles: {roleKey: {desc, covers}}; este celular muestra solo la
+// tarjeta de su propia función.
+function renderBriefing(briefing, roleRoster){
   joinBriefing.classList.toggle('hidden', !briefing);
   if(!briefing) return;
   joinBriefingTitle.textContent = briefing.title || '';
   joinBriefingText.innerHTML = String(briefing.intro || '').split(/\n\s*\n/).filter(t => t.trim())
     .map(t => `<p>${escapeHtmlLocal(t.trim())}</p>`).join('');
+  const mine = (briefing.roles || {})[myRoleKey];
+  const role = (roleRoster || []).find(r => r.roleKey === myRoleKey);
+  joinMyRole.classList.toggle('hidden', !mine || !role);
+  if(!mine || !role) return;
+  joinMyRoleName.textContent = role.name + (role.org ? ` · ${role.org}` : '');
+  joinMyRoleDesc.textContent = mine.desc || '';
+  joinMyRoleDesc.classList.toggle('hidden', !mine.desc);
+  const covers = mine.covers || [];
+  joinMyRoleCovers.textContent = covers.length
+    ? `Hoy además asumes las decisiones de ${covers.join(', ').replace(/, ([^,]*)$/, ' y $1')}.` : '';
+  joinMyRoleCovers.classList.toggle('hidden', !covers.length);
 }
 
 function renderVoteGrid(act, roleRoster){

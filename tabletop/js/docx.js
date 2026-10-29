@@ -15,6 +15,9 @@ const TibDocx = (function(){
     OBJ: 'OBJETIVO (ACTIVO AFECTADO)',
     EXTRA_ROLES: 'FUNCIONES ADICIONALES QUE PARTICIPAN',
     FUNCION_ESCENARIO: 'FUNCION DEL ESCENARIO',
+    // Opcional, justo debajo de cada FUNCIÓN DEL ESCENARIO: qué hace esa función en el ejercicio,
+    // sin adelantar situaciones. Se muestra en la presentación del equipo (ver showTeamIntro).
+    DESC_FUNCION: 'DESCRIPCION DE LA FUNCION',
     INTRO: 'INTRODUCCION',
     ETAPA: 'ETAPA',
     FUNCION: 'FUNCION QUE RESPONDE',
@@ -167,7 +170,7 @@ const TibDocx = (function(){
   function buildScenarioParagraphsXml(scenario){
     // scenario: {name, blurb, target, stages:[{stage, questions:[...]}],
     //   roleNames?: {roleKey: nombre a mostrar} (por defecto ROLE_NAMES),
-    //   customRoleList?: [{key, name, mandatory?, suplente?}, ...] — si viene, el escenario declara
+    //   customRoleList?: [{key, name, desc?, mandatory?, suplente?}, ...] — si viene, el escenario declara
     //     sus propias funciones (en vez de las 6 estándar) y se exporta el bloque FUNCIÓN DEL
     //     ESCENARIO, con sus marcas (OBLIGATORIA) / (SUPLENTE: …);
     //   extraRoleKeys?: [roleKey,...] — solo se usa cuando NO hay customRoleList;
@@ -182,8 +185,12 @@ const TibDocx = (function(){
     out.push(pLabelValue(LABELS.DESC, scenario.blurb));
     out.push(pLabelValue(LABELS.OBJ, scenario.target));
     if(scenario.customRoleList && scenario.customRoleList.length){
-      scenario.customRoleList.forEach(r => out.push(pLabelValue(LABELS.FUNCION_ESCENARIO, roleDeclarationText(r, roleNames))));
+      scenario.customRoleList.forEach(r => {
+        out.push(pLabelValue(LABELS.FUNCION_ESCENARIO, roleDeclarationText(r, roleNames)));
+        out.push(pLabelValue(LABELS.DESC_FUNCION, r.desc || ''));
+      });
       out.push(p('Este escenario usa sus propias funciones (arriba, una línea "FUNCIÓN DEL ESCENARIO" por cada una) en vez de Seguridad/TI/Legal/Comunicaciones/RRHH/Dirección. Cada "FUNCIÓN QUE RESPONDE" más abajo debe repetir uno de esos nombres tal cual. Para agregar una función nueva, agrega otra línea "FUNCIÓN DEL ESCENARIO" acá arriba.', {spacingAfter:160}));
+      out.push(p('"DESCRIPCIÓN DE LA FUNCIÓN" es opcional: en una o dos frases, qué hace esa función en el ejercicio (de qué se encarga y qué tipo de decisiones le tocan), sin adelantar ninguna situación ni respuesta. Se muestra al presentar al equipo, antes de la primera etapa.', {spacingAfter:160}));
       out.push(p(ROLE_KINDS_HELP, {spacingAfter:280}));
     } else {
       const extraNames = (scenario.extraRoleKeys || []).map(k => roleNames[k] || k).join(', ');
@@ -832,7 +839,8 @@ const TibDocx = (function(){
 
       // Cualquier etiqueta del encabezado o una ETAPA cierra la introducción.
       if(label === LABELS.NOMBRE || label === LABELS.DESC || label === LABELS.OBJ ||
-         label === LABELS.EXTRA_ROLES || label === LABELS.FUNCION_ESCENARIO || label === LABELS.ETAPA){
+         label === LABELS.EXTRA_ROLES || label === LABELS.FUNCION_ESCENARIO || label === LABELS.DESC_FUNCION ||
+         label === LABELS.ETAPA){
         introActive = false;
       }
       if(label === LABELS.INTRO){
@@ -854,6 +862,14 @@ const TibDocx = (function(){
           }
           customRoleByName[normLabel(decl.name)] = key;
         }
+        situationActive = false;
+        continue;
+      }
+      // Descripción de la función declarada justo arriba (opcional; vacía se ignora).
+      if(label === LABELS.DESC_FUNCION){
+        const last = customRoleList[customRoleList.length - 1];
+        if(value && last) last.desc = value;
+        else if(value) errors.push('Hay una línea "DESCRIPCIÓN DE LA FUNCIÓN" antes de cualquier "FUNCIÓN DEL ESCENARIO": va justo debajo de la función que describe.');
         situationActive = false;
         continue;
       }
@@ -918,6 +934,7 @@ const TibDocx = (function(){
     // se declara más abajo en el documento.
     const roles = customRoleList.map(r => {
       const role = {key: r.key, name: r.name};
+      if(r.desc) role.desc = r.desc;
       if(r.mandatory) role.mandatory = true;
       if(r.optional) role.optional = true;
       if(r.suplenteName){

@@ -183,3 +183,8 @@ body.lobby-mode .topbar-right{display:none;}
 }
 .join-code-msg{min-height:1.2em; margin:0; font-size:var(--fs-sm); color:var(--muted);}
 .join-code-msg.is-error{color:var(--red);}
+/* Tarjeta "Tu función en el ejercicio" bajo la introducción (ver renderBriefing). */
+.join-myrole{margin-top:16px; padding:14px 16px; border-radius:12px; background:var(--panel-2); border:1px solid var(--border); border-left:3px solid var(--blue);}
+.join-myrole-name{font-size:var(--fs-md); font-weight:600; color:var(--text); margin-bottom:6px;}
+.join-myrole-desc, .join-myrole-covers{margin:0; font-size:var(--fs-sm); line-height:1.55; color:var(--muted);}
+.join-myrole-covers{margin-top:8px;}

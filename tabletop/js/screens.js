@@ -14,6 +14,7 @@ window.TabletopScreens = (function(){
     builder:  {id: 'screen-builder',  modes: ['builder-mode'],            title: 'Configuración del ejercicio', status: 'CREAR ESCENARIO'},
     lobby:    {id: 'screen-lobby',    modes: ['setup-mode', 'lobby-mode'], title: 'Configuración del ejercicio', status: 'SALA DE ESPERA'},
     briefing: {id: 'screen-briefing', modes: ['briefing-mode'],           title: 'Antes de comenzar',           status: 'INTRODUCCIÓN'},
+    team:     {id: 'screen-team',     modes: ['briefing-mode'],           title: 'Antes de comenzar',           status: 'EQUIPO'},
     game:     {id: 'screen-game',     modes: ['game-mode'],               title: 'Ejercicio en curso',          status: 'EN CURSO'},
     results:  {id: 'screen-results',  modes: [],                          title: 'Resultados del ejercicio',    status: 'FINALIZADO'},
     report:   {id: 'screen-report',   modes: [],                          title: 'Informe ejecutivo',           status: 'FINALIZADO'}

@@ -333,7 +333,28 @@
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>
           <span>Contexto para facilitadores</span>
         </button>
-        <button class="btn-cta" id="briefingStartBtn" type="button">Comenzar ejercicio →</button>
+        <button class="btn-cta" id="briefingStartBtn" type="button">Presentar al equipo →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Presentación del equipo: después de la introducción y antes de la primera etapa. Una
+       tarjeta por función activa (nombre de la persona si entró con el celular, función, empresa
+       y qué hace en el ejercicio, sin adelantar situaciones); ver showTeamIntro en app.js. -->
+  <div id="screen-team" class="hidden">
+    <div class="panel section-block briefing-panel team-panel">
+      <div class="team-head">
+        <img class="team-head-icon" src="assets/iconos-3d/usuarios.png" alt="" width="72" height="72">
+        <div>
+          <div class="eyebrow">Antes de comenzar</div>
+          <h2 class="section-title">Presentación del <span class="kw">equipo</span></h2>
+          <p class="section-sub">Quién participa y de qué se encarga cada uno. Las situaciones y las decisiones se conocen durante el ejercicio.</p>
+        </div>
+      </div>
+      <div class="team-grid" id="teamGrid"></div>
+      <div class="lobby-actions briefing-actions">
+        <button class="btn" id="teamBackBtn" type="button">← Volver a la introducción</button>
+        <button class="btn-cta" id="teamStartBtn" type="button">Comenzar ejercicio →</button>
       </div>
     </div>
   </div>
