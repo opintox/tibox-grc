@@ -104,6 +104,19 @@ input[type=radio],input[type=checkbox]{accent-color:var(--cyan)}
 .radio input{margin-top:4px}
 .radio span small{display:block;color:var(--muted);font-size:12.5px}
 
+/* Alimentador del paso 3: selector de tipo en píldoras */
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg label{position:relative;cursor:pointer}
+.seg input{position:absolute;opacity:0;width:1px;height:1px}
+.seg span{display:inline-block;font:600 13px var(--sans);color:var(--muted);padding:6px 12px;border:1px solid var(--line-2);border-radius:999px;transition:border-color .15s,background .15s,color .15s}
+.seg label:hover span{border-color:var(--cyan);color:var(--fg)}
+.seg input:checked+span{color:var(--fg);border-color:var(--cyan);background:rgba(0,209,255,.14)}
+.seg input:focus-visible+span{outline:2px solid var(--cyan);outline-offset:2px}
+textarea.feed{min-height:90px}
+textarea.feed.short{min-height:44px}
+.blk.nuevo{animation:nuevo 1.6s ease-out}
+@keyframes nuevo{from{background:rgba(0,209,255,.18)}to{background:transparent}}
+
 /* ---------- 1 Portada ---------- */
 .coverbox{background:#fff;border-radius:6px;box-shadow:0 24px 50px -20px rgba(0,0,0,.7),0 0 0 1px rgba(0,209,255,.10);overflow:hidden;max-width:560px;margin:0 auto;width:100%}
 .coverbox canvas{display:block;width:100%;height:auto}

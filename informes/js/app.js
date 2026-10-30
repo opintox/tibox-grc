@@ -30,7 +30,7 @@ const DEF={titulo:"",subtitulo:"",
 const meta=Object.assign(JSON.parse(JSON.stringify(DEF)),store.get("meta",{}));
 const EXAMPLE=[
   {tipo:"h1",texto:"Objetivo"},
-  {tipo:"p",texto:"Este es un **ejemplo** de cómo queda el contenido con el formato de la plantilla. Sube o pega tu borrador a la izquierda y presiona «Ordenar borrador» para reemplazarlo."},
+  {tipo:"p",texto:"Este es un **ejemplo** de cómo queda el contenido con el formato de la plantilla. Agrega títulos, subtítulos y párrafos desde la izquierda, o sube tu borrador, y este ejemplo se reemplaza."},
   {tipo:"h1",texto:"Alcance"},
   {tipo:"p",texto:"El alcance de este documento comprende:"},
   {tipo:"lista",items:["La información de la organización, cualquiera sea su formato o ubicación;","Los sistemas, aplicaciones y servicios utilizados para procesarla."]},
@@ -304,7 +304,7 @@ function renderPaper(){
   const P=$("paper");P.innerHTML="";
   const hs=document.createElement("div");hs.className="hdrslot";hs.innerHTML=hdrHTML();P.appendChild(hs);
   if(isExample){const bd=document.createElement("div");bd.className="badge";bd.textContent="Ejemplo";P.appendChild(bd)}
-  if(!blocks.length){const e=document.createElement("div");e.className="empty";e.textContent="Aún no hay contenido. Sube o pega tu borrador a la izquierda.";P.appendChild(e)}
+  if(!blocks.length){const e=document.createElement("div");e.className="empty";e.textContent="Aún no hay contenido. Agrega un título a la izquierda o sube tu borrador.";P.appendChild(e)}
   blocks.forEach((b,i)=>{
     const w=document.createElement("div");w.className="blk";
     const tools=document.createElement("div");tools.className="tools";
@@ -443,6 +443,55 @@ $("goPlain").addEventListener("click",()=>{
   const md=$("draft").value.trim();if(!md){setStatus("Primero sube o pega el borrador.",true);return}
   blocks=parsePlain(md);isExample=false;save();renderPaper();setStatus("Listo. Revisa las secciones y corrige lo que haga falta: puedes editar cualquier texto haciendo clic sobre él.");
 });
+
+/* ---------- ALIMENTADOR ---------- */
+// Se elige el tipo, se escribe y cada pieza se suma al final del informe.
+const FEED={
+  h1:{label:"Texto del título",hint:"Sale numerado en romanos (I., II., III.) y entra solo al índice.",ph:"Ej: Objetivo"},
+  h2:{label:"Texto del subtítulo",hint:"Va dentro de la sección anterior.",ph:"Ej: Alcance de la revisión"},
+  p:{label:"Texto del párrafo",hint:"Deja una línea en blanco para separar párrafos. **texto** sale en negrita.",ph:"Escribe o pega el párrafo…"},
+  lista:{label:"Puntos de la lista",hint:"Un punto por línea.",ph:"Primer punto\nSegundo punto"},
+  imagen:{label:"Pie de imagen (opcional)",hint:"La imagen se agrega a ancho completo; luego puedes achicarla en la hoja.",ph:"Ej: Figura 1. Diagrama de red"}
+};
+const fdTipo=()=>document.querySelector('input[name="fdTipo"]:checked').value;
+let fdFile=null;
+function fdSet(){
+  const t=fdTipo(),c=FEED[t];
+  $("fdLabel").textContent=c.label;$("fdHint").textContent=c.hint;$("fdTexto").placeholder=c.ph;
+  $("fdImgRow").hidden=t!=="imagen";$("fdTexto").classList.toggle("short",t==="h1"||t==="h2"||t==="imagen");
+}
+document.querySelectorAll('input[name="fdTipo"]').forEach(r=>r.addEventListener("change",()=>{fdSet();$("fdStatus").textContent="";$("fdTexto").focus()}));
+$("fdImg").addEventListener("change",e=>{fdFile=e.target.files[0]||null;$("fdImgName").textContent=fdFile?fdFile.name:"PNG o JPG"});
+function fdMsg(t,err){$("fdStatus").textContent=t;$("fdStatus").classList.toggle("err",!!err)}
+async function fdAdd(){
+  const t=fdTipo(),txt=$("fdTexto").value.replace(/\r/g,"").trim();let nuevos=[];
+  if(t==="imagen"){
+    if(!fdFile){fdMsg("Primero elige la imagen.",true);return}
+    const id=await addImage(await readURL(fdFile));
+    if(!id){fdMsg("No pude leer esa imagen. Prueba con PNG o JPG.",true);return}
+    nuevos=[{tipo:"imagen",ref:id,texto:txt.replace(/\s+/g," ")}];
+  }else{
+    if(!txt){fdMsg("Escribe el texto antes de agregarlo.",true);return}
+    if(t==="h1")nuevos=[{tipo:"h1",texto:stripRoman(txt.replace(/\s+/g," "))}];
+    else if(t==="h2")nuevos=[{tipo:"h2",texto:txt.replace(/\s+/g," ")}];
+    else if(t==="p")nuevos=txt.split(/\n\s*\n/).map(s=>({tipo:"p",texto:s.replace(/\s+/g," ").trim()})).filter(b=>b.texto);
+    else nuevos=[{tipo:"lista",items:txt.split("\n").map(s=>s.replace(/^\s*[-*•·]\s*/,"").trim()).filter(Boolean)}];
+  }
+  if(isExample){blocks=[];isExample=false}
+  blocks.push(...nuevos);save();renderPaper();
+  // se marca y se muestra lo recién agregado
+  const all=$("paper").querySelectorAll(".blk");const last=all[all.length-1];
+  if(last){for(let i=all.length-nuevos.length;i<all.length;i++)all[i].classList.add("nuevo");last.scrollIntoView({block:"nearest",behavior:"smooth"})}
+  const nombre={h1:"Título",h2:"Subtítulo",p:nuevos.length>1?nuevos.length+" párrafos":"Párrafo",lista:"Lista",imagen:"Imagen"}[t];
+  fdMsg(nombre+(nuevos.length>1?" agregados":t==="imagen"||t==="lista"?" agregada":" agregado")+" al final del informe.");
+  $("fdTexto").value="";fdFile=null;$("fdImg").value="";$("fdImgName").textContent="PNG o JPG";
+  // después de un título o subtítulo, lo habitual es escribir un párrafo
+  if(t==="h1"||t==="h2"){document.querySelector('input[name="fdTipo"][value="p"]').checked=true;fdSet()}
+  $("fdTexto").focus();
+}
+$("fdAdd").addEventListener("click",fdAdd);
+$("fdTexto").addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)){e.preventDefault();fdAdd()}});
+fdSet();
 
 /* ---------- DESCARGAR ---------- */
 const sinCod=()=>!!(meta.headerSimple&&meta.ocultarCodigo);
