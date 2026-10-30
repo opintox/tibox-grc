@@ -30,7 +30,7 @@ const DEF={titulo:"",subtitulo:"",
 const meta=Object.assign(JSON.parse(JSON.stringify(DEF)),store.get("meta",{}));
 const EXAMPLE=[
   {tipo:"h1",texto:"Objetivo"},
-  {tipo:"p",texto:"Este es un **ejemplo** de cómo queda el contenido con el formato de la plantilla. Agrega títulos, subtítulos y párrafos desde la izquierda, o sube tu borrador, y este ejemplo se reemplaza."},
+  {tipo:"p",texto:"Este es un **ejemplo** de cómo queda el contenido con el formato de la plantilla. Pega tu texto a la izquierda, presiona «Clasificar texto» y este ejemplo se reemplaza."},
   {tipo:"h1",texto:"Alcance"},
   {tipo:"p",texto:"El alcance de este documento comprende:"},
   {tipo:"lista",items:["La información de la organización, cualquiera sea su formato o ubicación;","Los sistemas, aplicaciones y servicios utilizados para procesarla."]},
@@ -38,6 +38,7 @@ const EXAMPLE=[
   {tipo:"tabla",filas:[["Rol","Responsabilidades"],["Gerencia General","Aprobar el documento y proporcionar dirección para su cumplimiento."],["Encargado de TI","Mantener y proponer actualizaciones; coordinar su implementación."]]},
   {tipo:"p",texto:"**Confidencialidad:** acceso únicamente para personas, procesos o entidades autorizadas."}
 ];
+let trozos=null; // trozos del clasificador (paso 3), ver CLASIFICADOR
 let blocks=store.get("blocks",null);let isExample=!blocks;if(!blocks)blocks=JSON.parse(JSON.stringify(EXAMPLE));
 let clientLogo=null; // {bytes,w,h,url}
 let coverLogo=null;  // {url,w,h,size,img}
@@ -54,6 +55,7 @@ function saveImages(){
   const used=new Set(blocks.filter(b=>b.tipo==="imagen").map(b=>b.ref));
   const draftRefs=($("draft")?$("draft").value:"").match(/\[\[IMG:(\w+)\]\]/g)||[];
   draftRefs.forEach(r=>used.add(r.slice(6,-2)));
+  (trozos||[]).forEach(t=>{if(t.tipo==="imagen")used.add(t.ref)});
   Object.keys(images).forEach(k=>{if(!used.has(k))delete images[k]});
   // Si no cabe (el navegador guarda ~5 MB), se conserva lo que ya estaba guardado y se avisa:
   // las imágenes siguen en la página y entran al Word mientras la pestaña siga abierta.
@@ -304,7 +306,7 @@ function renderPaper(){
   const P=$("paper");P.innerHTML="";
   const hs=document.createElement("div");hs.className="hdrslot";hs.innerHTML=hdrHTML();P.appendChild(hs);
   if(isExample){const bd=document.createElement("div");bd.className="badge";bd.textContent="Ejemplo";P.appendChild(bd)}
-  if(!blocks.length){const e=document.createElement("div");e.className="empty";e.textContent="Aún no hay contenido. Agrega un título a la izquierda o sube tu borrador.";P.appendChild(e)}
+  if(!blocks.length){const e=document.createElement("div");e.className="empty";e.textContent="Aún no hay contenido. Pega tu texto a la izquierda y presiona «Clasificar texto».";P.appendChild(e)}
   blocks.forEach((b,i)=>{
     const w=document.createElement("div");w.className="blk";
     const tools=document.createElement("div");tools.className="tools";
@@ -411,7 +413,7 @@ $("draftFile").addEventListener("change",async e=>{
       $("draft").value=await htmlToMd(r.value);
     }else $("draft").value=await f.text();
     const n=($("draft").value.match(/\[\[IMG:\w+\]\]/g)||[]).length;
-    setStatus("Borrador cargado"+(n?` con ${n} ${n>1?"imágenes":"imagen"} (marcadas como [[IMG:…]] en el texto)`:"")+". Ahora presiona «Ordenar borrador»."+
+    setStatus("Borrador cargado"+(n?` con ${n} ${n>1?"imágenes":"imagen"} (marcadas como [[IMG:…]] en el texto)`:"")+". Ahora presiona «Clasificar texto»."+
       (htmlToMd.lost?` ${htmlToMd.lost} imagen(es) venían en un formato que el navegador no puede leer (por ejemplo EMF); agrégalas con «+ Imagen».`:""));
     saveImages();
   }catch(err){setStatus("No pude leer el archivo: "+err.message,true)}
@@ -421,28 +423,145 @@ $("draft").value=store.get("draft","");
 $("draft").addEventListener("input",()=>store.set("draft",$("draft").value));
 
 function stripRoman(t){return t.replace(/^\s*(?:[IVXLC]+|\d+)[.)-]\s+/,"")}
-function parsePlain(md){
-  const out=[];let cur=null;const flush=()=>{if(cur){out.push(cur);cur=null}};
-  md.replace(/\r/g,"").split("\n").forEach(raw=>{
-    const l=raw.trim();if(!l){flush();return}let m;
-    if((m=l.match(/^\[\[IMG:(\w+)\]\]$/))){flush();out.push({tipo:"imagen",ref:m[1],texto:""});return}
-    if((m=l.match(/^(#{1,3})\s+(.*)/))){flush();out.push({tipo:"h"+m[1].length,texto:m[1].length===1?stripRoman(m[2]):m[2]});return}
-    if((m=l.match(/^[-*•·]\s+(.*)/))){if(!cur||cur.tipo!=="lista"){flush();cur={tipo:"lista",items:[]}}cur.items.push(m[1]);return}
-    if((m=l.match(/^[IVXLC]+\.\s+(.{2,80})$/))&&!/[.;:]$/.test(m[1])){flush();out.push({tipo:"h1",texto:m[1]});return}
-    if((m=l.match(/^\d+[.)]\s+(.*)/))){if(!cur||cur.tipo!=="numerada"){flush();cur={tipo:"numerada",items:[]}}cur.items.push(m[1]);return}
-    if(/^\|.*\|$/.test(l)){const cells=l.slice(1,-1).split("|").map(s=>s.trim());if(cells.every(c=>/^:?-+:?$/.test(c)))return;
-      if(!cur||cur.tipo!=="tabla"){flush();cur={tipo:"tabla",filas:[]}}cur.filas.push(cells);return}
-    if(l.length<80&&!/[.,;:]$/.test(l)&&l===l.toUpperCase()&&/[A-ZÁÉÍÓÚÑ]/.test(l)){flush();out.push({tipo:"h1",texto:stripRoman(l.charAt(0)+l.slice(1).toLowerCase())});return}
-    const prev=out[out.length-1];
-    if(!cur&&prev&&prev.tipo==="imagen"&&!prev.texto&&/^(figura|fig\.|imagen|gráfico|grafico|diagrama|tabla)\s*\d*[.:-]/i.test(l)&&l.length<200){prev.texto=l;return}
-    if(!cur||cur.tipo!=="p"){flush();cur={tipo:"p",texto:l}}else cur.texto+=" "+l;
+/* ---------- CLASIFICADOR ---------- */
+// El texto pegado se corta en trozos (una línea = un trozo, salvo líneas cortadas a la mitad de
+// una frase) y cada uno trae un tipo propuesto. La persona corrige el tipo, el orden y los cortes,
+// y recién ahí se arma la hoja. Los trozos se guardan para no perder el trabajo al recargar.
+const CT=[["h1","Título"],["h2","Subtítulo"],["p","Párrafo"],["li","Viñeta"],["ni","Numerada"]];
+const CT_TXT=CT.map(c=>c[0]);
+trozos=store.get("trozos",null);
+const capital=l=>l.charAt(0)+l.slice(1).toLowerCase();
+function aTrozos(md){
+  const out=[];let prev=null;
+  const lines=md.replace(/\r/g,"").split("\n");
+  // la línea siguiente empieza en minúscula: la frase continúa, así que esta no es un título
+  const sigue=k=>/^[a-záéíóúñü(«"]/.test((lines[k+1]||"").trim());
+  lines.forEach((raw,k)=>{
+    const l=raw.trim();if(!l){prev=null;return}let m;
+    if((m=l.match(/^\[\[IMG:(\w+)\]\]$/))){prev={tipo:"imagen",ref:m[1],texto:""};out.push(prev);return}
+    if(/^\|.*\|$/.test(l)){const cells=l.slice(1,-1).split("|").map(x=>x.trim());if(cells.every(c=>/^:?-+:?$/.test(c)))return;
+      if(prev&&prev.tipo==="tabla")prev.filas.push(cells);else{prev={tipo:"tabla",filas:[cells]};out.push(prev)}return}
+    if(prev&&prev.tipo==="imagen"&&!prev.texto&&/^(figura|fig\.|imagen|gráfico|grafico|diagrama)\s*\d*[.:-]/i.test(l)&&l.length<200){prev.texto=l;prev=null;return}
+    if((m=l.match(/^(#{1,3})\s+(.*)/))){out.push({tipo:m[1].length===1?"h1":"h2",texto:m[1].length===1?stripRoman(m[2]):m[2]});prev=null;return}
+    if((m=l.match(/^[-*•·]\s+(.*)/))){prev={tipo:"li",texto:m[1]};out.push(prev);return}
+    if((m=l.match(/^[IVXLC]+\.\s+(.{2,80})$/))&&!/[.;:,]$/.test(m[1])){out.push({tipo:"h1",texto:m[1]});prev=null;return}
+    if((m=l.match(/^\d+\.\d+(?:\.\d+)*\.?\s+(.{2,80})$/))&&!/[.;:,]$/.test(m[1])){out.push({tipo:"h2",texto:m[1]});prev=null;return}
+    if((m=l.match(/^\d+[.)]\s+(.*)/))){prev={tipo:"ni",texto:m[1]};out.push(prev);return}
+    if(l.length<80&&!/[.,;:]$/.test(l)&&l===l.toUpperCase()&&/[A-ZÁÉÍÓÚÑ]/.test(l)){out.push({tipo:"h1",texto:stripRoman(capital(l))});prev=null;return}
+    // línea cortada a la mitad de una frase: sigue el trozo anterior
+    if(prev&&["p","li","ni"].includes(prev.tipo)&&!/[.:;?!]$/.test(prev.texto)&&/^[a-záéíóúñü(«"]/.test(l)){prev.texto+=" "+l;return}
+    // línea corta, sin punto final y con mayúscula inicial: probablemente un título
+    if(l.length<70&&l.split(/\s+/).length<=8&&!/[.,;:]$/.test(l)&&/^[A-ZÁÉÍÓÚÑ¿]/.test(l)&&!sigue(k)){out.push({tipo:"h1",texto:stripRoman(l)});prev=null;return}
+    prev={tipo:"p",texto:l};out.push(prev);
   });
-  flush();return out;
+  return out;
 }
-$("goPlain").addEventListener("click",()=>{
-  const md=$("draft").value.trim();if(!md){setStatus("Primero sube o pega el borrador.",true);return}
-  blocks=parsePlain(md);isExample=false;save();renderPaper();setStatus("Listo. Revisa las secciones y corrige lo que haga falta: puedes editar cualquier texto haciendo clic sobre él.");
+function trozosABloques(){
+  const out=[];
+  trozos.filter(t=>!t.quitado).forEach(t=>{
+    if(t.tipo==="tabla"){out.push({tipo:"tabla",filas:t.filas});return}
+    if(t.tipo==="imagen"){out.push({tipo:"imagen",ref:t.ref,texto:(t.texto||"").trim()});return}
+    const tx=String(t.texto||"").replace(/\s+/g," ").trim();if(!tx)return;
+    if(t.tipo==="li"||t.tipo==="ni"){const tp=t.tipo==="li"?"lista":"numerada",last=out[out.length-1];
+      if(last&&last.tipo===tp)last.items.push(tx);else out.push({tipo:tp,items:[tx]});return}
+    out.push({tipo:t.tipo,texto:t.tipo==="h1"?stripRoman(tx):tx});
+  });
+  return out;
+}
+let clSaveT;const saveTrozos=()=>{clearTimeout(clSaveT);clSaveT=setTimeout(()=>store.set("trozos",trozos),300)};
+function clMsg(t,err){$("clStatus").textContent=t;$("clStatus").classList.toggle("err",!!err)}
+function clAbrir(abierto){$("clasif").hidden=!abierto;$("paper").hidden=abierto}
+function clContar(){
+  const v=trozos.filter(t=>!t.quitado),n=k=>v.filter(t=>t.tipo===k).length,q=trozos.length-v.length;
+  const pl=(k,s)=>k+" "+s+(k===1?"":/[aeiouáéíóú]$/.test(s)?"s":"es");
+  $("clCount").textContent=[pl(trozos.length,"trozo"),pl(n("h1"),"título"),pl(n("h2"),"subtítulo"),pl(n("p"),"párrafo")]
+    .concat(n("li")+n("ni")?[pl(n("li")+n("ni"),"viñeta")]:[],q?[pl(q,"quitado")]:[]).join(" · ");
+  const hay=!isExample&&blocks.length>0;$("clAppend").hidden=!hay;$("clApply").textContent=hay?"Reemplazar el informe":"Pasar al informe";
+}
+let clDrag=null;
+function renderClasif(foco){
+  const L=$("clList");L.innerHTML="";
+  trozos.forEach((t,i)=>{
+    const row=document.createElement("div");row.className="tz tz-"+t.tipo+(t.quitado?" off":"");
+    const bar=document.createElement("div");bar.className="tzbar";
+    const h=document.createElement("span");h.className="tzh";h.textContent="⋮⋮";h.title="Arrastra para mover";h.draggable=true;
+    h.addEventListener("dragstart",e=>{clDrag=i;e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain",String(i));e.dataTransfer.setDragImage(row,20,20);row.classList.add("dragging")});
+    h.addEventListener("dragend",()=>{clDrag=null;row.classList.remove("dragging");L.querySelectorAll(".drop-up,.drop-dn").forEach(r=>r.classList.remove("drop-up","drop-dn"))});
+    row.addEventListener("dragover",e=>{if(clDrag===null)return;e.preventDefault();const r=row.getBoundingClientRect(),abajo=e.clientY>r.top+r.height/2;row.classList.toggle("drop-dn",abajo);row.classList.toggle("drop-up",!abajo)});
+    row.addEventListener("dragleave",()=>row.classList.remove("drop-up","drop-dn"));
+    row.addEventListener("drop",e=>{e.preventDefault();if(clDrag===null)return;const r=row.getBoundingClientRect();let to=i+(e.clientY>r.top+r.height/2?1:0);
+      const [m]=trozos.splice(clDrag,1);if(clDrag<to)to--;trozos.splice(to,0,m);clDrag=null;saveTrozos();renderClasif(to)});
+    bar.appendChild(h);
+    const num=document.createElement("span");num.className="tzn";num.textContent=i+1;bar.appendChild(num);
+    const texto=CT_TXT.includes(t.tipo),prevTexto=i>0&&CT_TXT.includes(trozos[i-1].tipo);
+    if(texto){
+      const g=document.createElement("div");g.className="tzpills";g.setAttribute("role","radiogroup");g.setAttribute("aria-label","Tipo del trozo "+(i+1));
+      CT.forEach(([v,l],k)=>{const b=document.createElement("button");b.type="button";b.textContent=l;b.title=l+" (Alt+"+(k+1)+")";
+        b.setAttribute("role","radio");b.setAttribute("aria-checked",String(t.tipo===v));b.className=t.tipo===v?"on":"";
+        b.addEventListener("click",()=>clTipo(i,v));g.appendChild(b)});
+      bar.appendChild(g);
+    }else{const tag=document.createElement("span");tag.className="tztag";tag.textContent=t.tipo==="tabla"?"Tabla":"Imagen";bar.appendChild(tag)}
+    const acc=document.createElement("div");acc.className="tzacc";
+    const mk=(txt,title,fn,dis)=>{const b=document.createElement("button");b.type="button";b.textContent=txt;b.title=title;b.disabled=!!dis;b.addEventListener("click",fn);acc.appendChild(b);return b};
+    mk("Unir ↑","Unir con el trozo de arriba",()=>clUnir(i),!(texto&&prevTexto));
+    if(texto)mk("Cortar","Cortar en dos donde está el cursor (Ctrl+Enter)",()=>clCortar(i));
+    mk(t.quitado?"Recuperar":"Quitar",t.quitado?"Volver a incluir este trozo":"No incluir este trozo (Alt+0)",()=>clQuitar(i));
+    bar.appendChild(acc);row.appendChild(bar);
+    if(texto){
+      const ta=document.createElement("textarea");ta.className="tzt";ta.value=t.texto;ta.rows=1;ta.setAttribute("aria-label","Texto del trozo "+(i+1));
+      const fit=()=>{ta.style.height="auto";ta.style.height=ta.scrollHeight+2+"px"};
+      // el botón «Cortar» necesita saber dónde estaba el cursor antes de que el clic le quite el foco
+      const marca=()=>{t._pos=ta.selectionStart};
+      ta.addEventListener("input",()=>{t.texto=ta.value;fit();marca();saveTrozos()});
+      ta.addEventListener("keyup",marca);ta.addEventListener("click",marca);
+      ta.addEventListener("keydown",e=>clTecla(e,i,ta));
+      row.appendChild(ta);requestAnimationFrame(fit);
+    }else if(t.tipo==="imagen"){
+      const f=document.createElement("div");f.className="tzimg";const im=images[t.ref];
+      if(im){const img=document.createElement("img");img.src=im.url;img.alt="";f.appendChild(img)}
+      const cap=document.createElement("input");cap.type="text";cap.placeholder="Pie de imagen (opcional)";cap.value=t.texto||"";cap.setAttribute("aria-label","Pie de la imagen");
+      cap.addEventListener("input",()=>{t.texto=cap.value;saveTrozos()});cap.addEventListener("keydown",e=>clTecla(e,i,null));f.appendChild(cap);row.appendChild(f);
+    }else{
+      const tb=document.createElement("div");tb.className="tztab";
+      tb.textContent=(t.filas||[]).slice(0,3).map(r=>r.join("  ·  ")).join("\n")+((t.filas||[]).length>3?`\n… ${t.filas.length} filas en total`:"");row.appendChild(tb);
+    }
+    L.appendChild(row);
+  });
+  clContar();
+  if(foco!=null){const r=L.children[Math.max(0,Math.min(foco,L.children.length-1))];if(r){const el=r.querySelector("textarea,input")||r.querySelector("button");if(el){el.focus({preventScroll:true});r.scrollIntoView({block:"nearest"})}}}
+}
+function clTipo(i,v){trozos[i].tipo=v;trozos[i].quitado=false;saveTrozos();renderClasif(i)}
+function clQuitar(i){trozos[i].quitado=!trozos[i].quitado;saveTrozos();renderClasif(i)}
+function clMover(i,d){const j=i+d;if(j<0||j>=trozos.length)return;[trozos[i],trozos[j]]=[trozos[j],trozos[i]];saveTrozos();renderClasif(j)}
+function clUnir(i){const a=trozos[i-1],b=trozos[i];a.texto=(a.texto.trim()+" "+b.texto.trim()).trim();trozos.splice(i,1);saveTrozos();renderClasif(i-1);clMsg("Trozos unidos.")}
+function clCortar(i,pos){
+  const t=trozos[i];if(pos==null)pos=t._pos;
+  const a=pos==null?"":t.texto.slice(0,pos).trim(),b=pos==null?"":t.texto.slice(pos).trim();
+  if(!a||!b){clMsg("Haz clic dentro del texto, justo donde quieres cortarlo, y vuelve a presionar «Cortar».",true);return}
+  t.texto=a;delete t._pos;trozos.splice(i+1,0,{tipo:"p",texto:b});saveTrozos();renderClasif(i+1);clMsg("Trozo cortado en dos: la segunda parte quedó como párrafo.");
+}
+function clTecla(e,i,ta){
+  if(e.altKey&&/^[0-5]$/.test(e.key)){e.preventDefault();if(e.key==="0")clQuitar(i);else if(CT_TXT.includes(trozos[i].tipo))clTipo(i,CT[+e.key-1][0]);return}
+  if(e.altKey&&(e.key==="ArrowUp"||e.key==="ArrowDown")){e.preventDefault();clMover(i,e.key==="ArrowUp"?-1:1);return}
+  if(ta&&e.key==="Enter"&&(e.ctrlKey||e.metaKey)){e.preventDefault();clCortar(i,ta.selectionStart)}
+}
+$("goClasif").addEventListener("click",()=>{
+  const md=$("draft").value.trim();if(!md){setStatus("Primero sube o pega el texto.",true);return}
+  if(trozos&&trozos.length&&!$("clasif").hidden&&!confirm("Ya estás clasificando un texto. ¿Empezar de nuevo con el texto de la izquierda? Se pierden los cambios de la clasificación actual."))return;
+  trozos=aTrozos(md);store.set("trozos",trozos);clAbrir(true);renderClasif();clMsg("");
+  setStatus("Revisa la clasificación a la derecha y presiona «"+$("clApply").textContent+"».");
+  $("clasif").scrollIntoView({block:"start",behavior:"smooth"});
 });
+function clTerminar(agregar){
+  const nuevos=trozosABloques();if(!nuevos.length){clMsg("No queda nada para pasar: todos los trozos están quitados o vacíos.",true);return}
+  if(agregar&&!isExample)blocks.push(...nuevos);else blocks=nuevos;
+  isExample=false;trozos=null;store.set("trozos",null);save();clAbrir(false);renderPaper();
+  setStatus("Listo: "+nuevos.length+" bloques "+(agregar?"agregados al final del informe":"en el informe")+". Puedes seguir editándolos en la hoja.");
+}
+$("clApply").addEventListener("click",()=>clTerminar(false));
+$("clAppend").addEventListener("click",()=>clTerminar(true));
+$("clCancel").addEventListener("click",()=>{trozos=null;store.set("trozos",null);clAbrir(false);setStatus("Clasificación cancelada. El informe no cambió.")});
+if(trozos&&trozos.length){clAbrir(true);renderClasif()}
 
 /* ---------- ALIMENTADOR ---------- */
 // Se elige el tipo, se escribe y cada pieza se suma al final del informe.

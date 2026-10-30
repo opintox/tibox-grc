@@ -120,8 +120,21 @@
   <!-- 3 CONTENIDO -->
   <section class="view" id="v3" hidden>
     <div class="side">
+      <div class="card">
+        <h2>Texto del informe</h2>
+        <div class="row">
+          <label class="btn">Subir archivo<input type="file" id="draftFile" accept=".docx,.txt,.md"></label>
+          <span class="hint" id="fileName">Word (.docx) o texto</span>
+        </div>
+        <label class="f">o pega el texto aquí<textarea id="draft" placeholder="Pega aquí el borrador…"></textarea></label>
+        <p class="hint">Pega todo el texto como lo tengas. Al clasificarlo, la app lo corta en trozos y propone qué es cada uno; tú indicas cuál es título, subtítulo o párrafo y cambias el orden si hace falta.</p>
+        <div class="row">
+          <button class="primary" id="goClasif"><svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><path d="M7 5.5h9M7 10h9M7 14.5h9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="4" cy="5.5" r="1.1" fill="currentColor"/><circle cx="4" cy="10" r="1.1" fill="currentColor"/><circle cx="4" cy="14.5" r="1.1" fill="currentColor"/></svg>Clasificar texto</button>
+        </div>
+        <p class="status" id="status" role="status"></p>
+      </div>
       <div class="card" id="feeder">
-        <h2>Agregar al informe</h2>
+        <h2>Agregar una pieza suelta</h2>
         <div class="seg" role="radiogroup" aria-label="Tipo de contenido">
           <label><input type="radio" name="fdTipo" value="h1" checked><span>Título</span></label>
           <label><input type="radio" name="fdTipo" value="h2"><span>Subtítulo</span></label>
@@ -136,30 +149,35 @@
         <label class="f"><span id="fdLabel">Texto del título</span><textarea id="fdTexto" class="feed"></textarea></label>
         <p class="hint" id="fdHint"></p>
         <div class="row">
-          <button class="primary" id="fdAdd"><svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4.5v11M4.5 10h11" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>Agregar</button>
+          <button class="ghost" id="fdAdd"><svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4.5v11M4.5 10h11" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>Agregar</button>
           <span class="hint">o Ctrl + Enter</span>
         </div>
         <p class="status" id="fdStatus" role="status"></p>
-      </div>
-      <div class="card">
-        <h2>¿Ya tienes un borrador?</h2>
-        <div class="row">
-          <label class="btn">Subir archivo<input type="file" id="draftFile" accept=".docx,.txt,.md"></label>
-          <span class="hint" id="fileName">Word (.docx) o texto</span>
-        </div>
-        <label class="f">o pega el texto aquí<textarea id="draft" placeholder="Pega aquí el borrador…"></textarea></label>
-        <p class="hint">Se reconocen títulos (# Título, I. Título o líneas en MAYÚSCULAS), viñetas (-), listas numeradas (1.) y tablas (| a | b |).</p>
-        <div class="row">
-          <button class="ghost" id="goPlain"><svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><path d="M7 5.5h9M7 10h9M7 14.5h9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="4" cy="5.5" r="1.1" fill="currentColor"/><circle cx="4" cy="10" r="1.1" fill="currentColor"/><circle cx="4" cy="14.5" r="1.1" fill="currentColor"/></svg>Ordenar borrador</button>
-        </div>
-        <p class="status" id="status" role="status"></p>
       </div>
       <div class="card">
         <h2>Cómo queda en Word</h2>
         <p class="hint">Las imágenes del borrador se mantienen en su lugar; también puedes agregar más con «+ Imagen». Los títulos de sección salen numerados en romanos (I., II., III.) y entran solos al índice; el texto va justificado; las tablas llevan encabezado azul marino y filas alternadas. Pasa el mouse sobre un bloque para cambiar su tipo, moverlo o quitarlo.</p>
       </div>
     </div>
-    <div class="sheetwrap"><div class="sheet paper" id="paper"></div></div>
+    <div class="sheetwrap">
+      <div class="clasif" id="clasif" hidden>
+        <div class="clhead">
+          <div>
+            <h2>Clasifica el texto</h2>
+            <p class="hint" id="clCount"></p>
+          </div>
+          <div class="row">
+            <button class="ghost" id="clCancel">Cancelar</button>
+            <button class="ghost" id="clAppend" hidden>Agregar al final</button>
+            <button class="primary" id="clApply">Pasar al informe</button>
+          </div>
+        </div>
+        <p class="hint clkeys">Elige el tipo de cada trozo. Para moverlo, arrástralo desde ⋮⋮. Atajos, con el cursor en un trozo: <kbd>Alt</kbd>+<kbd>1</kbd>…<kbd>5</kbd> tipo · <kbd>Alt</kbd>+<kbd>↑</kbd>/<kbd>↓</kbd> mover · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> cortar donde está el cursor · <kbd>Alt</kbd>+<kbd>0</kbd> quitar.</p>
+        <p class="status" id="clStatus" role="status"></p>
+        <div id="clList" class="cllist"></div>
+      </div>
+      <div class="sheet paper" id="paper"></div>
+    </div>
   </section>
 
   <!-- 4 DESCARGAR -->

@@ -192,3 +192,39 @@ textarea.feed.short{min-height:44px}
 
 footer{padding:20px;text-align:center;color:var(--faint);font-size:11px;letter-spacing:.04em}
 @media (prefers-reduced-motion:reduce){*{transition-duration:.01ms!important}}
+
+/* ---------- 3 Clasificador del texto pegado ---------- */
+.clasif{display:flex;flex-direction:column;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.clasif[hidden],.paper[hidden]{display:none}
+.clhead{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;justify-content:space-between}
+.clhead h2{font:600 17px var(--sans);margin:0 0 2px;color:var(--title)}
+.clkeys kbd{font:600 11px var(--mono);border:1px solid var(--line-2);border-radius:4px;padding:0 4px;color:var(--fg)}
+.cllist{display:flex;flex-direction:column;gap:6px}
+.tz{border:1px solid var(--line);border-left:3px solid transparent;border-radius:10px;padding:8px 10px 10px;background:var(--field);display:flex;flex-direction:column;gap:6px}
+.tz-h1{border-left-color:var(--cyan)}
+.tz-h2{border-left-color:var(--celeste)}
+.tz.off{opacity:.45}
+.tz.off .tzt{text-decoration:line-through}
+.tz.dragging{opacity:.4}
+.tz.drop-up{box-shadow:0 -3px 0 0 var(--cyan)}
+.tz.drop-dn{box-shadow:0 3px 0 0 var(--cyan)}
+.tzbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.tzh{cursor:grab;color:var(--faint);font-size:14px;letter-spacing:-2px;padding:2px 4px;user-select:none}
+.tzh:active{cursor:grabbing}
+.tzn{font:600 11px var(--mono);color:var(--faint);min-width:1.8em}
+.tzpills{display:flex;flex-wrap:wrap;gap:4px}
+.tzpills button,.tzacc button{font:600 12px var(--sans);padding:3px 9px;border-radius:999px;color:var(--muted);background:transparent}
+.tzpills button.on{color:var(--fg);border-color:var(--cyan);background:rgba(0,209,255,.16)}
+.tztag{font:600 12px var(--mono);color:var(--cyan);text-transform:uppercase;letter-spacing:.06em}
+.tzacc{display:flex;gap:4px;margin-left:auto}
+.tzacc button{border-radius:7px}
+textarea.tzt{min-height:0;resize:none;overflow:hidden;line-height:1.45;padding:6px 8px;background:transparent;border-color:transparent}
+textarea.tzt:hover{border-color:var(--line-2)}
+.tz-h1 textarea.tzt{font:600 17px var(--sans);color:var(--title)}
+.tz-h2 textarea.tzt{font:600 15px var(--sans);color:var(--title)}
+.tz-li textarea.tzt,.tz-ni textarea.tzt{padding-left:22px;background:radial-gradient(circle at 10px 16px,var(--muted) 2.5px,transparent 3px)}
+.tz-ni textarea.tzt{background:none;border-left:2px solid var(--line-2)}
+.tzimg{display:flex;gap:10px;align-items:center}
+.tzimg img{width:96px;height:64px;object-fit:contain;background:#fff;border-radius:6px;flex:none}
+.tztab{font:400 12.5px var(--mono);color:var(--muted);white-space:pre-wrap;padding:4px 6px}
