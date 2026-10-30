@@ -13,3 +13,8 @@ private/
 
 # Respaldos del historial de git (pueden traer contenido de antes de limpiarlo): nunca al repo
 *.bundle
+
+# Generador de Informes: la plantilla Word neutra (sin datos de clientes) sí va al repo.
+!informes/assets/plantilla-informe.docx
+# El HTML original del generador trae logo, nombres y plantilla de un cliente: nunca al repo.
+Estudio de Informes.html

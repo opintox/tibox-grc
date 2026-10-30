@@ -1,4 +1,4 @@
-// Guardia de las páginas protegidas (hub e index del tabletop). Cada página trae en su <head>
+// Guardia de las páginas protegidas (hub, index del tabletop y generador de informes). Cada página trae en su <head>
 // un <style id="authHide"> que la deja invisible; acá se quita solo si hay una sesión válida
 // con MFA, y si no se manda a login.html. Falla cerrado: si el SDK no carga, la página queda
 // oculta. Límite conocido: es una barrera del lado del navegador (el sitio es estático); la

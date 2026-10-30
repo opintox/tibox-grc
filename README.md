@@ -1,10 +1,12 @@
 # TIBOX · Herramientas
 
 Sitio estático (sin build ni dependencias de npm) publicado con GitHub Pages desde la rama
-`main`. Contiene un inicio con login y dos herramientas:
+`main`. Contiene un inicio con login y tres herramientas:
 
 - **Tabletop**: ejercicio de simulación de respuesta a incidentes de ciberseguridad, en una
   sola pantalla o con los participantes votando y respondiendo desde su celular.
+- **Generador de Informes**: arma un Word con el formato documental de TIBOX (portada, ficha
+  documental, control de cambios, firmas, índice y contenido) a partir de un borrador.
 - **SGC** (Cumplimiento CIP): hoy **deshabilitado** (ver más abajo).
 
 ## Estructura
@@ -49,6 +51,15 @@ Sitio estático (sin build ni dependencias de npm) publicado con GitHub Pages de
 │           ├── room.js            Lectura/escritura de la sala en Firestore (sin DOM)
 │           ├── facilitator.js     Sala de espera, votación y respuestas del lado del facilitador
 │           └── participant-app.js Lógica de join.html
+├── informes/                  Generador de Informes (protegido por login)
+│   ├── index.html             Marcado de los 4 pasos (portada, ficha, contenido, descargar)
+│   ├── css/informes.css       Diseño TIBOX de la app; la hoja de vista previa imita el Word
+│   ├── assets/                Portada base, logo del encabezado y plantilla Word neutra
+│   └── js/
+│       ├── app.js             Pasos, ficha, hoja editable, lectura del borrador y descarga
+│       ├── docx-builder.js    Arma el .docx sobre assets/plantilla-informe.docx
+│       ├── docx-parts.js      Trozos de XML de la plantilla (portada, índice, firmas…)
+│       └── lib/               mammoth (lee el borrador .docx); JSZip se toma de tabletop/js/lib
 └── sgc/                       SGC deshabilitado (ver más abajo)
 ```
 
@@ -99,6 +110,7 @@ Al publicar en GitHub Pages, los cambios en `main` quedan en línea en 1–2 min
 | Cambiar el constructor de escenarios | `js/builder.js` |
 | Cambiar el modo con celulares | `js/multiplayer/` y `tabletop/firestore.rules` |
 | Cambiar el comportamiento del ejercicio | `js/app.js` |
+| Cambiar el Generador de Informes | `informes/js/app.js` (pantallas y borrador), `informes/js/docx-builder.js` (el Word). La plantilla `informes/assets/plantilla-informe.docx` va sin datos de clientes: el repo es público, así que logos, nombres y firmas se cargan en la app y quedan solo en el navegador |
 
 ## Escenarios en Word
 
