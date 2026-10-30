@@ -562,6 +562,17 @@ $("clApply").addEventListener("click",()=>clTerminar(false));
 $("clAppend").addEventListener("click",()=>clTerminar(true));
 $("clCancel").addEventListener("click",()=>{trozos=null;store.set("trozos",null);clAbrir(false);setStatus("Clasificación cancelada. El informe no cambió.")});
 if(trozos&&trozos.length){clAbrir(true);renderClasif()}
+// Limpiar contenido: deja el paso 3 en blanco (texto pegado, clasificación e informe). La portada
+// y la ficha no se tocan; las imágenes que quedan sin uso se borran solas en saveImages().
+$("goLimpiar").addEventListener("click",()=>{
+  const hay=$("draft").value.trim()||(trozos&&trozos.length)||(!isExample&&blocks.length);
+  if(!hay){setStatus("No hay contenido que limpiar.");return}
+  if(!confirm("¿Borrar el texto pegado y todo el contenido del informe? La portada y la ficha del documento se mantienen. Esto no se puede deshacer."))return;
+  $("draft").value="";store.set("draft","");$("fileName").textContent="Word (.docx) o texto";
+  trozos=null;store.set("trozos",null);clAbrir(false);clMsg("");
+  blocks=[];isExample=false;save();renderPaper();
+  setStatus("Contenido borrado. Pega un texto nuevo para empezar.");
+});
 
 /* ---------- ALIMENTADOR ---------- */
 // Se elige el tipo, se escribe y cada pieza se suma al final del informe.
