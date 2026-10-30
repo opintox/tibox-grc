@@ -26,7 +26,7 @@ service cloud.firestore {
         && request.auth.token.firebase.sign_in_provider == 'password'
         && request.auth.token.firebase.sign_in_second_factor == 'totp'
         && request.auth.token.email_verified == true
-        && request.auth.token.email.lower() in ['opinto@tibox.cl'];
+        && request.auth.token.email.lower() in ['opinto@tibox.cl', 'ngonzalez@tibox.cl'];
     }
 
     function roomData(roomCode) {

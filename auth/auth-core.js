@@ -11,7 +11,7 @@ export const auth = getAuth(app);
 // abierto para los celulares, alguien podría crear una cuenta a nombre de un colega sin cuenta
 // y, si este confirma el correo de verificación, quedaría como facilitador). Mantener alineado
 // con isFacilitator() en tabletop/firestore.rules, que es donde esto se hace cumplir de verdad.
-export const ALLOWED_FACILITATORS = ['opinto@tibox.cl'];
+export const ALLOWED_FACILITATORS = ['opinto@tibox.cl', 'ngonzalez@tibox.cl'];
 
 function isAllowedEmail(email){
   return typeof email === 'string' && ALLOWED_FACILITATORS.includes(email.toLowerCase());
