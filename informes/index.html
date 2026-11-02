@@ -127,9 +127,14 @@
           <span class="hint" id="fileName">Word (.docx) o texto</span>
         </div>
         <label class="f">o pega el texto aquí<textarea id="draft" placeholder="Pega aquí el borrador…"></textarea></label>
-        <p class="hint">Pega todo el texto como lo tengas. Al clasificarlo, la app lo corta en trozos y propone qué es cada uno; tú indicas cuál es título, subtítulo o párrafo y cambias el orden si hace falta.</p>
+        <label class="f">Tipo de documento<select id="tipoDoc">
+          <option value="informe">Informe técnico</option>
+          <option value="procedimiento">Procedimiento</option>
+          <option value="">Sin estructura (no reordenar secciones)</option>
+        </select></label>
+        <p class="hint">Pega todo el texto como lo tengas. Al ordenarlo, la app reconoce títulos, subtítulos, párrafos y listas, y pone cada sección en el orden estándar del tipo de documento. Después revisas y corriges lo que haga falta.</p>
         <div class="row">
-          <button class="primary" id="goClasif"><svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><path d="M7 5.5h9M7 10h9M7 14.5h9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="4" cy="5.5" r="1.1" fill="currentColor"/><circle cx="4" cy="10" r="1.1" fill="currentColor"/><circle cx="4" cy="14.5" r="1.1" fill="currentColor"/></svg>Clasificar texto</button>
+          <button class="primary" id="goClasif"><svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><path d="M7 5.5h9M7 10h9M7 14.5h9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="4" cy="5.5" r="1.1" fill="currentColor"/><circle cx="4" cy="10" r="1.1" fill="currentColor"/><circle cx="4" cy="14.5" r="1.1" fill="currentColor"/></svg>Ordenar texto</button>
           <button class="ghost" id="goLimpiar" title="Borra el texto pegado y el contenido del informe; la portada y la ficha se mantienen"><svg class="ic" viewBox="0 0 20 20" aria-hidden="true"><path d="M4.5 6h11M8 6V4.5h4V6M6 6l.7 9.5h6.6L14 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>Limpiar contenido</button>
         </div>
         <p class="status" id="status" role="status"></p>
@@ -164,7 +169,7 @@
       <div class="clasif" id="clasif" hidden>
         <div class="clhead">
           <div>
-            <h2>Clasifica el texto</h2>
+            <h2>Revisa el orden</h2>
             <p class="hint" id="clCount"></p>
           </div>
           <div class="row">
@@ -174,6 +179,13 @@
           </div>
         </div>
         <p class="hint clkeys">Elige el tipo de cada trozo. Para moverlo, arrástralo desde ⋮⋮. Atajos, con el cursor en un trozo: <kbd>Alt</kbd>+<kbd>1</kbd>…<kbd>5</kbd> tipo · <kbd>Alt</kbd>+<kbd>↑</kbd>/<kbd>↓</kbd> mover · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> cortar donde está el cursor · <kbd>Alt</kbd>+<kbd>0</kbd> quitar.</p>
+        <div class="clrep" id="clRep" hidden>
+          <p id="clRepTxt"></p>
+          <div class="row">
+            <button class="small" id="clOrden" title="Vuelve a ordenar las secciones según el tipo de documento elegido">Ordenar secciones</button>
+            <button class="small" id="clFalta">Agregar títulos faltantes</button>
+          </div>
+        </div>
         <p class="status" id="clStatus" role="status"></p>
         <div id="clList" class="cllist"></div>
       </div>

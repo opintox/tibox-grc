@@ -228,3 +228,9 @@ textarea.tzt:hover{border-color:var(--line-2)}
 .tzimg{display:flex;gap:10px;align-items:center}
 .tzimg img{width:96px;height:64px;object-fit:contain;background:#fff;border-radius:6px;flex:none}
 .tztab{font:400 12.5px var(--mono);color:var(--muted);white-space:pre-wrap;padding:4px 6px}
+/* resumen del orden por tipo de documento y marca de sección estándar en cada título */
+.clrep{display:flex;flex-direction:column;gap:8px;border:1px solid var(--line-2);border-radius:10px;padding:10px 12px;background:rgba(0,209,255,.06)}
+.clrep[hidden]{display:none}
+.clrep p{margin:0;font-size:13.5px;color:var(--fg);line-height:1.45}
+.tzsec{font:600 11px var(--mono);color:var(--cyan);border:1px solid var(--line-2);border-radius:999px;padding:1px 8px;text-transform:uppercase;letter-spacing:.04em}
+.tzsec.warn{color:var(--fg);border:1px dashed var(--faint)}

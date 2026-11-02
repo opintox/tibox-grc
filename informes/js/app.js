@@ -30,7 +30,7 @@ const DEF={titulo:"",subtitulo:"",
 const meta=Object.assign(JSON.parse(JSON.stringify(DEF)),store.get("meta",{}));
 const EXAMPLE=[
   {tipo:"h1",texto:"Objetivo"},
-  {tipo:"p",texto:"Este es un **ejemplo** de cómo queda el contenido con el formato de la plantilla. Pega tu texto a la izquierda, presiona «Clasificar texto» y este ejemplo se reemplaza."},
+  {tipo:"p",texto:"Este es un **ejemplo** de cómo queda el contenido con el formato de la plantilla. Pega tu texto a la izquierda, presiona «Ordenar texto» y este ejemplo se reemplaza."},
   {tipo:"h1",texto:"Alcance"},
   {tipo:"p",texto:"El alcance de este documento comprende:"},
   {tipo:"lista",items:["La información de la organización, cualquiera sea su formato o ubicación;","Los sistemas, aplicaciones y servicios utilizados para procesarla."]},
@@ -306,7 +306,7 @@ function renderPaper(){
   const P=$("paper");P.innerHTML="";
   const hs=document.createElement("div");hs.className="hdrslot";hs.innerHTML=hdrHTML();P.appendChild(hs);
   if(isExample){const bd=document.createElement("div");bd.className="badge";bd.textContent="Ejemplo";P.appendChild(bd)}
-  if(!blocks.length){const e=document.createElement("div");e.className="empty";e.textContent="Aún no hay contenido. Pega tu texto a la izquierda y presiona «Clasificar texto».";P.appendChild(e)}
+  if(!blocks.length){const e=document.createElement("div");e.className="empty";e.textContent="Aún no hay contenido. Pega tu texto a la izquierda y presiona «Ordenar texto».";P.appendChild(e)}
   blocks.forEach((b,i)=>{
     const w=document.createElement("div");w.className="blk";
     const tools=document.createElement("div");tools.className="tools";
@@ -413,7 +413,7 @@ $("draftFile").addEventListener("change",async e=>{
       $("draft").value=await htmlToMd(r.value);
     }else $("draft").value=await f.text();
     const n=($("draft").value.match(/\[\[IMG:\w+\]\]/g)||[]).length;
-    setStatus("Borrador cargado"+(n?` con ${n} ${n>1?"imágenes":"imagen"} (marcadas como [[IMG:…]] en el texto)`:"")+". Ahora presiona «Clasificar texto»."+
+    setStatus("Borrador cargado"+(n?` con ${n} ${n>1?"imágenes":"imagen"} (marcadas como [[IMG:…]] en el texto)`:"")+". Ahora presiona «Ordenar texto»."+
       (htmlToMd.lost?` ${htmlToMd.lost} imagen(es) venían en un formato que el navegador no puede leer (por ejemplo EMF); agrégalas con «+ Imagen».`:""));
     saveImages();
   }catch(err){setStatus("No pude leer el archivo: "+err.message,true)}
@@ -425,36 +425,137 @@ $("draft").addEventListener("input",()=>store.set("draft",$("draft").value));
 function stripRoman(t){return t.replace(/^\s*(?:[IVXLC]+|\d+)[.)-]\s+/,"")}
 /* ---------- CLASIFICADOR ---------- */
 // El texto pegado se corta en trozos (una línea = un trozo, salvo líneas cortadas a la mitad de
-// una frase) y cada uno trae un tipo propuesto. La persona corrige el tipo, el orden y los cortes,
-// y recién ahí se arma la hoja. Los trozos se guardan para no perder el trabajo al recargar.
+// una frase) y cada uno trae un tipo propuesto. Si se eligió un tipo de documento, las secciones
+// se ponen en su orden estándar. La persona corrige tipo, orden y cortes, y recién ahí se arma la
+// hoja. Los trozos se guardan para no perder el trabajo al recargar.
 const CT=[["h1","Título"],["h2","Subtítulo"],["p","Párrafo"],["li","Viñeta"],["ni","Numerada"]];
 const CT_TXT=CT.map(c=>c[0]);
 trozos=store.get("trozos",null);
 const capital=l=>l.charAt(0)+l.slice(1).toLowerCase();
+
+// Secciones estándar de cada tipo de documento, en orden. El primer nombre es el oficial; los
+// demás son las variantes que se reconocen en el texto pegado.
+const ESTRUCTURAS={
+  procedimiento:{nombre:"Procedimiento",secciones:[
+    ["Objetivo","objetivos","propósito","finalidad"],
+    ["Alcance","ámbito de aplicación","ámbito","aplicabilidad"],
+    ["Referencias","documentos relacionados","documentos de referencia","normativa","marco normativo","normas de referencia"],
+    ["Definiciones","glosario","términos y definiciones","abreviaturas","conceptos"],
+    ["Roles y responsabilidades","responsables","responsabilidades","roles"],
+    ["Descripción del procedimiento","desarrollo","actividades","procedimiento","etapas","descripción","pasos"],
+    ["Registros","evidencias","formularios"],
+    ["Anexos","anexo","apéndices","apéndice"]]},
+  informe:{nombre:"Informe técnico",secciones:[
+    ["Resumen ejecutivo","resumen","síntesis","executive summary"],
+    ["Antecedentes","contexto","introducción","antecedente"],
+    ["Objetivo","objetivos","propósito"],
+    ["Alcance","activos revisados","repositorios revisados","sistemas evaluados","perímetro"],
+    ["Metodología","método","herramientas","enfoque","metodologia de trabajo"],
+    ["Hallazgos","resultados","observaciones","exposición detectada","hallazgo","detalle de hallazgos"],
+    ["Análisis de riesgo","evaluación de riesgos","evaluación de riesgo","riesgos","riesgo","impacto","criticidad"],
+    ["Recomendaciones","recomendación","acciones sugeridas","mitigación","remediación","plan de acción"],
+    ["Conclusiones","conclusión","cierre","comentarios finales"],
+    ["Anexos","anexo","apéndices","apéndice","evidencias"]]}
+};
+const sinTildes=s=>s.normalize("NFD").replace(/[̀-ͯ]/g,"");
+const normSec=s=>sinTildes(String(s||"").toLowerCase()).replace(/\*\*/g,"")
+  .replace(/^\s*(?:\d+(?:\.\d+)*[.)-]?|[ivxlc]+[.)-])\s+/,"").replace(/[^a-z0-9 ]+/g," ").replace(/\s+/g," ").trim();
+// Índice de la sección estándar que corresponde a un título, o -1. Gana la coincidencia más exacta.
+function secDe(texto,est){
+  const n=normSec(texto);let mejor=-1,puntos=0;
+  est.secciones.forEach((alias,i)=>alias.forEach(a=>{a=normSec(a);
+    const p=n===a?3:(n.startsWith(a+" ")||n.endsWith(" "+a))?2:(" "+n+" ").includes(" "+a+" ")?1:0;
+    if(p>puntos){puntos=p;mejor=i}}));
+  return mejor;
+}
+
+// Limpieza del texto: marcas de Markdown que no van al Word, numeración manual de los títulos
+// (Word ya los numera) y mayúsculas.
+function limpiaInline(s){
+  return s.replace(/!\[[^\]]*\]\([^)]*\)/g,"").replace(/\[([^\]]+)\]\(([^)\s]+)[^)]*\)/g,(m,t,u)=>t===u?t:t+" ("+u+")")
+    .replace(/`+([^`]+)`+/g,"$1").replace(/__([^_]+)__/g,"**$1**").replace(/~~([^~]+)~~/g,"$1")
+    .replace(/(^|[^*\w])\*(?!\s)([^*]+?)\*(?![*\w])/g,"$1$2").replace(/(^|[\s(])_(?!\s)([^_]+?)_(?=[\s).,;:]|$)/g,"$1$2")
+    .replace(/\s+/g," ").trim();
+}
+function limpiaTitulo(t){
+  t=limpiaInline(t).replace(/\*\*/g,"").replace(/^\s*(?:\d+(?:\.\d+)*[.)-]?|[IVXLC]+[.)-])\s+/,"").replace(/\s*[:.]\s*$/,"").trim();
+  if(t.length>3&&t===t.toUpperCase()&&/[A-ZÁÉÍÓÚÑ]/.test(t))t=capital(t);
+  return t.charAt(0).toUpperCase()+t.slice(1);
+}
+// «Término: descripción» → término en negrita (máx. 4 palabras, si no viene ya destacado).
+const negritaTermino=s=>s.replace(/^(?!\*\*)([A-ZÁÉÍÓÚÑ][^:.*()]{1,40}?):\s+(?=\S)/,(m,k)=>k.trim().split(/\s+/).length<=4?"**"+k.trim()+":** ":m);
+
+// Datos al inicio con forma «**Campo:** valor» (o «Campo: valor» si vienen dos seguidos).
+const DATO_MD=/^(?:[-*]\s+)?\*\*([^*:]{1,40}?):?\*\*:?\s*(\S.*)$/;
+const DATO_TXT=/^([A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚÑáéíóúñü ]{1,30}):\s+(\S.{0,200})$/;
+
 function aTrozos(md){
-  const out=[];let prev=null;
+  const out=[];let prev=null,enCodigo=false;aTrozos.titulo="";
   const lines=md.replace(/\r/g,"").split("\n");
+  // Markdown con un solo «# Título» y secciones «##»: el «#» es el nombre del documento.
+  const nh=k=>lines.filter(l=>new RegExp("^#{"+k+"}\\s").test(l.trim())).length;
+  const corrimiento=nh(1)===1&&nh(2)>0?1:0;
   // la línea siguiente empieza en minúscula: la frase continúa, así que esta no es un título
   const sigue=k=>/^[a-záéíóúñü(«"]/.test((lines[k+1]||"").trim());
+  const hayTitulo=()=>out.some(t=>t.tipo==="h1"||t.tipo==="h2");
   lines.forEach((raw,k)=>{
-    const l=raw.trim();if(!l){prev=null;return}let m;
+    let l=raw.trim();let m;
+    if(/^(```|~~~)/.test(l)){enCodigo=!enCodigo;prev=null;return}
+    if(enCodigo){if(!l)return;if(prev&&prev.codigo)prev.texto+=" "+l;else{prev={tipo:"p",texto:l,codigo:true};out.push(prev)}return}
+    if(!l){prev=null;return}
+    if(/^(-{3,}|\*{3,}|_{3,})$/.test(l)){prev=null;return}
+    l=l.replace(/^>\s?/,"");if(!l)return;
     if((m=l.match(/^\[\[IMG:(\w+)\]\]$/))){prev={tipo:"imagen",ref:m[1],texto:""};out.push(prev);return}
-    if(/^\|.*\|$/.test(l)){const cells=l.slice(1,-1).split("|").map(x=>x.trim());if(cells.every(c=>/^:?-+:?$/.test(c)))return;
-      if(prev&&prev.tipo==="tabla")prev.filas.push(cells);else{prev={tipo:"tabla",filas:[cells]};out.push(prev)}return}
-    if(prev&&prev.tipo==="imagen"&&!prev.texto&&/^(figura|fig\.|imagen|gráfico|grafico|diagrama)\s*\d*[.:-]/i.test(l)&&l.length<200){prev.texto=l;prev=null;return}
-    if((m=l.match(/^(#{1,3})\s+(.*)/))){out.push({tipo:m[1].length===1?"h1":"h2",texto:m[1].length===1?stripRoman(m[2]):m[2]});prev=null;return}
-    if((m=l.match(/^[-*•·]\s+(.*)/))){prev={tipo:"li",texto:m[1]};out.push(prev);return}
-    if((m=l.match(/^[IVXLC]+\.\s+(.{2,80})$/))&&!/[.;:,]$/.test(m[1])){out.push({tipo:"h1",texto:m[1]});prev=null;return}
-    if((m=l.match(/^\d+\.\d+(?:\.\d+)*\.?\s+(.{2,80})$/))&&!/[.;:,]$/.test(m[1])){out.push({tipo:"h2",texto:m[1]});prev=null;return}
-    if((m=l.match(/^\d+[.)]\s+(.*)/))){prev={tipo:"ni",texto:m[1]};out.push(prev);return}
-    if(l.length<80&&!/[.,;:]$/.test(l)&&l===l.toUpperCase()&&/[A-ZÁÉÍÓÚÑ]/.test(l)){out.push({tipo:"h1",texto:stripRoman(capital(l))});prev=null;return}
+    if(/^\|.*\|$/.test(l)){const cells=l.slice(1,-1).split("|").map(x=>limpiaInline(x));if(cells.every(c=>/^:?-+:?$/.test(c)))return;
+      if(prev&&prev.tipo==="tabla"&&!prev.datos)prev.filas.push(cells);else{prev={tipo:"tabla",filas:[cells]};out.push(prev)}return}
+    if(prev&&prev.tipo==="imagen"&&!prev.texto&&/^(figura|fig\.|imagen|gráfico|grafico|diagrama)\s*\d*[.:-]/i.test(l)&&l.length<200){prev.texto=limpiaInline(l);prev=null;return}
+    if((m=l.match(/^(#{1,6})\s+(.*)/))){
+      const nivel=m[1].length-corrimiento;
+      if(nivel<1){aTrozos.titulo=limpiaTitulo(m[2]);prev=null;return}
+      out.push({tipo:nivel===1?"h1":"h2",texto:limpiaTitulo(m[2])});prev=null;return}
+    // datos generales antes del primer título
+    if(!hayTitulo()){
+      const d=l.match(DATO_MD)||(((prev&&prev.datos)||DATO_TXT.test((lines[k+1]||"").trim()))&&l.match(DATO_TXT));
+      if(d){const fila=[limpiaInline(d[1]).replace(/\*\*/g,""),limpiaInline(d[2])];
+        if(prev&&prev.datos)prev.filas.push(fila);else{prev={tipo:"tabla",datos:true,filas:[["Dato","Detalle"],fila]};out.push(prev)}return}
+    }
+    l=limpiaInline(l);
+    if((m=l.match(/^[-*+•·]\s+(.*)/))){prev={tipo:"li",texto:negritaTermino(m[1])};out.push(prev);return}
+    if((m=l.match(/^[IVXLC]+\.\s+(.{2,80})$/))&&!/[.;:,]$/.test(m[1])){out.push({tipo:"h1",texto:limpiaTitulo(m[1])});prev=null;return}
+    if((m=l.match(/^\d+\.\d+(?:\.\d+)*\.?\s+(.{2,80})$/))&&!/[.;:,]$/.test(m[1])){out.push({tipo:"h2",texto:limpiaTitulo(m[1])});prev=null;return}
+    if((m=l.match(/^\d+[.)]\s+(.*)/))){prev={tipo:"ni",texto:negritaTermino(m[1])};out.push(prev);return}
+    if(l.length<80&&!/[.,;:]$/.test(l)&&l===l.toUpperCase()&&/[A-ZÁÉÍÓÚÑ]/.test(l)){out.push({tipo:"h1",texto:limpiaTitulo(l)});prev=null;return}
     // línea cortada a la mitad de una frase: sigue el trozo anterior
     if(prev&&["p","li","ni"].includes(prev.tipo)&&!/[.:;?!]$/.test(prev.texto)&&/^[a-záéíóúñü(«"]/.test(l)){prev.texto+=" "+l;return}
     // línea corta, sin punto final y con mayúscula inicial: probablemente un título
-    if(l.length<70&&l.split(/\s+/).length<=8&&!/[.,;:]$/.test(l)&&/^[A-ZÁÉÍÓÚÑ¿]/.test(l)&&!sigue(k)){out.push({tipo:"h1",texto:stripRoman(l)});prev=null;return}
-    prev={tipo:"p",texto:l};out.push(prev);
+    if(l.length<70&&l.split(/\s+/).length<=8&&!/[.,;:]$/.test(l)&&/^[A-ZÁÉÍÓÚÑ¿]/.test(l.replace(/^\*\*/,""))&&!sigue(k)){out.push({tipo:"h1",texto:limpiaTitulo(l)});prev=null;return}
+    prev={tipo:"p",texto:negritaTermino(l)};out.push(prev);
   });
+  out.forEach(t=>{delete t.codigo;if(t.tipo==="tabla")delete t.datos});
   return out;
+}
+
+// Pone las secciones (cada título con todo lo que tiene debajo) en el orden estándar. Lo que va
+// antes del primer título queda arriba; las secciones no reconocidas, al final y marcadas.
+function clOrdenar(){
+  const est=ESTRUCTURAS[$("tipoDoc").value];if(!est||!trozos)return null;
+  const pre=[],secs=[];let cur=null;
+  trozos.forEach(t=>{if(t.tipo==="h1"&&!t.quitado){cur={h:t,items:[t],idx:secDe(t.texto,est)};secs.push(cur)}else(cur?cur.items:pre).push(t)});
+  // un título suelto al comienzo, sin contenido propio, es el nombre del documento: se queda arriba
+  // (aunque su texto se parezca a una sección, como «PROCEDIMIENTO DE RESPALDO»)
+  if(!pre.length&&secs.length>1&&secs[0].items.length===1){const d=secs.shift().h;delete d.sec;delete d.sinUbicar;pre.push(d)}
+  secs.forEach(s=>{delete s.h.sec;delete s.h.sinUbicar;if(s.idx>=0)s.h.sec=est.secciones[s.idx][0];else s.h.sinUbicar=true});
+  const orden=secs.map((s,k)=>({s,k})).sort((a,b)=>((a.s.idx<0?1e6:a.s.idx)-(b.s.idx<0?1e6:b.s.idx))||a.k-b.k);
+  trozos=pre.concat(...orden.map(o=>o.s.items));
+  const hay=new Set(secs.map(s=>s.idx).filter(i=>i>=0));
+  return {est,reconocidas:hay.size,sin:secs.filter(s=>s.idx<0).length,faltan:est.secciones.map(s=>s[0]).filter((s,i)=>!hay.has(i))};
+}
+function clReporte(r){
+  $("clRep").hidden=!r;if(!r)return;
+  $("clRepTxt").textContent=`Ordenado como ${r.est.nombre}: ${r.reconocidas} de ${r.est.secciones.length} secciones estándar reconocidas.`+
+    (r.sin?` ${r.sin} ${r.sin>1?"secciones quedaron":"sección quedó"} al final como «Sin ubicar»: muévelas o cámbiales el título.`:"")+
+    (r.faltan.length?` No se encontró: ${r.faltan.join(", ")}.`:" Están todas.");
+  $("clFalta").hidden=!r.faltan.length;
 }
 function trozosABloques(){
   const out=[];
@@ -466,6 +567,9 @@ function trozosABloques(){
       if(last&&last.tipo===tp)last.items.push(tx);else out.push({tipo:tp,items:[tx]});return}
     out.push({tipo:t.tipo,texto:t.tipo==="h1"?stripRoman(tx):tx});
   });
+  // formato TIBOX de las listas: cada ítem termina en «;» y el último en «.»
+  out.forEach(b=>{if((b.tipo==="lista"||b.tipo==="numerada")&&b.items.length>1)
+    b.items=b.items.map((it,k)=>/[:?!]$/.test(it)?it:it.replace(/[;,.]\s*$/,"")+(k<b.items.length-1?";":"."))});
   return out;
 }
 let clSaveT;const saveTrozos=()=>{clearTimeout(clSaveT);clSaveT=setTimeout(()=>store.set("trozos",trozos),300)};
@@ -501,6 +605,8 @@ function renderClasif(foco){
         b.addEventListener("click",()=>clTipo(i,v));g.appendChild(b)});
       bar.appendChild(g);
     }else{const tag=document.createElement("span");tag.className="tztag";tag.textContent=t.tipo==="tabla"?"Tabla":"Imagen";bar.appendChild(tag)}
+    if(t.tipo==="h1"&&(t.sec||t.sinUbicar)){const s=document.createElement("span");s.className="tzsec"+(t.sinUbicar?" warn":"");
+      s.textContent=t.sinUbicar?"Sin ubicar":t.sec;s.title=t.sinUbicar?"No corresponde a ninguna sección estándar: muévela a su lugar o cámbiale el título":"Sección estándar reconocida";bar.appendChild(s)}
     const acc=document.createElement("div");acc.className="tzacc";
     const mk=(txt,title,fn,dis)=>{const b=document.createElement("button");b.type="button";b.textContent=txt;b.title=title;b.disabled=!!dis;b.addEventListener("click",fn);acc.appendChild(b);return b};
     mk("Unir ↑","Unir con el trozo de arriba",()=>clUnir(i),!(texto&&prevTexto));
@@ -530,7 +636,7 @@ function renderClasif(foco){
   clContar();
   if(foco!=null){const r=L.children[Math.max(0,Math.min(foco,L.children.length-1))];if(r){const el=r.querySelector("textarea,input")||r.querySelector("button");if(el){el.focus({preventScroll:true});r.scrollIntoView({block:"nearest"})}}}
 }
-function clTipo(i,v){trozos[i].tipo=v;trozos[i].quitado=false;saveTrozos();renderClasif(i)}
+function clTipo(i,v){const t=trozos[i];t.tipo=v;t.quitado=false;if(v!=="h1"){delete t.sec;delete t.sinUbicar}saveTrozos();renderClasif(i)}
 function clQuitar(i){trozos[i].quitado=!trozos[i].quitado;saveTrozos();renderClasif(i)}
 function clMover(i,d){const j=i+d;if(j<0||j>=trozos.length)return;[trozos[i],trozos[j]]=[trozos[j],trozos[i]];saveTrozos();renderClasif(j)}
 function clUnir(i){const a=trozos[i-1],b=trozos[i];a.texto=(a.texto.trim()+" "+b.texto.trim()).trim();trozos.splice(i,1);saveTrozos();renderClasif(i-1);clMsg("Trozos unidos.")}
@@ -548,9 +654,26 @@ function clTecla(e,i,ta){
 $("goClasif").addEventListener("click",()=>{
   const md=$("draft").value.trim();if(!md){setStatus("Primero sube o pega el texto.",true);return}
   if(trozos&&trozos.length&&!$("clasif").hidden&&!confirm("Ya estás clasificando un texto. ¿Empezar de nuevo con el texto de la izquierda? Se pierden los cambios de la clasificación actual."))return;
-  trozos=aTrozos(md);store.set("trozos",trozos);clAbrir(true);renderClasif();clMsg("");
-  setStatus("Revisa la clasificación a la derecha y presiona «"+$("clApply").textContent+"».");
+  trozos=aTrozos(md);clMsg("");
+  // el nombre del documento («# Título» del Markdown) va a la ficha si todavía no tiene título
+  const tit=aTrozos.titulo;let nota="";
+  if(tit&&!meta.titulo){meta.titulo=tit;$("m_titulo").value=tit;save();drawCover();renderFicha();nota=" El título del documento («"+tit+"») pasó a la ficha."}
+  else if(tit&&tit!==meta.titulo)nota=" El texto trae el título «"+tit+"»; la ficha mantiene «"+meta.titulo+"».";
+  const r=clOrdenar();clReporte(r);store.set("trozos",trozos);clAbrir(true);renderClasif();
+  setStatus("Revisa el resultado a la derecha y presiona «"+$("clApply").textContent+"»."+nota);
   $("clasif").scrollIntoView({block:"start",behavior:"smooth"});
+});
+$("tipoDoc").value=store.get("tipoDoc","informe")??"informe";
+$("tipoDoc").addEventListener("change",()=>{store.set("tipoDoc",$("tipoDoc").value);
+  if(trozos&&trozos.length&&!$("clasif").hidden){const r=clOrdenar();clReporte(r);saveTrozos();renderClasif();clMsg(r?"Secciones ordenadas como "+r.est.nombre+".":"")}});
+$("clOrden").addEventListener("click",()=>{const r=clOrdenar();clReporte(r);saveTrozos();renderClasif();clMsg(r?"Secciones ordenadas otra vez.":"")});
+$("clFalta").addEventListener("click",()=>{
+  const est=ESTRUCTURAS[$("tipoDoc").value];if(!est)return;
+  const hay=new Set(trozos.filter(t=>t.tipo==="h1"&&!t.quitado).map(t=>secDe(t.texto,est)));
+  const nuevas=est.secciones.filter((s,i)=>!hay.has(i)).map(s=>s[0]);
+  nuevas.forEach(n=>trozos.push({tipo:"h1",texto:n}));
+  const r=clOrdenar();clReporte(r);saveTrozos();renderClasif();
+  clMsg(nuevas.length?"Se agregaron "+nuevas.length+" títulos vacíos en su lugar: "+nuevas.join(", ")+". Complétalos o quítalos.":"");
 });
 function clTerminar(agregar){
   const nuevos=trozosABloques();if(!nuevos.length){clMsg("No queda nada para pasar: todos los trozos están quitados o vacíos.",true);return}
@@ -561,7 +684,9 @@ function clTerminar(agregar){
 $("clApply").addEventListener("click",()=>clTerminar(false));
 $("clAppend").addEventListener("click",()=>clTerminar(true));
 $("clCancel").addEventListener("click",()=>{trozos=null;store.set("trozos",null);clAbrir(false);setStatus("Clasificación cancelada. El informe no cambió.")});
-if(trozos&&trozos.length){clAbrir(true);renderClasif()}
+// al recargar se retoma la clasificación tal como quedó (sin volver a ordenar lo que se movió a mano)
+if(trozos&&trozos.length){clAbrir(true);renderClasif();const est=ESTRUCTURAS[$("tipoDoc").value];
+  if(est){$("clRep").hidden=false;$("clRepTxt").textContent="Tipo de documento: "+est.nombre+".";$("clFalta").hidden=true}}
 // Limpiar contenido: deja el paso 3 en blanco (texto pegado, clasificación e informe). La portada
 // y la ficha no se tocan; las imágenes que quedan sin uso se borran solas en saveImages().
 $("goLimpiar").addEventListener("click",()=>{
